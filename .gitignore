@@ -39,3 +39,24 @@
 
 # debug information files
 *.dwo
+
+# Visual studio
+.vs/
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Bb]uild/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
