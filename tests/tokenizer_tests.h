@@ -5,6 +5,8 @@
 #include <cassert>
 #include <vector>
 
+#include <iostream>
+
 namespace rt
 {
 	/// <summary>
@@ -12,9 +14,10 @@ namespace rt
 	/// </summary>
 	void test_tokenizer_basics()
 	{
-		// Test comments
-		char test1[] = "Import(StandardLibrary)\n# I can eat glass and it doesn't hurt me \nObject(Main, Zero)\n";
-		std::vector<Token> r1 = { Token("Import(StandardLibrary)", "Object(Main, Zero)")};
-		assert(*tokenize(test1) == r1);
+		char test1[] = "Import(StandardLibrary)\n# I can eat glass and it doesn't hurt me \nObject(\"Main\", Zero)\n";
+		std::vector<Token> r1 = { Token("Import", TokenType::IDENTIFIER), Token("(", TokenType::PUNCTUATION), Token("StandardLibrary", TokenType::IDENTIFIER),
+			Token(")", TokenType::PUNCTUATION), Token("Object", TokenType::IDENTIFIER), Token("(", TokenType::PUNCTUATION) ,Token("\"Main\"", TokenType::LITERAL),
+			Token(",", TokenType::PUNCTUATION), Token("Zero", TokenType::IDENTIFIER), Token(")", TokenType::PUNCTUATION) };
+		assert(tokenize(test1) == r1);
 	}
 }
