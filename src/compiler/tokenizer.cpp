@@ -9,10 +9,10 @@
 
 namespace rt
 {
-	const char Token::punctuation[] = {'.', '[', ']','(', ')', ','};
+	const char Token::punctuation[] = {'-','(', ')', ','};
 	
 	// Tokenizer
-	std::vector<Token> tokenize(char* src)
+	std::vector<Token> tokenize(const char* src)
 	{
 		int strLen = strlen(src);
 		// TODO: Implement srcLoc at later point

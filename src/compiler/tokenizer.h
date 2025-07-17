@@ -7,7 +7,8 @@ namespace rt
 	enum class TokenType {
 		IDENTIFIER,
 		LITERAL,
-		PUNCTUATION, // . and [] operators as well as parentheses
+		PUNCTUATION, // - operator as well as parentheses
+		END // Used by parser
 	};
 
 	/// <summary>
@@ -20,6 +21,10 @@ namespace rt
 		/// Default constructor
 		/// </summary>
 		SourceLocation(const int line, const std::string file) : line(line), file(file) {};
+		/// <summary>
+		/// Empty constructor for debugging
+		/// </summary>
+		SourceLocation() : line(-1), file("\0") {};
 
 		// Getters
 		
@@ -61,7 +66,7 @@ namespace rt
 		/// <summary>
 		/// Constructor without specified source code location, the src member will default to line: -1 file: "\0"
 		/// </summary>
-		Token(const std::string text, const TokenType type) : text(text), type(type), src(SourceLocation(-1, "\0")) {};
+		Token(const std::string text, const TokenType type) : text(text), type(type), src(SourceLocation()) {};
 
 		// Getters
 
@@ -111,5 +116,5 @@ namespace rt
 	/// </summary>
 	/// <param name="src">Source code (C style string)</param>
 	/// <returns>List of tokens parsed from source code</returns>
-	std::vector<Token> tokenize(char* src);
+	std::vector<Token> tokenize(const char* src);
 }
