@@ -2,9 +2,12 @@
 #include "tokenizer.h"
 // C++
 #include <memory>
+#include <vector>
 // Abstract syntax tree classes
 
+// Debugging
 #include <iostream>
+#include <cassert>
 
 namespace ast
 {
@@ -28,7 +31,7 @@ namespace ast
 		/// String constructor
 		/// </summary>
 		value(std::string value) : valueStr(value), type(valueType::STR) {};
-	private:
+
 		/// <summary>
 		/// Current type of value
 		/// </summary>
@@ -71,11 +74,13 @@ namespace ast
 					return v1.valueStr == v2.valueStr;
 					break;
 				}
+				default:
+					throw;
 				}
 			}
 			else
 				return false;
-		};
+		}
 	};
 
 	/// <summary>
@@ -106,18 +111,17 @@ namespace ast
 
 		//TODO: I have no idea how to do operator overloading
 
-		friend bool operator==(const Expression ast1, const Expression ast2)
+		bool operator==(const Expression& other) const
 		{
-			return compare(ast1, ast2);
+			return compare(other);
 		};
 	private:
 		/// <summary>
 		/// Compare two ast trees
 		/// </summary>
-		/// <param name="ast1">Ast tree 1</param>
-		/// <param name="ast2">Ast tree 2</param>
+		/// <param name="other">Ast node to compare against</param>
 		/// <returns>Whether or not the trees are identical</returns>
-		static bool compare(const Expression ast1, const Expression ast2);
+		virtual bool compare(const Expression& other) const = 0;
 	};
 
 	/// <summary>
@@ -135,6 +139,13 @@ namespace ast
 		/// Value of literal
 		/// </summary>
 		const value value;
+	private:
+		/// <summary>
+		/// Compare two ast trees
+		/// </summary>
+		/// <param name="other">Ast node to compare against</param>
+		/// <returns>Whether or not the nodes are identical</returns>
+		bool compare(const Expression& other) const override;
 	};
 
 	/// <summary>
@@ -152,6 +163,13 @@ namespace ast
 		/// Name of identifier
 		/// </summary>
 		const std::string name;
+	private:
+		/// <summary>
+		/// Compare two ast trees
+		/// </summary>
+		/// <param name="other">Ast node to compare against</param>
+		/// <returns>Whether or not the nodes are identical</returns>
+		bool compare(const Expression& other) const override;
 	};
 
 	/// <summary>
@@ -160,24 +178,91 @@ namespace ast
 	class Call : public Expression
 	{
 	public:
+		~Call()
+		{
+			for (int i = 0; i < args.size(); i++)
+				delete args[i];
+		}
+
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		Call(const rt::SourceLocation src, const std::string name, const Expression* args, const int argAmount) : name(name), args(args), argAmount(argAmount), Expression(src) {};
-
+		Call(const rt::SourceLocation src, const std::string name, const std::vector<Expression*> args) : name(name), args(args), Expression(src) {};
 		/// <summary>
 		/// Name of object to call
 		/// </summary>
 		const std::string name;
 		/// <summary>
-		/// Arguments to call object with
+		/// Arguments to call object with. Array of pointers because Expression is an abstract class
 		/// </summary>
-		const Expression* args;
+		const std::vector<Expression*> args; // I've spent hours on this
+	private:
 		/// <summary>
-		/// Amount of arguments
+		/// Compare two ast trees
 		/// </summary>
-		const int argAmount;
+		/// <param name="other">Ast node to compare against</param>
+		/// <returns>Whether or not the nodes are identical</returns>
+		bool compare(const Expression& other) const override;
 	};
 
+	/// <summary>
+	/// Ast expression for a binary operator (e.g. - )
+	/// </summary>
+	class BinaryOperator : public Expression
+	{
+	public:
+		~BinaryOperator()
+		{
+			delete left;
+			delete right;
+		}
 
+		/// <summary>
+		/// Default constructor
+		/// </summary>
+		BinaryOperator(const rt::SourceLocation src, const Expression* left, const Expression* right) : left(left), right(right), Expression(src) {};
+		/// <summary>
+		/// Left expression
+		/// </summary>
+		const Expression* left;
+		/// <summary>
+		/// Left expression
+		/// </summary>
+		const Expression* right;
+	private:
+		/// <summary>
+		/// Compare two ast trees
+		/// </summary>
+		/// <param name="other">Ast node to compare against</param>
+		/// <returns>Whether or not the nodes are identical</returns>
+		bool compare(const Expression& other) const override;
+	};
+
+	/// <summary>
+	/// Ast expression for a unary operator (e.g. () )
+	/// </summary>
+	class UnaryOperator : public Expression
+	{
+	public:
+		~UnaryOperator()
+		{
+			delete expr;
+		}
+
+		/// <summary>
+		/// Default constructor
+		/// </summary>
+		UnaryOperator(const rt::SourceLocation src, const Expression* expr) : expr(expr), Expression(src) {};
+		/// <summary>
+		/// Expression
+		/// </summary>
+		const Expression* expr;
+	private:
+		/// <summary>
+		/// Compare two ast trees
+		/// </summary>
+		/// <param name="other">Ast node to compare against</param>
+		/// <returns>Whether or not the nodes are identical</returns>
+		bool compare(const Expression& other) const override;
+	};
 }

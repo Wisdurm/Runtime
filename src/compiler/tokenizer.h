@@ -7,7 +7,7 @@ namespace rt
 	enum class TokenType {
 		IDENTIFIER,
 		LITERAL,
-		PUNCTUATION, // - operator as well as parentheses
+		PUNCTUATION, // - operator as well as parentheses (also commas)
 		END // Used by parser
 	};
 
