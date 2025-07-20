@@ -34,7 +34,7 @@ namespace rt
 
 	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens);
 	static ast::Expression* parseLiteral(const std::vector<Token>& tokens);
-	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens);
+	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
 	static ast::Expression* parseFunction(const std::vector<Token>& tokens, std::string functionName);
 
 	/// <summary>
@@ -43,17 +43,25 @@ namespace rt
 	/// <returns>Ast tree</returns>
 	static ast::Expression* parseExpression(const std::vector<Token>& tokens)
 	{
+		ast::Expression* left;
 		switch (peek(tokens).getType())
 		{
 		case TokenType::IDENTIFIER:
 		{
-			return parseIdentifier(tokens);
+			left = parseIdentifier(tokens);
+			break;
 		}
 		case TokenType::LITERAL:
 		{
-			return parseLiteral(tokens);
+			left = parseLiteral(tokens);
+			break;
 		}
 		}
+		if (peek(tokens).getType() == TokenType::PUNCTUATION)
+			return parsePunctuation(tokens, left);
+		else
+			return left;
+		throw;
 	}
 
 	/// <summary>
@@ -94,7 +102,7 @@ namespace rt
 			stringValue.pop_back();
 			return new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
 		}
-		else if ((*token.getText()).find('.')) // Contains not implemented in MSVC yet :(
+		else if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
 		{	// Decimal literal
 			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
 		}
@@ -120,10 +128,19 @@ namespace rt
 	/// <summary>
 	/// Parse punctuation token
 	/// </summary>
+	/// <param name="left">Left argument, for extra evaluation</param>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens)
+	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens, ast::Expression* left)
 	{
-
+		if (*peek(tokens).getText() == "(")
+		{
+			consume(tokens, "(");
+			consume(tokens, ")");
+			ast::Expression* expr = new ast::UnaryOperator(peek(tokens).getSrc(), left);
+			return parsePunctuation(tokens, expr);
+		}
+		else
+			return left;
 	}
 
 	/// <summary>
@@ -137,14 +154,35 @@ namespace rt
 		while (*peek(tokens).getText() != ")")
 		{
 			args.push_back(parseExpression(tokens));
+			if (*peek(tokens).getText() == ",")
+				consume(tokens, ",");
 		}
 		consume(tokens, ")");
 		return new ast::Call(peek(tokens).getSrc(), functionName, args);
 	}
 
+	/// <summary>
+	/// Parses top level statements as arguments to a main function
+	/// </summary
+	/// <returns>Ast tree</returns>
+	static ast::Expression* parseMain(const std::vector<Token>& tokens)
+	{
+		std::vector<ast::Expression*> args;
+		args.push_back(new ast::Identifier(peek(tokens).getSrc(), "Main"));
+		while (peek(tokens).getType() != TokenType::END)
+		{
+			args.push_back(parseExpression(tokens));
+		}
+		return new ast::Call(peek(tokens).getSrc(), "Object", args);
+	}
+
 	ast::Expression* parse(const std::vector<Token>& tokens)
 	{
-		return parseExpression(tokens);
+		pos = 0;
+		if (*tokens[3].getText() == "Main") // Check for main function
+			return parseExpression(tokens);
+		else
+			return parseMain(tokens);
 	}
 }
 
@@ -205,7 +243,7 @@ namespace ast
 		try
 		{
 			const BinaryOperator& otherBinOp = dynamic_cast<const BinaryOperator&>(other);
-			return left == otherBinOp.left and right == otherBinOp.right;
+			return *left == *otherBinOp.left and *right == *otherBinOp.right;
 		}
 		catch (std::bad_cast e)
 		{
@@ -218,7 +256,7 @@ namespace ast
 		try
 		{
 			const UnaryOperator& otherUnOp = dynamic_cast<const UnaryOperator&>(other);
-			return expr == otherUnOp.expr;
+			return *expr == *otherUnOp.expr;
 		}
 		catch (std::bad_cast e)
 		{

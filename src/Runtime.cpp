@@ -26,5 +26,7 @@ void test()
 	std::cout << "Running tests..." << std::endl;
 	rt::test_tokenizer_basics();
 	rt::test_parser_basics();
+	rt::test_parser_values();
+	rt::test_parser_advanced();
 	std::cout << "All tests passed!" << std::endl;
 }
