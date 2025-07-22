@@ -3,6 +3,7 @@
 // C++
 #include <memory>
 #include <vector>
+#include <variant>
 // Abstract syntax tree classes
 
 // Debugging
@@ -11,7 +12,7 @@
 
 namespace ast
 {
-	enum class valueType {
+	enum class valueType { // TODO : maybe obsolete? REF type still valuable
 		INT,
 		DEC,
 		STR,
@@ -22,32 +23,24 @@ namespace ast
 		/// <summary>
 		/// Int constructor
 		/// </summary>
-		value(int value) : valueInt(value), type(valueType::INT) {};
+		value(int value) : valueHeld(value), type(valueType::INT) {};
 		/// <summary>
 		/// Decimal constructor
 		/// </summary>
-		value(double value) : valueDec(value), type(valueType::DEC) {};
+		value(double value) : valueHeld(value), type(valueType::DEC) {};
 		/// <summary>
 		/// String constructor
 		/// </summary>
-		value(std::string value) : valueStr(value), type(valueType::STR) {};
+		value(std::string value) : valueHeld(value), type(valueType::STR) {};
 
 		/// <summary>
 		/// Current type of value
 		/// </summary>
 		const valueType type;
 		/// <summary>
-		/// Integer value
+		/// Value of the class
 		/// </summary>
-		long valueInt; // Might as well be long since we have string here
-		/// <summary>
-		/// Decimal value
-		/// </summary>
-		double valueDec; // Might as well be double
-		/// <summary>
-		/// String value
-		/// </summary>
-		std::string valueStr;
+		std::variant<long, double, std::string> valueHeld;
 
 		// Operators
 
@@ -61,17 +54,17 @@ namespace ast
 				{
 				case valueType::INT:
 				{
-					return v1.valueInt == v2.valueInt;
+					return v1.valueHeld == v2.valueHeld;
 					break;
 				}
 				case valueType::DEC:
 				{
-					return v1.valueDec == v2.valueDec;
+					return v1.valueHeld == v2.valueHeld;
 					break;
 				}
 				case valueType::STR:
 				{
-					return v1.valueStr == v2.valueStr;
+					return v1.valueHeld == v2.valueHeld;
 					break;
 				}
 				default:

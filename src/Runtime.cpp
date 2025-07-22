@@ -5,6 +5,7 @@
 
 #include "../tests/tokenizer_tests.h"
 #include "../tests/parser_tests.h"
+#include "../tests/interpreter_tests.h"
 
 // C++
 #include <iostream>
@@ -28,5 +29,6 @@ void test()
 	rt::test_parser_basics();
 	rt::test_parser_values();
 	rt::test_parser_advanced();
+	rt::test_interpreter_basics();
 	std::cout << "All tests passed!" << std::endl;
 }

@@ -3,6 +3,7 @@
 #include "../src/compiler/tokenizer.h"
 #include "../src/compiler/parser.h"
 // C++
+#include <variant>
 #include <cassert>
 #include <iostream>
 
@@ -45,8 +46,8 @@ namespace rt
 	{
 		std::cout << "Testing parser evaluation..." << std::endl;
 
-		const char* test1 = "Human-EyeColor() # Returns “blue”";
-		ast::Expression* r1 = new ast::Call(L, "Object", { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::Identifier(L, "Human"), new ast::Call(L, "EyeColor", {}))});
+		const char* test1 = "Human-\"EyeColor\"() # Returns “blue”";
+		ast::Expression* r1 = new ast::Call(L, "Object", { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::Identifier(L, "Human"), new ast::UnaryOperator(L, new ast::Literal(L, ast::value("EyeColor")) ))});
 		assert(*parse(tokenize(test1)) == *r1);
 		delete r1;
 
@@ -102,9 +103,13 @@ namespace rt
 		{
 			auto node = dynamic_cast<ast::Literal*>(ast);
 			std::cout << "type: " << (int)node->value.type << std::endl;
-			std::cout << "dec: " << node->value.valueDec << std::endl;
-			std::cout << "int: " << node->value.valueInt << std::endl;
-			std::cout << "str: " << node->value.valueStr << std::endl;
+
+			if (std::holds_alternative<std::string>(node->value.valueHeld))
+				std::cout << std::get<std::string>(node->value.valueHeld) << std::endl;
+			else if (std::holds_alternative<long>(node->value.valueHeld))
+				std::cout << std::to_string(std::get<long>(node->value.valueHeld)) << std::endl;
+			else
+				std::cout << std::to_string(std::get<double>(node->value.valueHeld)) << std::endl;
 		}
 		else if (dynamic_cast<ast::Call*>(ast) != nullptr)
 		{

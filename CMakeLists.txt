@@ -12,7 +12,7 @@ endif()
 project ("Runtime")
 
 # Add source to this project's executable.
-add_executable (Runtime "src/Runtime.cpp" "src/Runtime.h" "src/compiler/tokenizer.cpp" "src/compiler/tokenizer.h"  "tests/tokenizer_tests.h" "src/compiler/parser.cpp" "src/compiler/parser.h" "src/compiler/ast.h" "tests/parser_tests.h" "src/compiler/interpreter.h" "src/compiler/interpreter.cpp" "src/compiler/Lib/StandardLibrary.h")
+add_executable (Runtime "src/Runtime.cpp" "src/Runtime.h" "src/compiler/tokenizer.cpp" "src/compiler/tokenizer.h"  "tests/tokenizer_tests.h" "src/compiler/parser.cpp" "src/compiler/parser.h" "src/compiler/ast.h" "tests/parser_tests.h" "src/compiler/interpreter.h" "src/compiler/interpreter.cpp" "src/compiler/Lib/StandardLibrary.h" "tests/interpreter_tests.h")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET Runtime PROPERTY CXX_STANDARD 20)

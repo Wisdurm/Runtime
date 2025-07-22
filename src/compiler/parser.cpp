@@ -56,6 +56,8 @@ namespace rt
 			left = parseLiteral(tokens);
 			break;
 		}
+		default:
+			throw;
 		}
 		if (peek(tokens).getType() == TokenType::PUNCTUATION)
 			return parsePunctuation(tokens, left);
@@ -94,35 +96,39 @@ namespace rt
 	static ast::Expression* parseLiteral(const std::vector<Token>& tokens)
 	{
 		Token token = consume(tokens);
+		if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
+		{	// Decimal literal
+			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
+		}
+
+		ast::Expression* node;
+
 		if ((*token.getText())[0] == '\"')
 		{	// String literal
 			std::string stringValue = *token.getText();
 			// Remove quatation marks
 			stringValue.erase(0,1);
 			stringValue.pop_back();
-			return new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
-		}
-		else if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
-		{	// Decimal literal
-			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
+			node = new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
 		}
 		else
 		{	// Int literal
-			ast::Expression* node = new ast::Literal(token.getSrc(), std::stoi(*token.getText()));
-			if (*peek(tokens).getText() == "(") // Member value begin accessed
-			{
-				consume(tokens, "(");
-				consume(tokens, ")");
-				return new ast::UnaryOperator(token.getSrc(), node);
-			}
-			else if (*peek(tokens).getText() == "-") // Accessing deeper level member
-			{
-				consume(tokens, "-");
-				return new ast::BinaryOperator(node->src, node, parseExpression(tokens));
-			}
-			else
-				return node;
+			node = new ast::Literal(token.getSrc(), std::stoi(*token.getText()));
 		}
+
+		if (*peek(tokens).getText() == "(") // Member value begin accessed
+		{
+			consume(tokens, "(");
+			consume(tokens, ")");
+			return new ast::UnaryOperator(token.getSrc(), node);
+		}
+		else if (*peek(tokens).getText() == "-") // Accessing deeper level member
+		{
+			consume(tokens, "-");
+			return new ast::BinaryOperator(node->src, node, parseExpression(tokens));
+		}
+		else
+			return node;
 	}
 
 	/// <summary>
