@@ -33,6 +33,8 @@ namespace ast
 		/// </summary>
 		value(std::string value) : valueHeld(value), type(valueType::STR) {};
 
+		// TODO: Encapsulation
+
 		/// <summary>
 		/// Current type of value
 		/// </summary>
@@ -40,7 +42,7 @@ namespace ast
 		/// <summary>
 		/// Value of the class
 		/// </summary>
-		std::variant<long, double, std::string> valueHeld;
+		const std::variant<long, double, std::string> valueHeld;
 
 		// Operators
 

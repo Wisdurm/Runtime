@@ -8,30 +8,54 @@
 
 namespace rt
 {
+	static ast::value Zero = ast::value(0);
 	/// <summary>
 	/// Prints a value to the standard output
 	/// </summary>
 	/// <param name="args">Value(s) to print</param>
-	Object Print(std::vector<Object>& args)
+	objectOrValue Print(std::vector<objectOrValue>& args, SymbolTable* symtab)
 	{
-		for (Object& arg : args)
+		for (objectOrValue arg : args)
 		{
-			auto v = std::get<ast::value>(arg.getMember(0)).valueHeld; // Get value held by first member of object
+			auto valueHeld(std::holds_alternative<std::shared_ptr<Object>>(arg) ? // If object
+				evaluate(std::get<std::shared_ptr<Object>>(arg), symtab).valueHeld : // Get value of object
+				std::get<ast::value>(arg).valueHeld // If value, just use value
+			);
+
 			std::string output;
 			// Convert type to string
-			if (std::holds_alternative<std::string>(v))
-				output = std::get<std::string>(v);
-			else if (std::holds_alternative<long>(v))
-				output = std::to_string(std::get<long>(v));
+			if (std::holds_alternative<std::string>(valueHeld))
+				output = std::get<std::string>(valueHeld);
+			else if (std::holds_alternative<long>(valueHeld))
+				output = std::to_string(std::get<long>(valueHeld));
 			else
-				output = std::to_string(std::get<double>(v));
+				output = std::to_string(std::get<double>(valueHeld));
 			
 			// Print
 			if (isCapture())
 				captureString(output);
+			// TODO: Add else clause if not debugging
 			std::cout << output;
 		}
 		std::cout << std::endl;
-		return Object();
+		return Zero;
+	}
+	/// <summary>
+	/// Initializes object with specified arguments
+	/// </summary>
+	/// <param name="args"></param>
+	/// <returns></returns>
+	objectOrValue ObjectF(std::vector<objectOrValue>& args, SymbolTable* symtab)
+	{
+		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
+		{
+			// TODO: This should get values from the symbol table, however it should also use args??? Bruhhhh... :cry:
+			std::shared_ptr<Object> init = std::get<std::shared_ptr<Object>>(args.at(0)); // Main object to initialize
+			for (std::vector<objectOrValue>::iterator it = ++args.begin(); it != args.end(); ++it)
+			{
+				init.get()->addMember(*it);
+			}
+		}
+		return Zero;
 	}
 }

@@ -19,10 +19,10 @@ namespace rt
 	{
 		std::cout << "Testing interpreter basics..." << std::endl;
 
-		// Test basic string printing
-		std::vector<std::string> test1 = {"Hello world"};
-		ast::Expression* r1 = new ast::Call(L, "Print", { new ast::Literal(L, ast::value("Hello world")) });
-		assert(interpretAndReturn(r1) == test1.data());
+		// Test object creation and basic Hello world output
+		std::vector<std::string> test1 = { "Hello world" };
+		ast::Expression* r1 = parse(tokenize("Object(str, Print(\"NULL\"), Object(str), \"Hello world\")\nPrint(str)"));
+		assert(interpretAndReturn(r1)->at(0) == test1.data()->at(0)); // Print "Hello world", but not "NULL"
 		delete r1;
 
 		std::cout << "Passed interpreter basics!" << std::endl;

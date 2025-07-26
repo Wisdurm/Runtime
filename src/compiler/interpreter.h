@@ -8,24 +8,26 @@
 #include <variant>
 #include <functional>
 #include <vector>
+#include <algorithm>
 
 namespace rt
 {
 	class Object;
+	class SymbolTable;
 };
 
 /// <summary>
 /// Object member type
 /// </summary>
-typedef std::variant<rt::Object, ast::value> member;
+typedef std::variant<std::shared_ptr<rt::Object>, ast::value> objectOrValue;
 /// <summary>
 /// Built-in Runtime function
 /// </summary>
-typedef std::function<rt::Object(std::vector<rt::Object>&)> BuiltIn;
+typedef std::function<objectOrValue(std::vector<objectOrValue>&, rt::SymbolTable*)> BuiltIn;
 /// <summary>
 /// Type which symbol table points to. Either object, or a function object referencing a built in function.
 /// </summary>
-typedef std::variant<rt::Object, BuiltIn> symbol;
+typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn> objectOrBuiltin;
 
 namespace rt
 {
@@ -34,6 +36,12 @@ namespace rt
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
 	void interpret(ast::Expression* expr);
+	/// <summary>
+	/// Returns the value of a member, derived from it's contained expression and other values.
+	/// </summary>
+	/// <param name="member">Member to evaluate</param>
+	/// <returns>An ast::value represting the ultimate value of the object</returns>
+	ast::value evaluate(objectOrValue member, SymbolTable* symtab);
 	/// <summary>
 	/// Interprets ast tree, and returns everything printed to cout
 	/// </summary>
@@ -65,6 +73,11 @@ namespace rt
 			name = "";
 			expr = nullptr;
 		}
+		Object(ast::Expression* expr)
+		{
+			name = "";
+			this->expr = expr;
+		}
 		/// <summary>
 		/// Creates empty object with specified name
 		/// </summary>
@@ -89,24 +102,37 @@ namespace rt
 		/// </summary>
 		/// <param name="key">Index</param>
 		/// <returns></returns>
-		member getMember(int key) { return members[key]; };
+		objectOrValue* getMember(int key) { return &members[key]; };
 		/// <summary>
 		/// Returns member by name
 		/// </summary>
 		/// <param name="key">Name</param>
 		/// <returns></returns>
-		member getMember(std::string name) { return members[memberStringMap[name]]; }; // TODO: idfk man
+		objectOrValue* getMember(std::string name) { return &members[memberStringMap[name]]; }; // TODO: idfk man
+		/// <summary>
+		/// Returns a vector containing all of the members
+		/// </summary>
+		/// <returns></returns>
+		std::vector<objectOrValue*> getMembers()
+		{
+			std::vector<objectOrValue*> r;
+			for (std::unordered_map<int, objectOrValue>::iterator it = members.begin(); it != members.end(); ++it)
+			{
+				r.push_back(&it->second);
+			};
+			return r; 
+		};
 		/// <summary>
 		/// Adds member with int key
 		/// </summary>
 		/// <param name="member"></param>
 		/// <param name="key"></param>
-		void addMember(member& member, int key) { 
+		void addMember(objectOrValue& member, int key) { 
 			if (key == counter) 
 				counter++;
 			members.insert({ key, member });
 		};
-		void addMember(member& member)
+		void addMember(objectOrValue& member)
 		{
 			// TODO this can fuck up due to counter shenanigans.
 			// TODO: cry
@@ -118,7 +144,7 @@ namespace rt
 		/// </summary>
 		/// <param name="member"></param>
 		/// <param name="key"></param>
-		void addMember(member& member, std::string key) {
+		void addMember(objectOrValue& member, std::string key) {
 			if (not members.contains(counter))
 			{
 				members.insert({counter, member});
@@ -144,7 +170,7 @@ namespace rt
 		/// <summary>
 		/// Members of the object. Can either be objects, or values
 		/// </summary>
-		std::unordered_map<int, member> members;
+		std::unordered_map<int, objectOrValue> members;
 		/// <summary>
 		/// Maps strings to their placement on the members list. Definitely not the best way to implement this, but I can always change it later
 		/// </summary>
@@ -161,7 +187,7 @@ namespace rt
 		/// <summary>
 		/// Stores the values of variables in the local scope. Also points to built in functions
 		/// </summary>
-		std::unordered_map<std::string, symbol> locals;
+		std::unordered_map<std::string, objectOrBuiltin> locals;
 		/// <summary>
 		/// Stores higher level variables
 		/// </summary>
@@ -177,10 +203,10 @@ namespace rt
 		/// <summary>
 		/// Initialized symbol constructor
 		/// </summary>
-		SymbolTable(const std::unordered_map<std::string, symbol> locals)
+		SymbolTable(const std::unordered_map<std::string, objectOrBuiltin> locals)
 		{
 			parent = nullptr;
-			this->locals = std::unordered_map<std::string, symbol>(locals); // TODO what the fuck maaan
+			this->locals = std::unordered_map<std::string, objectOrBuiltin>(locals); // TODO what the fuck maaan
 		}
 		/// <summary>
 		/// Parent constructor
@@ -196,13 +222,13 @@ namespace rt
 		/// </summary>
 		/// <param name="key">Key to look for</param>
 		/// <returns>The value of a key, if not found will create new empty value</returns>
-		symbol* lookUp(std::string key);
+		objectOrBuiltin& lookUp(std::string key);
 		/// <summary>
 		/// Changes the value of a symbol, or adds a new one to the local scope if not found
 		/// </summary>
 		/// <param name="key">Name of the symbol</param>
 		/// <param name="value">Value of the symbol</param>
-		void updateSymbol(const std::string& key, const Object& object);
+		void updateSymbol(const std::string& key, const std::shared_ptr<rt::Object> object);
 		/// <summary>
 		/// Clears the symbol table
 		/// </summary>
