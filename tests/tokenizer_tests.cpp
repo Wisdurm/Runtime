@@ -4,8 +4,9 @@
 #include "../src/compiler/tokenizer.h"
 // C++
 #include <vector>
+#include <iostream>
 
-TEST_CASE("Testing the ability to rt::Tokenize a string", "[rt::Token]")
+TEST_CASE("String tokenizing", "[token]")
 {
 	const char* test1 = "Import(StandardLibrary)\n# I can eat glass and it doesn't hurt me \nObject(\"Main\", Zero-0)\n";
 	

@@ -5,8 +5,6 @@
 // C
 #include <string.h>
 
-#include <iostream>
-
 namespace rt
 {
 	const char Token::punctuation[] = {'-','(', ')', ','};
