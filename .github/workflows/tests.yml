@@ -27,7 +27,7 @@ jobs:
 
       - name: "Build"
         run: |
-          cmake . -G Ninja \
+          cmake . -G Ninja
           ninja
 
       - name: "test"
