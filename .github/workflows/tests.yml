@@ -3,13 +3,33 @@ name: "Catch2 - Tests"
 on: push
 
 jobs:
-  build:
-    runs-on: "linux"
+  build-and-test:
+    runs-on: "ubuntu-latest"
     steps:
+      - name: "Checkout repo"
+        uses: actions/checkout@v3
+        with:
+          submodules: 'true'
+
+      - name: "Dependencies"
+        run: |
+          echo bruh
+          sudo apt-get update && \
+          sudo apt-get install -yq \
+          cmake \
+          ninja-build \
+
+#      - name : "CMake"
+#        run: |
+#          cmake --preset basic-tests -GNinja \
+#            -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+#            -DCMAKE_CXX_COMPILER=${{matrix.cxx}} \
+#            -DCMAKE_CXX_STANDARD=${{matrix.std}}
+
       - name: "Build"
         run: |
-          cmake -S . -B build \
-          cmake --build build 
+          cmake . -G ninja \
+          ninja
 
       - name: "test"
         run: "./build/tests"
