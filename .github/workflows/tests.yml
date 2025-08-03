@@ -13,7 +13,6 @@ jobs:
 
       - name: "Dependencies"
         run: |
-          echo bruh
           sudo apt-get update && \
           sudo apt-get install -yq \
           cmake \
@@ -28,7 +27,7 @@ jobs:
 
       - name: "Build"
         run: |
-          cmake . -G ninja \
+          cmake . -G Ninja \
           ninja
 
       - name: "test"
