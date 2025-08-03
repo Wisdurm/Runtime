@@ -48,12 +48,12 @@ namespace rt
 	{
 		std::cout << "Testing parser evaluation..." << std::endl;
 
-		const char* test1 = "Human-\"EyeColor\"() # Returns “blue”";
+		const char* test1 = "Human-\"EyeColor\"() # Returns ï¿½blueï¿½";
 		ast::Expression* r1 = new ast::Call(L, "Object", { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::Identifier(L, "Human"), new ast::UnaryOperator(L, new ast::Literal(L, ast::value("EyeColor")) ))});
 		assert(*parse(tokenize(test1)) == *r1);
 		delete r1;
 
-		const char* test2 = "CarArray-1() # Returns “BMW”";
+		const char* test2 = "CarArray-1() # Returns ï¿½BMWï¿½";
 		ast::Expression* r2 = new ast::Call(L, "Object", { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::Identifier(L, "CarArray"), new ast::UnaryOperator(L, new ast::Literal(L, 1))) });
 		assert(*parse(tokenize(test2)) == *r2);
 		delete r2;
@@ -104,14 +104,14 @@ namespace rt
 		else if (dynamic_cast<ast::Literal*>(ast) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Literal*>(ast);
-			std::cout << "type: " << (int)node->value.type << std::endl;
+			std::cout << "type: " << (int)node->lit_value.type << std::endl;
 
-			if (std::holds_alternative<std::string>(node->value.valueHeld))
-				std::cout << std::get<std::string>(node->value.valueHeld) << std::endl;
-			else if (std::holds_alternative<long>(node->value.valueHeld))
-				std::cout << std::to_string(std::get<long>(node->value.valueHeld)) << std::endl;
+			if (std::holds_alternative<std::string>(node->lit_value.valueHeld))
+				std::cout << std::get<std::string>(node->lit_value.valueHeld) << std::endl;
+			else if (std::holds_alternative<long>(node->lit_value.valueHeld))
+				std::cout << std::to_string(std::get<long>(node->lit_value.valueHeld)) << std::endl;
 			else
-				std::cout << std::to_string(std::get<double>(node->value.valueHeld)) << std::endl;
+				std::cout << std::to_string(std::get<double>(node->lit_value.valueHeld)) << std::endl;
 		}
 		else if (dynamic_cast<ast::Call*>(ast) != nullptr)
 		{

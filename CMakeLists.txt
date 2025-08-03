@@ -1,6 +1,8 @@
 ﻿# CMakeList.txt : CMake project for Runtime, include source and define
 # project specific logic here.
 #
+add_compile_options(-std=c++20)
+
 cmake_minimum_required (VERSION 3.8)
 project (Runtime)
 

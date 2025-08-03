@@ -128,12 +128,12 @@ namespace ast
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		Literal(const rt::SourceLocation src, const value value) : value(value), Expression(src) {};
+		Literal(const rt::SourceLocation src, const value value) : lit_value(value), Expression(src) {};
 
 		/// <summary>
 		/// Value of literal
 		/// </summary>
-		const value value;
+		const value lit_value;
 	private:
 		/// <summary>
 		/// Compare two ast trees

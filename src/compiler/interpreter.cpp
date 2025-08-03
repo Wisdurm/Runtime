@@ -113,7 +113,7 @@ namespace rt
 		else if (dynamic_cast<ast::Literal*>(expr) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Literal*>(expr);
-			return node->value;
+			return node->lit_value;
 		}
 		else if (dynamic_cast<ast::Call*>(expr) != nullptr)
 		{
@@ -146,11 +146,11 @@ namespace rt
 		}
 		else if (dynamic_cast<ast::BinaryOperator*>(expr) != nullptr)
 		{
-
+			throw; //TODO
 		}
 		else if (dynamic_cast<ast::UnaryOperator*>(expr) != nullptr)
 		{
-
+			throw; //TODO
 		}
 		else
 			throw;

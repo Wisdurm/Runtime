@@ -200,7 +200,7 @@ namespace ast
 		// I don't think speed matters that much
 		try
 		{
-			return value == dynamic_cast<const Literal&>(other).value;
+			return lit_value == dynamic_cast<const Literal&>(other).lit_value;
 		}
 		catch (std::bad_cast e)
 		{
