@@ -15,4 +15,4 @@ ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.h
 ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.cpp
 # Runtime standard libraries
 ${CMAKE_SOURCE_DIR}/src/compiler/Lib/StandardLibrary.h
-)
+ "flowgraph.cpp")

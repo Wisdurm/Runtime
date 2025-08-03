@@ -73,9 +73,21 @@ namespace rt
 			name = "";
 			expr = nullptr;
 		}
+		/// <summary>
+		/// Creates object with expression
+		/// </summary>
+		/// <param name="expr"></param>
 		Object(ast::Expression* expr)
 		{
 			name = "";
+			this->expr = expr;
+		}
+		/// <summary>
+		/// Creates empty object with specified name and expression
+		/// </summary>
+		Object(std::string name, ast::Expression* expr)
+		{
+			this->name = name;
 			this->expr = expr;
 		}
 		/// <summary>

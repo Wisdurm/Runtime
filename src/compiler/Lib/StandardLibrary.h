@@ -49,7 +49,6 @@ namespace rt
 	{
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
-			// TODO: This should get values from the symbol table, however it should also use args??? Bruhhhh... :cry:
 			std::shared_ptr<Object> init = std::get<std::shared_ptr<Object>>(args.at(0)); // Main object to initialize
 			for (std::vector<objectOrValue>::iterator it = ++args.begin(); it != args.end(); ++it)
 			{

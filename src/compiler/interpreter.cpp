@@ -24,9 +24,7 @@ namespace rt
 				p = p->parent;
 		}
 
-		// Cannot find
-		// Create symbol ( possibly shadow built in functions; bruh )
-		// Also this is the only part of the code where objects are created, how simple :DDDDDDDD:D:D::D:D:D.d.a.da.d.awd.....ad...hghhh....hnhgh..h....
+		// Cannot find, create symbol
 		// TODO: THIS SHOULD GET A REFERENCE TO A PARAMETERS IF SUCH EXISTS IN CURRENT SCOPE
 		std::shared_ptr<Object> zero = std::make_shared<Object>(key);
 		updateSymbol(key, zero);
@@ -65,7 +63,6 @@ namespace rt
 	/// Root symbol table of the program
 	/// </summary>
 	static SymbolTable globalSymtab = SymbolTable({ 
-		{"Main", std::make_shared<Object>("Main")},
 		{"Print", Print },
 		{"Object", ObjectF }
 		});
@@ -113,7 +110,7 @@ namespace rt
 		else if (dynamic_cast<ast::Literal*>(expr) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Literal*>(expr);
-			return node->lit_value;
+			return node->litValue;
 		}
 		else if (dynamic_cast<ast::Call*>(expr) != nullptr)
 		{
@@ -125,6 +122,9 @@ namespace rt
 			{
 				// Do not evaluate here
 				args.push_back(interpret_interal(arg, symtab, false));
+
+				// Even if not called, this might still be useful for evaluation purposes
+				// Evaluate the situtation (pun intended)
 			}
 
 			if (call)
@@ -141,7 +141,7 @@ namespace rt
 			}
 			else
 			{
-				return std::make_shared<Object>(expr);
+				return std::make_shared<Object>(node->name, expr);
 			}
 		}
 		else if (dynamic_cast<ast::BinaryOperator*>(expr) != nullptr)
@@ -163,10 +163,7 @@ namespace rt
 			if (object.get()->getExpression() != nullptr) // Parse expression
 			{
 				auto r = interpret_interal(object.get()->getExpression(), symtab, true);
-				if (std::holds_alternative<std::shared_ptr<Object>>(r))
-					return evaluate(r, symtab);
-				else
-					return std::get<ast::value>(r);
+				return evaluate(r, symtab);
 			}
 			else if (auto members = object.get()->getMembers(); members.size() > 0)
 			{

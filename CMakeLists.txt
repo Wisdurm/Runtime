@@ -1,6 +1,8 @@
 ﻿# CMakeList.txt : CMake project for Runtime, include source and define
 # project specific logic here.
 #
+
+# Specify C++ 20
 add_compile_options(-std=c++20)
 
 cmake_minimum_required (VERSION 3.8)
@@ -18,7 +20,5 @@ endif()
 add_subdirectory(src)
 add_subdirectory(tests)
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET Runtime PROPERTY CXX_STANDARD 20)
-  set_property(TARGET tests PROPERTY CXX_STANDARD 20)
-endif()
+set_property(TARGET Runtime PROPERTY CXX_STANDARD 20)
+set_property(TARGET tests PROPERTY CXX_STANDARD 20)

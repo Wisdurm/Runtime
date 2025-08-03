@@ -1,0 +1,13 @@
+name: "Catch2 - Tests"
+# 100% this doesn't work but whatever, I don't give a swag
+on: push
+
+jobs:
+  build:
+    runs-on: "linux"
+    steps:
+      - name: "Build"
+        run: "cmake --build build"
+
+      - name: "test"
+        run: "./build/tests"
