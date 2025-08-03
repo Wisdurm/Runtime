@@ -7,7 +7,9 @@ jobs:
     runs-on: "linux"
     steps:
       - name: "Build"
-        run: "cmake --build build"
+        run: |
+          cmake -S . -B build \
+          cmake --build build 
 
       - name: "test"
         run: "./build/tests"
