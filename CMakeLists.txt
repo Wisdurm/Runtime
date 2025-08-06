@@ -29,7 +29,7 @@ if (RUNTIME_BUILD_TESTS)
 	enable_testing()
 	add_test(
 		NAME Runtime_test
-		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/tests
+		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/tests_runtime
 	)
 endif()
 # Enforce C++ 20 (again)
