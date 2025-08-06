@@ -1,6 +1,4 @@
-﻿# CMakeList.txt : CMake project for Runtime, include source and define
-# project specific logic here.
-#
+﻿# Root CMakeLists.txt
 
 # Specify C++ 20
 add_compile_options(-std=c++20)
@@ -8,8 +6,13 @@ add_compile_options(-std=c++20)
 cmake_minimum_required (VERSION 3.8)
 project (Runtime)
 
+# Options
+option(RUNTIME_BUILD_TESTS "Configure and build tests" TRUE)
+
 # Output
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
+if(NOT MSVC)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
+endif()
 
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
@@ -17,8 +20,16 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
+# Main project CMake
 add_subdirectory(src)
-add_subdirectory(tests)
 
-set_property(TARGET Runtime PROPERTY CXX_STANDARD 20)
-set_property(TARGET tests PROPERTY CXX_STANDARD 20)
+# Tests
+if (RUNTIME_BUILD_TESTS)
+	add_subdirectory(tests)
+	enable_testing()
+	add_test(
+		NAME Runtime_test
+		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/tests
+	)
+endif()
+# Enforce C++ 20 (again)

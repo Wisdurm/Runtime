@@ -18,12 +18,9 @@ jobs:
           cmake \
           ninja-build \
 
-#      - name : "CMake"
-#        run: |
-#          cmake --preset basic-tests -GNinja \
-#            -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
-#            -DCMAKE_CXX_COMPILER=${{matrix.cxx}} \
-#            -DCMAKE_CXX_STANDARD=${{matrix.std}}
+      - name : "CMake"
+        run: |
+          cmake -S . -B build
 
       - name: "Build"
         run: |
@@ -31,4 +28,5 @@ jobs:
           ninja
 
       - name: "test"
-        run: "./build/tests"
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure

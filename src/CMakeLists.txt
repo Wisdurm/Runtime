@@ -1,3 +1,5 @@
+# Main project CMakeLists.txt
+
 # Add source to this project's executable.
 add_executable ( Runtime
 # Main
@@ -15,4 +17,9 @@ ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.h
 ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.cpp
 # Runtime standard libraries
 ${CMAKE_SOURCE_DIR}/src/compiler/Lib/StandardLibrary.h
- "flowgraph.cpp")
+# Other
+# TODO: flowgraph
+)
+
+# Enforce C++ 20 (again)
+set_property(TARGET Runtime PROPERTY CXX_STANDARD 20)
