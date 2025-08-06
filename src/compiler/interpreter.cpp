@@ -1,5 +1,5 @@
 #include "interpreter.h"
-#include "Lib/StandardLibrary.h"
+#include "Stlib/StandardLibrary.h"
 // C++
 #include <vector>
 
@@ -141,7 +141,7 @@ namespace rt
 			}
 			else
 			{
-				return std::make_shared<Object>(node->name, expr);
+				return std::make_shared<Object>(node->name, node);
 			}
 		}
 		else if (dynamic_cast<ast::BinaryOperator*>(expr) != nullptr)

@@ -54,6 +54,7 @@ namespace rt
 			{
 				init.get()->addMember(*it);
 			}
+			return init;
 		}
 		return Zero;
 	}
