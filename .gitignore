@@ -8,6 +8,9 @@ CMakeCache.txt
 CMakeFiles/
 *.cmake
 
+# Testing
+Testing/
+
 # Prerequisites
 *.d
 
