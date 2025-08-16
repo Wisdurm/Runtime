@@ -15,3 +15,4 @@ Use the Ninja build system
 
 ## Documentation
 TODO:
+TODO: Fix all "todos" before publishing code

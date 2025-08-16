@@ -48,6 +48,15 @@ namespace rt
 			parent->clear();
 	}
 
+	static void clearSymtab(SymbolTable& symtab)
+	{
+		symtab = SymbolTable({
+			{"Print", Print },
+			{"Object", ObjectF },
+			{"Assign", Assign}
+		});
+	}
+
 	// Interpreter
 
 	/// <summary>
@@ -62,10 +71,7 @@ namespace rt
 	/// <summary>
 	/// Root symbol table of the program
 	/// </summary>
-	static SymbolTable globalSymtab = SymbolTable({ 
-		{"Print", Print },
-		{"Object", ObjectF }
-		});
+	static SymbolTable globalSymtab;
 	/// <summary>
 	/// Internal recursive function for interpreting an ast tree
 	/// </summary>
@@ -86,6 +92,7 @@ namespace rt
 
 	std::string* interpretAndReturn(ast::Expression* expr)
 	{
+		clearSymtab(globalSymtab);
 		capture = true;
 		capturedCout.clear();
 		interpret_interal(expr, &globalSymtab, true);

@@ -170,6 +170,34 @@ namespace rt
 				throw;
 			}
 		};
+		/// <summary>
+		/// Sets the value of "key" to "value"
+		/// </summary>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		void setMember(ast::value key, objectOrValue& value)
+		{
+			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
+			if (std::holds_alternative<long>(key.valueHeld)) // Number
+			{
+				int memberKey = std::get<long>(key.valueHeld);
+				members.erase(memberKey);
+				addMember(value, memberKey);
+			}
+			else if (std::holds_alternative<double>(key.valueHeld)) // Decimal
+			{
+				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
+				members.erase(memberKey);
+				addMember(value, memberKey);
+			}
+			else
+			{
+				std::string memberKey = std::get<std::string>(key.valueHeld); // String
+				members.erase(memberStringMap.at(memberKey));
+				memberStringMap.erase(memberKey);
+				addMember(value, memberKey);
+			}
+		}
 	private:
 		/// <summary>
 		/// Name of the object

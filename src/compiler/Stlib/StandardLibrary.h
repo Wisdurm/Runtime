@@ -8,7 +8,7 @@
 
 namespace rt
 {
-	static ast::value Zero = ast::value(0);
+	static const ast::value Zero = ast::value(0);
 	/// <summary>
 	/// Prints a value to the standard output
 	/// </summary>
@@ -40,6 +40,7 @@ namespace rt
 		std::cout << std::endl;
 		return Zero;
 	}
+
 	/// <summary>
 	/// Initializes object with specified arguments
 	/// </summary>
@@ -55,6 +56,25 @@ namespace rt
 				init.get()->addMember(*it);
 			}
 			return init;
+		}
+		return Zero;
+	}
+
+	/// <summary>
+	/// Assigns a value to an object/member
+	/// </summary>
+	/// <param name="args">First arg is object/member to assign to, second one is the key of the member and the third one is the value to assign</param>
+	/// <returns></returns>
+	objectOrValue Assign(std::vector<objectOrValue>& args, SymbolTable* symtab)
+	{
+		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
+		{
+			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
+			if (std::holds_alternative<ast::value>(args.at(1)))
+			{
+				ast::value key = std::get<ast::value>(args.at(1));
+				assignee.get()->setMember(key, args.at(2));
+			}
 		}
 		return Zero;
 	}
