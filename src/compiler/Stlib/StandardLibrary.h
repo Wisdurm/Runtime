@@ -34,10 +34,11 @@ namespace rt
 			// Print
 			if (isCapture())
 				captureString(output);
-			// TODO: Add else clause if not debugging
-			std::cout << output;
+			else // Remove else clause if debugging output
+				std::cout << output;
 		}
-		std::cout << std::endl;
+		if (not isCapture)
+			std::cout << std::endl;
 		return Zero;
 	}
 

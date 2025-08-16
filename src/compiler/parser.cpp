@@ -32,28 +32,30 @@ namespace rt
 		return token;
 	};
 
-	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens);
-	static ast::Expression* parseLiteral(const std::vector<Token>& tokens);
+	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens, const bool parseSingle);
+	static ast::Expression* parseLiteral(const std::vector<Token>& tokens, const bool parseSingle);
 	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
 	static ast::Expression* parseFunction(const std::vector<Token>& tokens, std::string functionName);
+	static ast::Expression* parseBinaryLeft(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
 
 	/// <summary>
 	/// Main function for parsing an expression, will branch off to more specific functions
 	/// </summary>
+	/// <param name="parseSingle">Whether or not to parse - tokens</param>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseExpression(const std::vector<Token>& tokens)
+	static ast::Expression* parseExpression(const std::vector<Token>& tokens, const bool parseSingle)
 	{
 		ast::Expression* left;
 		switch (peek(tokens).getType())
 		{
 		case TokenType::IDENTIFIER:
 		{
-			left = parseIdentifier(tokens);
+			left = parseIdentifier(tokens, parseSingle);
 			break;
 		}
 		case TokenType::LITERAL:
 		{
-			left = parseLiteral(tokens);
+			left = parseLiteral(tokens, parseSingle);
 			break;
 		}
 		default:
@@ -70,7 +72,7 @@ namespace rt
 	/// Parse identifier token
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens)
+	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens, const bool parseSingle)
 	{
 		Token token = consume(tokens);
 		if (*peek(tokens).getText() == "(") // Identifier being called
@@ -79,10 +81,9 @@ namespace rt
 		{
 			ast::Expression* node = new ast::Identifier(token.getSrc(), *token.getText());
 
-			if (*peek(tokens).getText() == "-") // Member being accessed
+			if (*peek(tokens).getText() == "-" and !parseSingle) // Member being accessed
 			{
-				consume(tokens, "-");
-				return new ast::BinaryOperator(node->src, node, parseExpression(tokens));
+				return parseBinaryLeft(tokens, node);
 			}
 			else
 				return node;
@@ -93,7 +94,7 @@ namespace rt
 	/// Parse literal token
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseLiteral(const std::vector<Token>& tokens)
+	static ast::Expression* parseLiteral(const std::vector<Token>& tokens, const bool parseSingle)
 	{
 		Token token = consume(tokens);
 		if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
@@ -122,13 +123,31 @@ namespace rt
 			consume(tokens, ")");
 			return new ast::UnaryOperator(token.getSrc(), node);
 		}
-		else if (*peek(tokens).getText() == "-") // Accessing deeper level member
+		else if (*peek(tokens).getText() == "-" and !parseSingle) // Accessing deeper level member
 		{
-			consume(tokens, "-");
-			return new ast::BinaryOperator(node->src, node, parseExpression(tokens));
+			return parseBinaryLeft(tokens, node);
 		}
 		else
 			return node;
+	}
+
+	/// <summary>
+	/// Parses binary operator with left assosiatety
+	/// </summary>
+	/// <returns></returns>
+	static ast::Expression* parseBinaryLeft(const std::vector<Token>& tokens, ast::Expression* left)
+	{
+		while (*peek(tokens).getText() == "-")
+		{
+			consume(tokens, "-");
+			auto right = parseExpression(tokens, true);
+			left = new ast::BinaryOperator(peek(tokens).getSrc(),
+				left,
+				right
+			);
+		}
+
+		return left;
 	}
 
 	/// <summary>
@@ -159,7 +178,7 @@ namespace rt
 		std::vector<ast::Expression*> args;
 		while (*peek(tokens).getText() != ")")
 		{
-			args.push_back(parseExpression(tokens));
+			args.push_back(parseExpression(tokens, false));
 			if (*peek(tokens).getText() == ",")
 				consume(tokens, ",");
 		}
@@ -177,7 +196,7 @@ namespace rt
 		args.push_back(new ast::Identifier(peek(tokens).getSrc(), "Main"));
 		while (peek(tokens).getType() != TokenType::END)
 		{
-			args.push_back(parseExpression(tokens));
+			args.push_back(parseExpression(tokens, false));
 		}
 		return new ast::Call(peek(tokens).getSrc(), "Object", args);
 	}
@@ -186,7 +205,7 @@ namespace rt
 	{
 		pos = 0;
 		if (*tokens[3].getText() == "Main") // Check for main function
-			return parseExpression(tokens);
+			return parseExpression(tokens, false);
 		else
 			return parseMain(tokens);
 	}

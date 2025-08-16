@@ -32,4 +32,3 @@ if (RUNTIME_BUILD_TESTS)
 		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests_runtime
 	)
 endif()
-# Enforce C++ 20 (again)

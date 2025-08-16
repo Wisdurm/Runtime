@@ -100,6 +100,17 @@ namespace rt
 		}
 
 		/// <summary>
+		/// Creates an empty unnamed object with a single value as a member
+		/// </summary>
+		/// <param name="value"></param>
+		Object(ast::value& value)
+		{
+			name = "";
+			expr = nullptr;
+			addMember(value);
+		}
+
+		/// <summary>
 		/// Return name member
 		/// </summary>
 		/// <returns></returns>
@@ -114,13 +125,53 @@ namespace rt
 		/// </summary>
 		/// <param name="key">Index</param>
 		/// <returns></returns>
-		objectOrValue* getMember(int key) { return &members[key]; };
+		objectOrValue* getMember(int key) 
+		{
+			// If exists, return
+			std::unordered_map<int, objectOrValue>::iterator it = members.find(key);
+			if (it != members.end()) // Exists
+				return &(it->second);
+			// if not exist, create
+			addMember(key);
+			return getMember(key);
+		};
 		/// <summary>
 		/// Returns member by name
 		/// </summary>
 		/// <param name="key">Name</param>
 		/// <returns></returns>
-		objectOrValue* getMember(std::string name) { return &members[memberStringMap[name]]; }; // TODO: idfk man
+		objectOrValue* getMember(std::string name)
+		{ 
+			// If exists, return
+			std::unordered_map<std::string, int>::iterator it = memberStringMap.find(name);
+			if (it != memberStringMap.end()) // Exists
+				return &members[it->second];
+			// if not exist, create
+			addMember(name);
+			return getMember(name);
+		}; // TODO: idfk man
+		/// <summary>
+		/// Returns member by key
+		/// </summary>
+		/// <returns></returns>
+		objectOrValue* getMember(ast::value key)
+		{
+			if (std::holds_alternative<long>(key.valueHeld)) // Number
+			{
+				int memberKey = std::get<long>(key.valueHeld);
+				return getMember(memberKey);
+			}
+			else if (std::holds_alternative<double>(key.valueHeld)) // Decimal
+			{
+				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
+				return getMember(memberKey);
+			}
+			else
+			{
+				std::string memberKey = std::get<std::string>(key.valueHeld); // String
+				return getMember(memberKey);
+			}
+		}
 		/// <summary>
 		/// Returns a vector containing all of the members
 		/// </summary>
@@ -135,6 +186,33 @@ namespace rt
 			return r; 
 		};
 		/// <summary>
+		/// Add member with just int key
+		/// </summary>
+		/// <param name="key"></param>
+		void addMember(int key)
+		{
+			members.insert({key, std::make_shared<Object>()});
+		}
+		/// <summary>
+		/// Add member with just string key
+		/// </summary>
+		/// <param name="key"></param>
+		void addMember(std::string key)
+		{
+			if (not members.contains(counter))
+			{
+				members.insert({counter, std::make_shared<Object>() });
+				memberStringMap.insert({ key, counter });
+				counter++;
+			}
+			else
+			{
+				// TODO i wanna cry I don't want to implement this stupid ass way of doing things
+				// Hoping I figure out something better
+				throw;
+			}
+		}
+		/// <summary>
 		/// Adds member with int key
 		/// </summary>
 		/// <param name="member"></param>
@@ -144,7 +222,12 @@ namespace rt
 				counter++;
 			members.insert({ key, member });
 		};
-		void addMember(objectOrValue& member)
+
+		/// <summary>
+		/// Add member with no key
+		/// </summary>
+		/// <param name="member"></param>
+		void addMember(objectOrValue member)
 		{
 			// TODO this can fuck up due to counter shenanigans.
 			// TODO: cry
@@ -197,6 +280,18 @@ namespace rt
 				memberStringMap.erase(memberKey);
 				addMember(value, memberKey);
 			}
+		}
+
+		/// <summary>
+		/// Creates an object from an ast::value
+		/// </summary>
+		/// <param name=""></param>
+		/// <returns></returns>
+		static std::shared_ptr<Object> objectFromValue(ast::value value)
+		{
+			// TODO: Might not be needed, depends...
+			// Remember the constructor associated with this!
+			return std::make_shared<Object>(value);
 		}
 	private:
 		/// <summary>

@@ -78,12 +78,17 @@ namespace rt
 	/// <param name="expr">Ast node to interpret</param>
 	/// <param name="call">Whether or not to evaluate call values</param>
 	/// <returns>The value of the node</returns>
-	const objectOrValue interpret_interal(ast::Expression* expr, SymbolTable* symtab, bool call);
+	const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call);
 	/// <summary>
 	/// Calls object
 	/// </summary>
 	/// <param name="object"></param>
 	void call(Object* object, SymbolTable* symtab);
+
+	/// <summary>
+	/// Whether or not members can be initialized by reference (ie. obj-0)
+	/// </summary>
+	static bool memberInitialization;
 
 	void captureString(std::string str)
 	{
@@ -92,11 +97,13 @@ namespace rt
 
 	std::string* interpretAndReturn(ast::Expression* expr)
 	{
+		memberInitialization = false;
 		clearSymtab(globalSymtab);
 		capture = true;
 		capturedCout.clear();
-		interpret_interal(expr, &globalSymtab, true);
+		interpret_internal(expr, &globalSymtab, true);
 		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main"));
+		memberInitialization = true;
 		call(main.get(), &globalSymtab);
 		return capturedCout.data();
 	}
@@ -104,10 +111,10 @@ namespace rt
 	void interpret(ast::Expression* expr)
 	{
 		capture = false;
-		interpret_interal(expr, &globalSymtab, false);
+		interpret_internal(expr, &globalSymtab, false);
 	}
 
-	const objectOrValue interpret_interal(ast::Expression* expr, SymbolTable* symtab, bool call)
+	const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call)
 	{
 		if (dynamic_cast<ast::Identifier*>(expr) != nullptr)
 		{
@@ -128,7 +135,7 @@ namespace rt
 			for (auto arg : node->args)
 			{
 				// Do not evaluate here
-				args.push_back(interpret_interal(arg, symtab, false));
+				args.push_back(interpret_internal(arg, symtab, false));
 
 				// Even if not called, this might still be useful for evaluation purposes
 				// Evaluate the situtation (pun intended)
@@ -153,7 +160,17 @@ namespace rt
 		}
 		else if (dynamic_cast<ast::BinaryOperator*>(expr) != nullptr)
 		{
-			throw; //TODO
+			auto node = dynamic_cast<ast::BinaryOperator*>(expr);
+			if (memberInitialization)
+			{
+				std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true));
+				ast::value member = std::get<ast::value>(interpret_internal(node->right, symtab, true));
+				return *(object->getMember(member));
+			}
+			else
+			{
+				return interpret_internal(node->left, symtab, false);
+			}
 		}
 		else if (dynamic_cast<ast::UnaryOperator*>(expr) != nullptr)
 		{
@@ -162,6 +179,7 @@ namespace rt
 		else
 			throw;
 	}
+
 	ast::value evaluate(objectOrValue member, SymbolTable* symtab)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
@@ -169,7 +187,7 @@ namespace rt
 			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
 			if (object.get()->getExpression() != nullptr) // Parse expression
 			{
-				auto r = interpret_interal(object.get()->getExpression(), symtab, true);
+				auto r = interpret_internal(object.get()->getExpression(), symtab, true);
 				return evaluate(r, symtab);
 			}
 			else if (auto members = object.get()->getMembers(); members.size() > 0)

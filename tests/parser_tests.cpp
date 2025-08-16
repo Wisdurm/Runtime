@@ -50,6 +50,14 @@ TEST_CASE("Evaluation parsing", "[parser]")
 	delete r3;
 }
 
+TEST_CASE("Nested members", "[parser]")
+{
+	const char* test1 = "obj-0-0";
+	ast::Expression* r1 = new ast::Call(L, "Object", { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::BinaryOperator(L, new ast::Identifier(L, "obj"), new ast::Literal(L,0) ), new ast::Literal(L,0))});
+	REQUIRE(*parse(tokenize(test1)) == *r1);
+	delete r1;
+}
+
 TEST_CASE("Parsing complex nested calls", "[parser]")
 {
 	const char* test1 = "i \n Object( body, Print(param1), Assign(param1-0, Add(param1(), 1)) )\nWhile(SmallerThan(i, 5), body(i) )";

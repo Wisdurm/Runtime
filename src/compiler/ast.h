@@ -215,15 +215,15 @@ namespace ast
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		BinaryOperator(const rt::SourceLocation src, const Expression* left, const Expression* right) : left(left), right(right), Expression(src) {};
+		BinaryOperator(const rt::SourceLocation src, Expression* left, Expression* right) : left(left), right(right), Expression(src) {};
 		/// <summary>
 		/// Left expression
 		/// </summary>
-		const Expression* left;
+		Expression* left;
 		/// <summary>
-		/// Left expression
+		/// Right expression
 		/// </summary>
-		const Expression* right;
+		Expression* right;
 	private:
 		/// <summary>
 		/// Compare two ast trees
@@ -247,11 +247,11 @@ namespace ast
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		UnaryOperator(const rt::SourceLocation src, const Expression* expr) : expr(expr), Expression(src) {};
+		UnaryOperator(const rt::SourceLocation src, Expression* expr) : expr(expr), Expression(src) {};
 		/// <summary>
 		/// Expression
 		/// </summary>
-		const Expression* expr;
+		Expression* expr;
 	private:
 		/// <summary>
 		/// Compare two ast trees
