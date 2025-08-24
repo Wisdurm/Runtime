@@ -38,11 +38,11 @@ namespace ast
 		/// <summary>
 		/// Current type of value
 		/// </summary>
-		const valueType type;
+		valueType type;
 		/// <summary>
 		/// Value of the class
 		/// </summary>
-		const std::variant<long, double, std::string> valueHeld;
+		std::variant<long, double, std::string> valueHeld;
 
 		// Operators
 
@@ -75,6 +75,12 @@ namespace ast
 			}
 			else
 				return false;
+		}
+		value& operator=(const value newValue)
+		{
+			valueHeld = newValue.valueHeld;
+			type = newValue.type;
+			return *this;
 		}
 	};
 
@@ -175,6 +181,9 @@ namespace ast
 	public:
 		~Call()
 		{
+			// Object
+			delete object;
+			// Args
 			for (int i = 0; i < args.size(); i++)
 				delete args[i];
 		}
@@ -182,11 +191,11 @@ namespace ast
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		Call(const rt::SourceLocation src, const std::string name, const std::vector<Expression*> args) : name(name), args(args), Expression(src) {};
+		Call(const rt::SourceLocation src, Expression* object, const std::vector<Expression*> args) : object(object), args(args), Expression(src) {};
 		/// <summary>
-		/// Name of object to call
+		/// Object to call
 		/// </summary>
-		const std::string name;
+		Expression* object;
 		/// <summary>
 		/// Arguments to call object with. Array of pointers because Expression is an abstract class
 		/// </summary>
@@ -224,34 +233,6 @@ namespace ast
 		/// Right expression
 		/// </summary>
 		Expression* right;
-	private:
-		/// <summary>
-		/// Compare two ast trees
-		/// </summary>
-		/// <param name="other">Ast node to compare against</param>
-		/// <returns>Whether or not the nodes are identical</returns>
-		bool compare(const Expression& other) const override;
-	};
-
-	/// <summary>
-	/// Ast expression for a unary operator (e.g. () )
-	/// </summary>
-	class UnaryOperator : public Expression
-	{
-	public:
-		~UnaryOperator()
-		{
-			delete expr;
-		}
-
-		/// <summary>
-		/// Default constructor
-		/// </summary>
-		UnaryOperator(const rt::SourceLocation src, Expression* expr) : expr(expr), Expression(src) {};
-		/// <summary>
-		/// Expression
-		/// </summary>
-		Expression* expr;
 	private:
 		/// <summary>
 		/// Compare two ast trees

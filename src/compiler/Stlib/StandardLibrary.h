@@ -35,7 +35,7 @@ namespace rt
 			if (isCapture())
 				captureString(output);
 			else // Remove else clause if debugging output
-				std::cout << output;
+				std::cout << output << std::endl;
 		}
 		if (not isCapture)
 			std::cout << std::endl;

@@ -1,7 +1,9 @@
 // Runtime
 #include "compiler/tokenizer.h"
 #include "compiler/parser.h"
-
+#include "flowgraph.h"
+// C++
+#include <iostream>
 //TODO: Rewrite, Redo, Reformat
 
 namespace rt
@@ -14,7 +16,7 @@ namespace rt
 	{
 		// TODO: Use Graphviz for visual graph
 	}
-	static std::string dot(ast::Expression* ast)
+	std::string dot(ast::Expression* ast)
 	{
 		// Quick way to print all info from object
 		if (dynamic_cast<ast::Identifier*>(ast) != nullptr)
@@ -37,7 +39,7 @@ namespace rt
 		else if (dynamic_cast<ast::Call*>(ast) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Call*>(ast);
-			std::cout << node->name << std::endl;
+			dot(node->object);
 			for (auto arg : node->args)
 			{
 				dot(arg);
@@ -48,11 +50,6 @@ namespace rt
 			auto node = dynamic_cast<ast::BinaryOperator*>(ast);
 			dot(const_cast<ast::Expression*>(node->left));
 			dot(const_cast<ast::Expression*>(node->right));
-		}
-		else if (dynamic_cast<ast::UnaryOperator*>(ast) != nullptr)
-		{
-			auto node = dynamic_cast<ast::UnaryOperator*>(ast);
-			dot(const_cast<ast::Expression*>(node->expr));
 		}
 		return "";
 	}

@@ -12,7 +12,7 @@ namespace rt
 	// Tokenizer
 	std::vector<Token> tokenize(const char* src)
 	{
-		int strLen = strlen(src);
+		//TODO, use std::string
 		// TODO: Implement srcLoc at later point
 		SourceLocation srcLoc = SourceLocation(-1, "\0");
 
@@ -63,7 +63,7 @@ namespace rt
 				do {
 					stringLiteral += src[srcI];
 					srcI++;
-					if (srcI > strLen)
+					if (srcI > srcLen)
 					{
 						throw;
 					}

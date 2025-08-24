@@ -34,8 +34,7 @@ namespace rt
 
 	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens, const bool parseSingle);
 	static ast::Expression* parseLiteral(const std::vector<Token>& tokens, const bool parseSingle);
-	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
-	static ast::Expression* parseFunction(const std::vector<Token>& tokens, std::string functionName);
+	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function);
 	static ast::Expression* parseBinaryLeft(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
 
 	/// <summary>
@@ -45,27 +44,28 @@ namespace rt
 	/// <returns>Ast tree</returns>
 	static ast::Expression* parseExpression(const std::vector<Token>& tokens, const bool parseSingle)
 	{
-		ast::Expression* left;
+		ast::Expression* expr;
 		switch (peek(tokens).getType())
 		{
 		case TokenType::IDENTIFIER:
 		{
-			left = parseIdentifier(tokens, parseSingle);
+			expr = parseIdentifier(tokens, parseSingle);
 			break;
 		}
 		case TokenType::LITERAL:
 		{
-			left = parseLiteral(tokens, parseSingle);
+			expr = parseLiteral(tokens, parseSingle);
 			break;
 		}
 		default:
 			throw;
 		}
-		if (peek(tokens).getType() == TokenType::PUNCTUATION)
-			return parsePunctuation(tokens, left);
-		else
-			return left;
-		throw;
+		ast::Expression* r = expr;
+		while (*peek(tokens).getText() == "(" and not parseSingle)
+		{
+			r = parseFunction(tokens, r);
+		}
+		return r;
 	}
 
 	/// <summary>
@@ -75,19 +75,14 @@ namespace rt
 	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens, const bool parseSingle)
 	{
 		Token token = consume(tokens);
-		if (*peek(tokens).getText() == "(") // Identifier being called
-			return parseFunction(tokens, *token.getText());
-		else
-		{
-			ast::Expression* node = new ast::Identifier(token.getSrc(), *token.getText());
+		ast::Expression* node = new ast::Identifier(token.getSrc(), *token.getText());
 
-			if (*peek(tokens).getText() == "-" and !parseSingle) // Member being accessed
-			{
-				return parseBinaryLeft(tokens, node);
-			}
-			else
-				return node;
+		if (*peek(tokens).getText() == "-" and !parseSingle) // Member being accessed
+		{
+			return parseBinaryLeft(tokens, node);
 		}
+		else
+			return node;
 	}
 
 	/// <summary>
@@ -117,13 +112,7 @@ namespace rt
 			node = new ast::Literal(token.getSrc(), std::stoi(*token.getText()));
 		}
 
-		if (*peek(tokens).getText() == "(") // Member value begin accessed
-		{
-			consume(tokens, "(");
-			consume(tokens, ")");
-			return new ast::UnaryOperator(token.getSrc(), node);
-		}
-		else if (*peek(tokens).getText() == "-" and !parseSingle) // Accessing deeper level member
+		if (*peek(tokens).getText() == "-" and !parseSingle) // Accessing deeper level member
 		{
 			return parseBinaryLeft(tokens, node);
 		}
@@ -146,33 +135,14 @@ namespace rt
 				right
 			);
 		}
-
 		return left;
-	}
-
-	/// <summary>
-	/// Parse punctuation token
-	/// </summary>
-	/// <param name="left">Left argument, for extra evaluation</param>
-	/// <returns>Ast tree</returns>
-	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens, ast::Expression* left)
-	{
-		if (*peek(tokens).getText() == "(")
-		{
-			consume(tokens, "(");
-			consume(tokens, ")");
-			ast::Expression* expr = new ast::UnaryOperator(peek(tokens).getSrc(), left);
-			return parsePunctuation(tokens, expr);
-		}
-		else
-			return left;
 	}
 
 	/// <summary>
 	/// Parse function
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseFunction(const std::vector<Token>& tokens, std::string functionName)
+	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function)
 	{
 		consume(tokens, "(");
 		std::vector<ast::Expression*> args;
@@ -183,7 +153,7 @@ namespace rt
 				consume(tokens, ",");
 		}
 		consume(tokens, ")");
-		return new ast::Call(peek(tokens).getSrc(), functionName, args);
+		return new ast::Call(peek(tokens).getSrc(), function, args);
 	}
 
 	/// <summary>
@@ -198,16 +168,23 @@ namespace rt
 		{
 			args.push_back(parseExpression(tokens, false));
 		}
-		return new ast::Call(peek(tokens).getSrc(), "Object", args);
+		return new ast::Call(peek(tokens).getSrc(), new ast::Identifier(SourceLocation(), "Object"), args);
 	}
 
-	ast::Expression* parse(const std::vector<Token>& tokens)
+	ast::Expression* parse(const std::vector<Token>& tokens, bool requireMain)
 	{
 		pos = 0;
-		if (*tokens[3].getText() == "Main") // Check for main function
+		if (requireMain) // True by default
+		{
+			if (*tokens[3].getText() == "Main") // Check for main function
+				return parseExpression(tokens, false);
+			else
+				return parseMain(tokens);
+		}
+		else // Don't use main function. This will only accept a single statement
+		{
 			return parseExpression(tokens, false);
-		else
-			return parseMain(tokens);
+		}
 	}
 }
 
@@ -244,7 +221,7 @@ namespace ast
 		try
 		{
 			const Call& otherCall = dynamic_cast<const Call&>(other);
-			if (name == otherCall.name and args.size() == otherCall.args.size())
+			if (*object == *otherCall.object and args.size() == otherCall.args.size())
 			{
 				// Now check all args
 				for (int i = 0; i < args.size(); i++)
@@ -269,19 +246,6 @@ namespace ast
 		{
 			const BinaryOperator& otherBinOp = dynamic_cast<const BinaryOperator&>(other);
 			return *left == *otherBinOp.left and *right == *otherBinOp.right;
-		}
-		catch (std::bad_cast e)
-		{
-			return false;
-		}
-	}
-
-	bool UnaryOperator::compare(const Expression& other) const
-	{
-		try
-		{
-			const UnaryOperator& otherUnOp = dynamic_cast<const UnaryOperator&>(other);
-			return *expr == *otherUnOp.expr;
 		}
 		catch (std::bad_cast e)
 		{

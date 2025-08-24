@@ -69,10 +69,6 @@ namespace rt
 	/// </summary>
 	static std::vector<std::string> capturedCout = {};
 	/// <summary>
-	/// Root symbol table of the program
-	/// </summary>
-	static SymbolTable globalSymtab;
-	/// <summary>
 	/// Internal recursive function for interpreting an ast tree
 	/// </summary>
 	/// <param name="expr">Ast node to interpret</param>
@@ -83,12 +79,24 @@ namespace rt
 	/// Calls object
 	/// </summary>
 	/// <param name="object"></param>
-	void call(Object* object, SymbolTable* symtab);
+	ast::value callObject(objectOrValue object, SymbolTable* symtab);
 
 	/// <summary>
 	/// Whether or not members can be initialized by reference (ie. obj-0)
 	/// </summary>
 	static bool memberInitialization;
+
+	void liveIntrepretSetup()
+	{
+		memberInitialization = true;
+		capture = false;
+		clearSymtab(globalSymtab);
+	}
+
+	void liveIntrepret(ast::Expression* expr)
+	{
+		interpret_internal(expr, &globalSymtab, true);
+	}
 
 	void captureString(std::string str)
 	{
@@ -104,14 +112,19 @@ namespace rt
 		interpret_internal(expr, &globalSymtab, true);
 		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main"));
 		memberInitialization = true;
-		call(main.get(), &globalSymtab);
+		callObject(main, &globalSymtab);
 		return capturedCout.data();
 	}
 
 	void interpret(ast::Expression* expr)
 	{
+		memberInitialization = false;
+		clearSymtab(globalSymtab);
 		capture = false;
-		interpret_internal(expr, &globalSymtab, false);
+		interpret_internal(expr, &globalSymtab, true);
+		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main"));
+		memberInitialization = true;
+		callObject(main, &globalSymtab);
 	}
 
 	const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call)
@@ -129,7 +142,30 @@ namespace rt
 		else if (dynamic_cast<ast::Call*>(expr) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Call*>(expr);
-			objectOrBuiltin called = symtab->lookUp(node->name);
+
+			objectOrBuiltin calledObject;
+			objectOrValue callee;
+			if (dynamic_cast<ast::Identifier*>(node->object) != nullptr) // First check for builtin since interpret_internal can't handle that
+			{
+				auto bn = dynamic_cast<ast::Identifier*>(node->object);
+				auto v = (symtab->lookUp(bn->name));
+				if (std::holds_alternative<BuiltIn>(v))
+				{
+					calledObject = std::get<BuiltIn>(v);
+				}
+				callee = std::make_shared<Object>(bn->name, node);
+			}
+			else // Not builtin function
+			{
+				callee = interpret_internal(node->object, symtab, false);
+				if (std::holds_alternative<std::shared_ptr<Object>>(callee)) // If object, call object
+				{
+					calledObject = std::get<std::shared_ptr<Object>>(callee);
+				}
+				else
+					return std::get<ast::value>(callee); // If value, return the value
+			}
+
 			// Get arguments	
 			std::vector<objectOrValue> args;
 			for (auto arg : node->args)
@@ -143,19 +179,19 @@ namespace rt
 
 			if (call)
 			{
-				if (std::holds_alternative<BuiltIn>(called)) // Call built-in
+				if (std::holds_alternative<BuiltIn>(calledObject)) // Call built-in
 				{
-					return std::get<BuiltIn>(called)(args, symtab);
+					return std::get<BuiltIn>(calledObject)(args, symtab);
 				}
 				else // Call Object
 				{
 					SymbolTable localSt = SymbolTable(symtab); // Going down in scope
-					throw; // TODO
+					return callObject(std::get<std::shared_ptr<Object>>(calledObject), &localSt);
 				}
 			}
 			else
 			{
-				return std::make_shared<Object>(node->name, node);
+				return callee;
 			}
 		}
 		else if (dynamic_cast<ast::BinaryOperator*>(expr) != nullptr)
@@ -171,10 +207,6 @@ namespace rt
 			{
 				return interpret_internal(node->left, symtab, false);
 			}
-		}
-		else if (dynamic_cast<ast::UnaryOperator*>(expr) != nullptr)
-		{
-			throw; //TODO
 		}
 		else
 			throw;
@@ -205,11 +237,23 @@ namespace rt
 		}
 	}
 
-	void call(Object* object, SymbolTable* symtab)
+	ast::value callObject(objectOrValue member, SymbolTable* symtab)
 	{
-		for (auto arg : object->getMembers())
+		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
-			evaluate(*arg, symtab);
+			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
+			// Evaluate all members, and return last one
+			auto members = object->getMembers();
+			for (int i = 0; i < members.size() - 1; i++) // All except last one
+			{
+				evaluate(*members[i], symtab);
+			}
+			// Return last member
+			return evaluate(*members[members.size() - 1], symtab);
+		}
+		else // If value, return value
+		{
+			return std::get<ast::value>(member);
 		}
 	}
 }

@@ -17,8 +17,9 @@ ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.h
 ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.cpp
 # Runtime standard libraries
 ${CMAKE_SOURCE_DIR}/src/compiler/Stlib/StandardLibrary.h
-# Other
-# TODO: flowgraph
+# Flowgraph
+${CMAKE_SOURCE_DIR}/src/flowgraph.cpp
+${CMAKE_SOURCE_DIR}/src/flowgraph.h
 )
 
 # Enforce C++ 20 (again)

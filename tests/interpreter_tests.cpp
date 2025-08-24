@@ -62,37 +62,45 @@ TEST_CASE("Member accession", "[interpreter]")
 	delete r2;
 
 	// Object(Main,
-	//	Assign(args, "Hello", "Hi")
-	//	Print(args-"Hello")
+	//	Assign(named, "Hello", "Hi")
+	//	Print(named-"Hello")
 	// )
 	// Expected output: "Hi"
 
 	const std::vector<std::string> test3 = { "Hi" };
-	ast::Expression* r3 = rt::parse(rt::tokenize("Assign(args, \"Hello\", \"Hi\")\nPrint(args-\"Hello\")"));
+	ast::Expression* r3 = rt::parse(rt::tokenize("Assign(named, \"Hello\", \"Hi\")\nPrint(named-\"Hello\")"));
 	REQUIRE(rt::interpretAndReturn(r3)[0] == test3.at(0));
 	delete r3;
 }
 
-TEST_CASE("Complex evaluation", "[interpreter]")
+TEST_CASE("Overcomplex evaluation", "[interpreter]")
 {
 	// Object(Main,
-	//	Object(args, Object("Hi", "Hello"), "Hello"),
+	//	Object(args, Object(nest, "Hi"), "Hello"),
 	//	Print(args-0-0)
 	// )
 	// Excepted output: "Hi"
 
-	// nightmare nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
+	// I can't reason out whether or not this should run, airing on the side of it can't because trying to ponder how it could makes me feel like I'm having a panic attack
+	ast::Expression* r1 = rt::parse(rt::tokenize("Object(args, Object(nest, \"Hi\"), \"Hello\")\nPrint(args-0-0)"));
+	REQUIRE_THROWS(rt::interpretAndReturn(r1));
+	delete r1;
 }
 
-TEST_CASE("Reference passing", "[interpreter]")
+TEST_CASE("Reference passing and explicit evaluation", "[interpreter]")
 {
 	// Object(Main,
 	//	Object(one, 1)
-	//	Object(value, one()) // Passed the value of one
+	//	Object(value, one-0) // Passed the value of one
 	//	Object(reference, one) // Passed a reference to one
 	//	Assign(one, 0, 2)
 	//	Print(value)
 	//	Print(reference)
 	// )
 	// Expected output: "1\n2"
+	std::string* test1 = new std::string[] { "1", "2" };
+	ast::Expression* r1 = rt::parse(rt::tokenize("Object(one, 1)\nObject(value, one-0)\nObject(reference, one)\nAssign(one, 0, 2)\nPrint(value)\nPrint(reference)"));
+	REQUIRE(*rt::interpretAndReturn(r1) == *test1);
+	delete r1;
+	delete []test1;
 }

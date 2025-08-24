@@ -32,6 +32,14 @@ typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn> objectOrBuiltin;
 namespace rt
 {
 	/// <summary>
+	/// Sets up the required variables for live interpreting
+	/// </summary>
+	void liveIntrepretSetup();
+	/// <summary>
+	/// Interprets in live cli session
+	/// </summary>
+	void liveIntrepret(ast::Expression* expr);
+	/// <summary>
 	/// Interprets ast tree
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
@@ -264,20 +272,25 @@ namespace rt
 			if (std::holds_alternative<long>(key.valueHeld)) // Number
 			{
 				int memberKey = std::get<long>(key.valueHeld);
-				members.erase(memberKey);
+				if (members.contains(memberKey))
+					members.erase(memberKey);
 				addMember(value, memberKey);
 			}
 			else if (std::holds_alternative<double>(key.valueHeld)) // Decimal
 			{
 				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
-				members.erase(memberKey);
+				if (members.contains(memberKey))
+					members.erase(memberKey);
 				addMember(value, memberKey);
 			}
 			else
 			{
 				std::string memberKey = std::get<std::string>(key.valueHeld); // String
-				members.erase(memberStringMap.at(memberKey));
-				memberStringMap.erase(memberKey);
+				if (memberStringMap.contains(memberKey))
+				{
+					members.erase(memberStringMap.at(memberKey));
+					memberStringMap.erase(memberKey);
+				}
 				addMember(value, memberKey);
 			}
 		}
@@ -369,4 +382,9 @@ namespace rt
 		/// </summary>
 		void clear();
 	};
+
+	/// <summary>
+	/// Root symbol table of the program
+	/// </summary>
+	static SymbolTable globalSymtab;
 }
