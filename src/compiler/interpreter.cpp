@@ -53,7 +53,8 @@ namespace rt
 		symtab = SymbolTable({
 			{"Print", Print },
 			{"Object", ObjectF },
-			{"Assign", Assign}
+			{"Assign", Assign},
+			{"Exit", Exit},
 		});
 	}
 
@@ -132,7 +133,11 @@ namespace rt
 		if (dynamic_cast<ast::Identifier*>(expr) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Identifier*>(expr);
-			return std::get<std::shared_ptr<Object>>(symtab->lookUp(node->name)); // :pray: :sob:
+			auto v = symtab->lookUp(node->name);
+			if (std::holds_alternative<std::shared_ptr<Object>>(v))
+				return std::get<std::shared_ptr<Object>>(v);
+			else
+				return nullptr;
 		}
 		else if (dynamic_cast<ast::Literal*>(expr) != nullptr)
 		{

@@ -79,4 +79,23 @@ namespace rt
 		}
 		return Zero;
 	}
+
+	/// <summary>
+	/// Exits
+	/// </summary>
+	/// <param name="args">First arg is exit code</param>
+	/// <param name="symtab"></param>
+	/// <returns></returns>
+	objectOrValue Exit(std::vector<objectOrValue>& args, SymbolTable* symtab)
+	{
+		if (args.size() > 0)
+		{
+			auto r = rt::evaluate(args.at(0), symtab);
+			if (r.type == ast::valueType::INT)
+				exit(std::get<long>(r.valueHeld));
+			else if (r.type == ast::valueType::DEC)
+				exit(std::get<double>(r.valueHeld));
+		}
+		exit(0);
+	}
 }

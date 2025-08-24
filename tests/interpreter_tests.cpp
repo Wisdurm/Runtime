@@ -71,6 +71,18 @@ TEST_CASE("Member accession", "[interpreter]")
 	ast::Expression* r3 = rt::parse(rt::tokenize("Assign(named, \"Hello\", \"Hi\")\nPrint(named-\"Hello\")"));
 	REQUIRE(rt::interpretAndReturn(r3)[0] == test3.at(0));
 	delete r3;
+
+	// Object(Main,
+	//	Object(zero, 0)
+	//	Object(values, "Hi", "Hello")
+	//	Print(values-zero())
+	// )
+	// Expected output: "Hi"
+
+	const std::vector<std::string> test4 = { "Hi" };
+	ast::Expression* r4 = rt::parse(rt::tokenize("Object(zero,0)\nObject(values,\"Hi\",\"Hello\")\nPrint(values-zero())"));
+	REQUIRE(rt::interpretAndReturn(r4)[0] == test4.at(0));
+	delete r4;
 }
 
 TEST_CASE("Overcomplex evaluation", "[interpreter]")
