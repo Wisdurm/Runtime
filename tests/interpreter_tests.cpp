@@ -60,6 +60,17 @@ TEST_CASE("Member accession", "[interpreter]")
 	ast::Expression* r2 = rt::parse(rt::tokenize("Assign(args-0, 0, \"Hi\")\nPrint(args-0-0)"));
 	REQUIRE(rt::interpretAndReturn(r2)[0] == test2.at(0));
 	delete r2;
+
+	// Object(Main,
+	//	Assign(args, "Hello", "Hi")
+	//	Print(args-"Hello")
+	// )
+	// Expected output: "Hi"
+
+	const std::vector<std::string> test3 = { "Hi" };
+	ast::Expression* r3 = rt::parse(rt::tokenize("Assign(args, \"Hello\", \"Hi\")\nPrint(args-\"Hello\")"));
+	REQUIRE(rt::interpretAndReturn(r3)[0] == test3.at(0));
+	delete r3;
 }
 
 TEST_CASE("Complex evaluation", "[interpreter]")
@@ -71,4 +82,17 @@ TEST_CASE("Complex evaluation", "[interpreter]")
 	// Excepted output: "Hi"
 
 	// nightmare nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
+}
+
+TEST_CASE("Reference passing", "[interpreter]")
+{
+	// Object(Main,
+	//	Object(one, 1)
+	//	Object(value, one()) // Passed the value of one
+	//	Object(reference, one) // Passed a reference to one
+	//	Assign(one, 0, 2)
+	//	Print(value)
+	//	Print(reference)
+	// )
+	// Expected output: "1\n2"
 }
