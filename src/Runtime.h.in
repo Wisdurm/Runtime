@@ -1,0 +1,2 @@
+﻿#pragma once
+#define RUNTIME_VERSION "v@Runtime_VERSION@"

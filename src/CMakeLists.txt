@@ -1,10 +1,11 @@
 # Main project CMakeLists.txt
+configure_file(
+	${CMAKE_SOURCE_DIR}/src/Runtime.h.in
+	${PROJECT_BINARY_DIR}/Runtime.h @ONLY)
 
-# Add source to this project's executable.
 add_executable ( Runtime
 # Main
 ${CMAKE_SOURCE_DIR}/src/Runtime.cpp
-${CMAKE_SOURCE_DIR}/src/Runtime.h
 # Tokenizer
 ${CMAKE_SOURCE_DIR}/src/compiler/tokenizer.cpp
 ${CMAKE_SOURCE_DIR}/src/compiler/tokenizer.h
@@ -22,5 +23,6 @@ ${CMAKE_SOURCE_DIR}/src/flowgraph.cpp
 ${CMAKE_SOURCE_DIR}/src/flowgraph.h
 )
 
+target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR})
 # Enforce C++ 20 (again)
 set_property(TARGET Runtime PROPERTY CXX_STANDARD 20)

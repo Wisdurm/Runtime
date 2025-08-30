@@ -4,7 +4,10 @@
 add_compile_options(-std=c++20)
 
 cmake_minimum_required (VERSION 3.8)
-project (Runtime)
+project (Runtime
+	LANGUAGES CXX
+	VERSION 0.8.3
+)
 
 # Options
 option(RUNTIME_BUILD_TESTS "Configure and build tests" TRUE)
