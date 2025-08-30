@@ -15,9 +15,9 @@ TEST_CASE("Object creation, basic evaluation and console output", "[interpreter]
 	// )
 	// Excepted output: "Hello world"
 
-	const std::vector<std::string> test1 = { "Hello world" };
+	const std::string test1 = "Hello world";
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(str, Print(\"NULL\"), Object(obj, \"Hello world\"))\nPrint(str)"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1.at(0)); // Print "Hello world", but not "NULL"
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1); // Print "Hello world", but not "NULL"
 	delete r1;
 }
 
@@ -30,9 +30,9 @@ TEST_CASE("Assignment", "[interpreter]")
 	// )
 	// Excepted output: "2"
 
-	const std::vector<std::string> test1 = { "2" };
+	const std::string test1 = "2";
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(num, 1)\nAssign(num, 0, 2)\nPrint(num)"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1.at(0));
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 	delete r1;
 }
 
@@ -45,9 +45,9 @@ TEST_CASE("Member accession", "[interpreter]")
 	// )
 	// Excepted output: "Hi"
 
-	const std::vector<std::string> test1 = { "Hi" };
+	const std::string test1 = "Hi";
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(args, \"Hi\", \"Hello\")\nargs-0\nPrint(args-0)"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1.at(0));
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 	delete r1;
 
 	// Object(Main,
@@ -56,9 +56,9 @@ TEST_CASE("Member accession", "[interpreter]")
 	// )
 	// Excepted output: "Hi"
 
-	const std::vector<std::string> test2 = { "Hi" };
+	const std::string test2 = "Hi";
 	ast::Expression* r2 = rt::parse(rt::tokenize("Assign(args-0, 0, \"Hi\")\nPrint(args-0-0)"));
-	REQUIRE(rt::interpretAndReturn(r2)[0] == test2.at(0));
+	REQUIRE(rt::interpretAndReturn(r2)[0] == test2);
 	delete r2;
 
 	// Object(Main,
@@ -67,9 +67,9 @@ TEST_CASE("Member accession", "[interpreter]")
 	// )
 	// Expected output: "Hi"
 
-	const std::vector<std::string> test3 = { "Hi" };
+	const std::string test3 = "Hi";
 	ast::Expression* r3 = rt::parse(rt::tokenize("Assign(named, \"Hello\", \"Hi\")\nPrint(named-\"Hello\")"));
-	REQUIRE(rt::interpretAndReturn(r3)[0] == test3.at(0));
+	REQUIRE(rt::interpretAndReturn(r3)[0] == test3);
 	delete r3;
 
 	// Object(Main,
@@ -79,9 +79,9 @@ TEST_CASE("Member accession", "[interpreter]")
 	// )
 	// Expected output: "Hi"
 
-	const std::vector<std::string> test4 = { "Hi" };
+	const std::string test4 = "Hi";
 	ast::Expression* r4 = rt::parse(rt::tokenize("Object(zero,0)\nObject(values,\"Hi\",\"Hello\")\nPrint(values-zero())"));
-	REQUIRE(rt::interpretAndReturn(r4)[0] == test4.at(0));
+	REQUIRE(rt::interpretAndReturn(r4)[0] == test4);
 	delete r4;
 }
 

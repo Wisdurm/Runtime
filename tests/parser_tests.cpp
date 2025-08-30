@@ -6,6 +6,10 @@
 // C++
 #include <variant>
 
+//TODO: REMOVE
+#include "../src/flowgraph.h"
+#include <iostream>
+
 /// <summary>
 /// Placeholder values for code locations
 /// </summary>
@@ -48,12 +52,17 @@ TEST_CASE("Evaluation parsing", "[parser]")
 	ast::Expression* r3 = new ast::Call(L, new ast::Identifier(L, "Object"), { new ast::Identifier(L,"Main"), new ast::Call(L,new ast::Call(L, new ast::Call(L, new ast::Identifier(L, "CountCars"), {}), {}), {})});
 	REQUIRE(*parse(tokenize(test3)) == *r3);
 	delete r3;
+	
+	const char* test4 = "Human-EyeColor()";
+	ast::Expression* r4 = new ast::Call(L, new ast::Identifier(L, "Object"), { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::Identifier(L, "Human"), new ast::Call(L, new ast::Identifier(L,"EyeColor"), {}))});
+	REQUIRE(*parse(tokenize(test4)) == *r4);
+	delete r4;
 }
 
 TEST_CASE("Nested members", "[parser]")
 {
-	const char* test1 = "obj-0-0";
-	ast::Expression* r1 = new ast::Call(L, new ast::Identifier(L, "Object"), { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::BinaryOperator(L, new ast::Identifier(L, "obj"), new ast::Literal(L,0) ), new ast::Literal(L,0))});
+	const char* test1 = "obj-0-1";
+	ast::Expression* r1 = new ast::Call(L, new ast::Identifier(L, "Object"), { new ast::Identifier(L,"Main"), new ast::BinaryOperator(L, new ast::BinaryOperator(L, new ast::Identifier(L, "obj"), new ast::Literal(L,0) ), new ast::Literal(L,1))});
 	REQUIRE(*parse(tokenize(test1)) == *r1);
 	delete r1;
 }

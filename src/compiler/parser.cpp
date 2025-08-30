@@ -32,8 +32,8 @@ namespace rt
 		return token;
 	};
 
-	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens, const bool parseSingle);
-	static ast::Expression* parseLiteral(const std::vector<Token>& tokens, const bool parseSingle);
+	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens);
+	static ast::Expression* parseLiteral(const std::vector<Token>& tokens);
 	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function);
 	static ast::Expression* parseBinaryLeft(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
 
@@ -41,83 +41,73 @@ namespace rt
 	/// Main function for parsing an expression, will branch off to more specific functions
 	/// </summary>
 	/// <param name="parseSingle">Whether or not to parse - tokens</param>
+	/// <param name="parsePure">If only pure expressions should be parsed (eq. no functions or binary operations). False by default</param>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseExpression(const std::vector<Token>& tokens, const bool parseSingle)
+	static ast::Expression* parseExpression(const std::vector<Token>& tokens, bool parsePure = false)
 	{
 		ast::Expression* expr;
 		switch (peek(tokens).getType())
 		{
 		case TokenType::IDENTIFIER:
 		{
-			expr = parseIdentifier(tokens, parseSingle);
+			expr = parseIdentifier(tokens);
+			parsePure = false;
 			break;
 		}
 		case TokenType::LITERAL:
 		{
-			expr = parseLiteral(tokens, parseSingle);
+			expr = parseLiteral(tokens);
 			break;
 		}
 		default:
 			throw;
 		}
-		ast::Expression* r = expr;
-		while (*peek(tokens).getText() == "(" and not parseSingle)
+
+		if (*peek(tokens).getText() == "-" and !parsePure) // Member being accessed
 		{
-			r = parseFunction(tokens, r);
+			expr = parseBinaryLeft(tokens, expr);
 		}
-		return r;
+
+		while (*peek(tokens).getText() == "(" and !parsePure)
+		{
+			expr = parseFunction(tokens, expr);
+		}
+		return expr;
 	}
 
 	/// <summary>
 	/// Parse identifier token
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens, const bool parseSingle)
+	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens)
 	{
 		Token token = consume(tokens);
-		ast::Expression* node = new ast::Identifier(token.getSrc(), *token.getText());
-
-		if (*peek(tokens).getText() == "-" and !parseSingle) // Member being accessed
-		{
-			return parseBinaryLeft(tokens, node);
-		}
-		else
-			return node;
+		return new ast::Identifier(token.getSrc(), *token.getText());
 	}
 
 	/// <summary>
 	/// Parse literal token
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseLiteral(const std::vector<Token>& tokens, const bool parseSingle)
+	static ast::Expression* parseLiteral(const std::vector<Token>& tokens)
 	{
 		Token token = consume(tokens);
 		if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
 		{	// Decimal literal
 			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
 		}
-
-		ast::Expression* node;
-
-		if ((*token.getText())[0] == '\"')
+		else if ((*token.getText())[0] == '\"')
 		{	// String literal
 			std::string stringValue = *token.getText();
 			// Remove quatation marks
 			stringValue.erase(0,1);
 			stringValue.pop_back();
-			node = new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
+			return new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
 		}
 		else
 		{	// Int literal
-			node = new ast::Literal(token.getSrc(), std::stoi(*token.getText()));
+			return new ast::Literal(token.getSrc(), std::stoi(*token.getText()));
 		}
-
-		if (*peek(tokens).getText() == "-" and !parseSingle) // Accessing deeper level member
-		{
-			return parseBinaryLeft(tokens, node);
-		}
-		else
-			return node;
 	}
 
 	/// <summary>
@@ -148,7 +138,7 @@ namespace rt
 		std::vector<ast::Expression*> args;
 		while (*peek(tokens).getText() != ")")
 		{
-			args.push_back(parseExpression(tokens, false));
+			args.push_back(parseExpression(tokens));
 			if (*peek(tokens).getText() == ",")
 				consume(tokens, ",");
 		}
@@ -166,7 +156,7 @@ namespace rt
 		args.push_back(new ast::Identifier(peek(tokens).getSrc(), "Main"));
 		while (peek(tokens).getType() != TokenType::END)
 		{
-			args.push_back(parseExpression(tokens, false));
+			args.push_back(parseExpression(tokens));
 		}
 		return new ast::Call(peek(tokens).getSrc(), new ast::Identifier(SourceLocation(), "Object"), args);
 	}
@@ -177,13 +167,13 @@ namespace rt
 		if (requireMain) // True by default
 		{
 			if (*tokens[3].getText() == "Main") // Check for main function
-				return parseExpression(tokens, false);
+				return parseExpression(tokens);
 			else
 				return parseMain(tokens);
 		}
 		else // Don't use main function. This will only accept a single statement
 		{
-			return parseExpression(tokens, false);
+			return parseExpression(tokens);
 		}
 	}
 }

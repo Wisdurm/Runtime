@@ -148,15 +148,22 @@ namespace rt
 		{
 			auto node = dynamic_cast<ast::Call*>(expr);
 
+			//TODO: The next 20 or so lines of code suck REALLY bad and I HATE THEM VERY MUCH
+			// THIS FUNCTION IS SOOOOO BAD BUT I REALLY DONT WANT TO REWRITE IT
+
 			objectOrBuiltin calledObject;
 			objectOrValue callee;
 			if (dynamic_cast<ast::Identifier*>(node->object) != nullptr) // First check for builtin since interpret_internal can't handle that
 			{
 				auto bn = dynamic_cast<ast::Identifier*>(node->object);
-				auto v = (symtab->lookUp(bn->name));
-				if (std::holds_alternative<BuiltIn>(v))
+				auto v = (symtab->lookUp(bn->name)); // Look up object in symtab
+				if (std::holds_alternative<BuiltIn>(v)) // Builtin
 				{
 					calledObject = std::get<BuiltIn>(v);
+				}
+				else // Not builtin
+				{
+					calledObject = std::get<std::shared_ptr<Object>>(v);
 				}
 				callee = std::make_shared<Object>(bn->name, node);
 			}

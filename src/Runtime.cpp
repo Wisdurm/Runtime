@@ -8,7 +8,7 @@
 // C++
 #include <iostream>
 
-#define RUNTIME_VERSION "v0.8.0"
+#define RUNTIME_VERSION "v0.8.2"
 
 int main(int argc, char* argv[])
 {
@@ -18,6 +18,8 @@ int main(int argc, char* argv[])
 	rt::liveIntrepretSetup();
 	while (true)
 	{
+		//TODO: Color changing text should work regardless of os
+		// include "windows.h" for windows colored text
 		std::cout << "\033[33m" << ">> " << "\033[37m";
 		std::string input;
 		std::getline(std::cin,input);
