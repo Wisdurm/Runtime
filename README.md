@@ -22,4 +22,8 @@ Use the Ninja build system
 
 ## Documentation
 TODO:
+* File input
+* Tests run succesfully on Linux
+* Commas might not be needed at all?
+* Final todo's
 TODO: Fix all "todos" before publishing code

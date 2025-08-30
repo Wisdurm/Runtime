@@ -1,7 +1,4 @@
 # Main project CMakeLists.txt
-configure_file(
-	${CMAKE_SOURCE_DIR}/src/Runtime.h.in
-	${PROJECT_BINARY_DIR}/Runtime.h @ONLY)
 
 add_executable ( Runtime
 # Main
@@ -23,6 +20,5 @@ ${CMAKE_SOURCE_DIR}/src/flowgraph.cpp
 ${CMAKE_SOURCE_DIR}/src/flowgraph.h
 )
 
-target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR})
 # Enforce C++ 20 (again)
 set_property(TARGET Runtime PROPERTY CXX_STANDARD 20)

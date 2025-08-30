@@ -23,6 +23,7 @@
 
 int main(int argc, char* argv[])
 {
+	//TODO: file input
 #ifdef _WIN32
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE); 
 #endif // _WIN32

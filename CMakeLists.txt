@@ -3,10 +3,10 @@
 # Specify C++ 20
 add_compile_options(-std=c++20)
 
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.20)
 project (Runtime
 	LANGUAGES CXX
-	VERSION 0.8.3
+	VERSION 0.9.0
 )
 
 # Options
@@ -23,8 +23,14 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
+# Global vars
+configure_file(
+	${CMAKE_SOURCE_DIR}/src/Runtime.h.in
+	${PROJECT_BINARY_DIR}/Runtime.h @ONLY)
+
 # Main project CMake
 add_subdirectory(src)
+target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR})
 
 # Tests
 if (RUNTIME_BUILD_TESTS)
@@ -34,4 +40,5 @@ if (RUNTIME_BUILD_TESTS)
 		NAME Runtime_test
 		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests_runtime
 	)
+	target_include_directories(tests_runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
 endif()

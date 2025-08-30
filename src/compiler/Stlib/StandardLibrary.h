@@ -13,12 +13,12 @@ namespace rt
 	/// Prints a value to the standard output
 	/// </summary>
 	/// <param name="args">Value(s) to print</param>
-	objectOrValue Print(std::vector<objectOrValue>& args, SymbolTable* symtab)
+	objectOrValue Print(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		for (objectOrValue arg : args)
 		{
 			auto valueHeld(std::holds_alternative<std::shared_ptr<Object>>(arg) ? // If object
-				evaluate(std::get<std::shared_ptr<Object>>(arg), symtab).valueHeld : // Get value of object
+				evaluate(std::get<std::shared_ptr<Object>>(arg), symtab, argState).valueHeld : // Get value of object
 				std::get<ast::value>(arg).valueHeld // If value, just use value
 			);
 
@@ -47,7 +47,7 @@ namespace rt
 	/// </summary>
 	/// <param name="args"></param>
 	/// <returns></returns>
-	objectOrValue ObjectF(std::vector<objectOrValue>& args, SymbolTable* symtab)
+	objectOrValue ObjectF(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
@@ -56,7 +56,7 @@ namespace rt
 			{
 				init.get()->addMember(*it);
 			}
-			return init;
+			return Zero;
 		}
 		return Zero;
 	}
@@ -66,7 +66,7 @@ namespace rt
 	/// </summary>
 	/// <param name="args">First arg is object/member to assign to, second one is the key of the member and the third one is the value to assign</param>
 	/// <returns></returns>
-	objectOrValue Assign(std::vector<objectOrValue>& args, SymbolTable* symtab)
+	objectOrValue Assign(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
@@ -86,11 +86,11 @@ namespace rt
 	/// <param name="args">First arg is exit code</param>
 	/// <param name="symtab"></param>
 	/// <returns></returns>
-	objectOrValue Exit(std::vector<objectOrValue>& args, SymbolTable* symtab)
+	objectOrValue Exit(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		if (args.size() > 0)
 		{
-			auto r = rt::evaluate(args.at(0), symtab);
+			auto r = rt::evaluate(args.at(0), symtab, argState);
 			if (r.type == ast::valueType::INT)
 				exit(std::get<long>(r.valueHeld));
 			else if (r.type == ast::valueType::DEC)

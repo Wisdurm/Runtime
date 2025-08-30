@@ -14,6 +14,7 @@ namespace rt
 {
 	class Object;
 	class SymbolTable;
+	class ArgState;
 };
 
 /// <summary>
@@ -23,7 +24,7 @@ typedef std::variant<std::shared_ptr<rt::Object>, ast::value> objectOrValue;
 /// <summary>
 /// Built-in Runtime function
 /// </summary>
-typedef std::function<objectOrValue(std::vector<objectOrValue>&, rt::SymbolTable*)> BuiltIn;
+typedef std::function<objectOrValue(std::vector<objectOrValue>&, rt::SymbolTable*, rt::ArgState&)> BuiltIn;
 /// <summary>
 /// Type which symbol table points to. Either object, or a function object referencing a built in function.
 /// </summary>
@@ -49,7 +50,7 @@ namespace rt
 	/// </summary>
 	/// <param name="member">Member to evaluate</param>
 	/// <returns>An ast::value represting the ultimate value of the object</returns>
-	ast::value evaluate(objectOrValue member, SymbolTable* symtab);
+	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args);
 	/// <summary>
 	/// Interprets ast tree, and returns everything printed to cout
 	/// </summary>
@@ -369,8 +370,9 @@ namespace rt
 		/// Looks up a key from the symbol table and its parents
 		/// </summary>
 		/// <param name="key">Key to look for</param>
+		/// <param name="args">Arguments in current scope. If there are values here, they will be used instead of initializing a new one.</param>
 		/// <returns>The value of a key, if not found will create new empty value</returns>
-		objectOrBuiltin& lookUp(std::string key);
+		objectOrBuiltin& lookUp(std::string key, ArgState& args);
 		/// <summary>
 		/// Changes the value of a symbol, or adds a new one to the local scope if not found
 		/// </summary>
@@ -387,4 +389,49 @@ namespace rt
 	/// Root symbol table of the program
 	/// </summary>
 	static SymbolTable globalSymtab;
+
+	/// <summary>
+	/// Current state of arguments in the interpreter.
+	/// </summary>
+	class ArgState
+	{
+	private:
+		/// <summary>
+		/// Arguments currently
+		/// </summary>
+		std::vector<objectOrValue> args;
+		/// <summary>
+		/// Position of earliest argument currently yet to be initialized
+		/// </summary>
+		int pos;
+		/// <summary>
+		/// Arguments from higher level
+		/// </summary>
+		ArgState* parent;
+	public:
+		/// <summary>
+		/// Parent constructor
+		/// </summary>
+		ArgState(std::vector<objectOrValue>& args, ArgState* parent)
+		{
+			this->args = args;
+			pos = 0;
+			this->parent = parent;
+		};
+		/// <summary>
+		/// Parentless constructor
+		/// </summary>
+		ArgState(std::vector<objectOrValue>& args)
+		{
+			this->args = args;
+			pos = 0;
+			parent = nullptr;
+		};
+
+		/// <summary>
+		/// Returns a pointer to an argument, or nullptr if none exist.
+		/// </summary>
+		/// <returns></returns>
+		objectOrValue* getArg();
+	};
 }
