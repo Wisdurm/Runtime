@@ -46,10 +46,15 @@ namespace rt
 	/// <param name="astTree">Ast tree to be interpreted</param>
 	void interpret(ast::Expression* expr);
 	/// <summary>
+	/// Evaluates ast tree and adds all of an it's symbols to another symbol table
+	/// </summary>
+	/// <param name="expr"></param>
+	void include(ast::Expression* expr, SymbolTable* symtab, ArgState& argState);
+	/// <summary>
 	/// Returns the value of a member, derived from it's contained expression and other values.
 	/// </summary>
 	/// <param name="member">Member to evaluate</param>
-	/// <returns>An ast::value represting the ultimate value of the object</returns>
+	/// <returns>An ast::value representing the ultimate value of the object</returns>
 	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args);
 	/// <summary>
 	/// Interprets ast tree, and returns everything printed to cout
@@ -383,6 +388,12 @@ namespace rt
 		/// Clears the symbol table
 		/// </summary>
 		void clear();
+		/// <summary>
+		/// Whether or not the symbol table contains the specified key
+		/// </summary>
+		/// <param name="key">Key to look for</param>
+		/// <returns></returns>
+		bool contains(std::string& key);
 	};
 
 	/// <summary>

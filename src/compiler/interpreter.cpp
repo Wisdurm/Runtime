@@ -64,6 +64,24 @@ namespace rt
 		return lookUp(key, args);
 	}
 
+	bool SymbolTable::contains(std::string& key)
+	{
+		// Check if key exists
+		if (locals.contains(key))
+			return true;
+
+		auto p = parent;
+		while (p != nullptr) // Look for key in parent symbol table
+		{
+			// Check if key exists
+			if (p->locals.contains(key)) // Exists
+				return true;
+			else
+				p = p->parent;
+		}
+		return false;
+	}
+
 	void SymbolTable::updateSymbol(const std::string& key, const std::shared_ptr<Object> object)
 	{
 		// Check if key exists
@@ -88,6 +106,7 @@ namespace rt
 			{"Object", ObjectF },
 			{"Assign", Assign},
 			{"Exit", Exit},
+			{"Include", Include},
 		});
 	}
 
@@ -108,7 +127,7 @@ namespace rt
 	/// <param name="expr">Ast node to interpret</param>
 	/// <param name="call">Whether or not to evaluate call values</param>
 	/// <returns>The value of the node</returns>
-	const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& args);
+	static const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& args);
 	/// <summary>
 	/// Calls object
 	/// </summary>
@@ -167,6 +186,35 @@ namespace rt
 		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main", mainArgState));
 		memberInitialization = true;
 		callObject(main, &globalSymtab, mainArgState);
+	}
+
+	void include(ast::Expression* expr, SymbolTable* symtab, ArgState& argState)
+	{
+		// Don't forget "global" values before this was called
+		bool prev = memberInitialization;
+		memberInitialization = false;
+		// Rename main to avoid conflict (I know this is a hacky workaround, but every way of doing this is hacky)
+		auto node = dynamic_cast<ast::Call*>(expr);
+		delete (node->args[0]);
+		int mainCounter = 2;
+		std::string mainName;
+		while (true)
+		{
+			mainName = "Main";
+			mainName += std::to_string(mainCounter);
+			if (not symtab->contains(mainName))
+				break;
+			mainCounter++;
+		}
+		node->args[0] = new ast::Identifier(SourceLocation(), mainName);
+
+		//
+		interpret_internal(expr, symtab, true, argState);
+		std::shared_ptr<Object> mainObject = std::get<std::shared_ptr<Object>>((*symtab).lookUp(mainName, argState));
+		memberInitialization = true;
+		callObject(mainObject, &globalSymtab, mainArgState);
+		//
+		memberInitialization = prev;
 	}
 
 	const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& argState)

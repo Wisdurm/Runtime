@@ -92,17 +92,17 @@ namespace rt
 	static ast::Expression* parseLiteral(const std::vector<Token>& tokens)
 	{
 		Token token = consume(tokens);
-		if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
-		{	// Decimal literal
-			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
-		}
-		else if ((*token.getText())[0] == '\"')
+		if ((*token.getText())[0] == '\"')
 		{	// String literal
 			std::string stringValue = *token.getText();
 			// Remove quatation marks
 			stringValue.erase(0,1);
 			stringValue.pop_back();
 			return new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
+		}
+		else if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
+		{	// Decimal literal
+			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
 		}
 		else
 		{	// Int literal

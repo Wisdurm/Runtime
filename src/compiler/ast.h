@@ -199,7 +199,7 @@ namespace ast
 		/// <summary>
 		/// Arguments to call object with. Array of pointers because Expression is an abstract class
 		/// </summary>
-		const std::vector<Expression*> args; // I've spent hours on this
+		std::vector<Expression*> args; // I've spent hours on this
 	private:
 		/// <summary>
 		/// Compare two ast trees

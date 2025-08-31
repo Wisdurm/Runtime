@@ -1,8 +1,10 @@
 #pragma once
 // This file contains all the functions for the StandardLibrary in Runtime
 #include "../interpreter.h"
+#include "../parser.h"
 // C++
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <variant>
 
@@ -97,5 +99,43 @@ namespace rt
 				exit(std::get<double>(r.valueHeld));
 		}
 		exit(0);
+	}
+
+	/// <summary>
+	/// Includes a file in the current runtime
+	/// </summary>
+	/// <param name="args">Args are either the names of .rnt runtime files, or builtin libraries that end with .h</param>
+	/// <param name="symtab"></param>
+	/// <returns></returns>
+	objectOrValue Include(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		for (objectOrValue arg : args)
+		{
+			auto valueHeld(std::holds_alternative<std::shared_ptr<Object>>(arg) ? // If object
+				evaluate(std::get<std::shared_ptr<Object>>(arg), symtab, argState).valueHeld : // Get value of object
+				std::get<ast::value>(arg).valueHeld // If value, just use value
+			);
+			if (std::holds_alternative<std::string>(valueHeld)) // If string, try load file
+			{
+				std::string fileName = std::get<std::string>(valueHeld);
+				std::ifstream file;
+				// Open file
+				file.open(fileName, std::fstream::in);
+				if (file.fail())
+				{
+					std::cout << "Unable to open file " << fileName;
+					return Zero;
+				}
+				file.seekg(0, std::ios::end);
+				size_t size = file.tellg();
+				std::string fileText(size, ' ');
+				file.seekg(0);
+				file.read(&fileText[0], size);
+				file.close();
+
+				rt::include(rt::parse((rt::tokenize(fileText.c_str())), true), symtab, argState);
+			}
+		}
+		return Zero;
 	}
 }
