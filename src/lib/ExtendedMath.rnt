@@ -1,0 +1,32 @@
+# Pi
+Object(Pi, 3.141592)
+# Returns factorial of first argument
+Object(Factorial
+	Object(factorialResult)
+	Object(i, factorialResult)
+	While(LargerThan(i, 2)
+		Assign(i, 0,Minus(i, 1) )
+		Assign(factorialResult, 0, Multiply(factorialResult, i) )
+		)
+	Return(factorialResult)
+)
+# Returns the nth power of the first argument
+Object(Power
+	Object(exponentResult)
+	Object(i)
+	Object(origin, exponentResult())
+	While(LargerThan(i, 1)
+		Assign(i,0,Minus(i, 1))
+		Assign(exponentResult, 0, Multiply(exponentResult, origin) )
+		)
+	Return(exponentResult)
+)
+# Returns sine approximation of first argument (in radians)
+Object(Sine
+	Object(sineResult)
+	Object(num, sineResult)
+	Assign(sineResult,0, Minus(sineResult, Divide( Power(num,3) , Factorial(3) ) ) )
+	Assign(sineResult,0, Minus(sineResult, Divide( Power(num,5) , Factorial(5) ) ) )
+	Assign(sineResult,0, Minus(sineResult, Divide( Power(num,7) , Factorial(7) ) ) )
+	Return(sineResult)
+)

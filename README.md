@@ -8,7 +8,7 @@
 [![Catch2 - Tests](https://github.com/Wisdurm/Runtime/actions/workflows/tests.yml/badge.svg)](https://github.com/Wisdurm/Runtime/actions/workflows/tests.yml)
 
 # The Runtime programming language  
-Runtime is a very-high-level, lazily-evaluated, spaghetti-typed, object-necessitating, mostly-purely-functional, interpreted programming language.  
+Runtime is a very-high-level, questionably-evaluated, spaghetti-typed, object-necessitating, mostly-purely-functional, interpreted programming language.  
 This language was made for fun and practice, and is not intended to be used for practical purposes.
 
 ## Notes
@@ -22,10 +22,13 @@ Use the Ninja build system
 
 ## Documentation
 Objects can be called, or evaluated
+Commas are syntactic sugar, completely unnecessary
+
 TODO:
-* Rework Evaluation so that it doesn't work in a completely nonsensical and useless way
+* Rework Evaluation so that it doesn't work in a completely nonsensical and useless way ( Maybe done !? )
+* Add negative values
+* Src location
 * Tests run succesfully on Linux
-* Commas might not be needed at all
 * Cleanup comments:
   * Remove useless stuff
   * Comment more thouroughly

@@ -7,7 +7,7 @@
 
 namespace rt
 {
-	const char Token::punctuation[] = {'-','(', ')', ','};
+	const char Token::punctuation[] = {'-','(', ')', ',', '<', '>'};
 	
 	// Tokenizer
 	std::vector<Token> tokenize(const char* src)

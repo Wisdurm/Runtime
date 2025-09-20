@@ -63,7 +63,8 @@ int main(int argc, char* argv[])
 			WHITE_TEXT
 				std::string input;
 			std::getline(std::cin, input);
-			rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str()), false));
+			if (not input.empty())
+				rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str()), false));
 		}
 		return EXIT_SUCCESS;
 	}

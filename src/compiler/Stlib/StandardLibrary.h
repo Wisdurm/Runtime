@@ -1,5 +1,6 @@
 #pragma once
 // This file contains all the functions for the StandardLibrary in Runtime
+#include "StandardFiles.h"
 #include "../interpreter.h"
 #include "../parser.h"
 // C++
@@ -14,56 +15,19 @@
 
 namespace rt
 {
-	// Stack overflow
-	bool ichar_equals(char a, char b)
-	{
-		return std::tolower(static_cast<unsigned char>(a)) ==
-			std::tolower(static_cast<unsigned char>(b));
-	}
-	bool iequals(std::string_view lhs, std::string_view rhs)
-	{
-		return std::ranges::equal(lhs, rhs, ichar_equals);
-	}
-	// Evaluates a valueHeld as a bool
-	static bool toBoolean(std::variant<long, double, std::string> val)
-	{
-		if (std::holds_alternative<std::string>(val))
-		{
-			std::string str = std::get<std::string>(val);
-			if (iequals(str, "true"))
-				return true;
-			else if (iequals(str, "false"))
-				return false;
-			else
-			{
-				for (char c : str)
-				{
-					if (not isalnum(c) or c == '.') // If string is not "true", "false" or a number, then it can't be evaluated as a boolean
-						goto BAIL;
-				}
-				if (str.find('.') != std::string::npos)
-				{
-					return std::stod(str) >= 1;
-				}
-				else
-				{
-					return std::stoi(str) >= 1;
-				}
-			}
-		}
-		else if (std::holds_alternative<long>(val))
-		{
-			return std::get<long>(val) >= 1;
-		}
-		else
-		{
-			return std::get<double>(val) >= 1;
-		}
-	BAIL:
-		return 0;
-	}
-
 	static const ast::value Zero = ast::value(0);
+
+	/// <summary>
+	/// Returns the first argument
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue Return(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		return args.at(0);
+	}
 	/// <summary>
 	/// Prints a value to the standard output
 	/// </summary>
@@ -72,10 +36,7 @@ namespace rt
 	{
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld(std::holds_alternative<std::shared_ptr<Object>>(arg) ? // If object
-				evaluate(std::get<std::shared_ptr<Object>>(arg), symtab, argState, true).valueHeld : // Get value of object
-				std::get<ast::value>(arg).valueHeld // If value, just use value
-			);
+			auto valueHeld VALUEHELD(arg);
 
 			std::string output;
 			// Convert type to string
@@ -127,7 +88,7 @@ namespace rt
 		{
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
 			ast::value key = evaluate(args.at(1),symtab, argState, true);
-			assignee.get()->setMember(key, args.at(2));
+			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false)  );
 		}
 		return Zero;
 	}
@@ -161,10 +122,7 @@ namespace rt
 	{
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld(std::holds_alternative<std::shared_ptr<Object>>(arg) ? // If object
-				evaluate(std::get<std::shared_ptr<Object>>(arg), symtab, argState, true).valueHeld : // Get value of object
-				std::get<ast::value>(arg).valueHeld // If value, just use value
-			);
+			auto valueHeld VALUEHELD(arg);
 			if (std::holds_alternative<std::string>(valueHeld)) // If string, try load file
 			{
 				std::string fileName = std::get<std::string>(valueHeld);
@@ -200,21 +158,18 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			auto valueHeld(std::holds_alternative<std::shared_ptr<Object>>(args.at(0)) ? // If object
-				evaluate(std::get<std::shared_ptr<Object>>(args.at(0)), symtab, argState, true).valueHeld : // Get value of object
-				std::get<ast::value>(args.at(0)).valueHeld // If value, just use value
-			);
+			auto valueHeld VALUEHELD(args.at(0));
 			// Evaluate cond
 			bool cond = toBoolean(valueHeld);
 			
 			// Actual if statement
 			if (cond)
 			{
-				return callObject(args.at(1), symtab, argState, {});
+				return evaluate(args.at(1), symtab, argState, false);
 			}
 			else if (args.size() > 2)
 			{
-				return callObject(args.at(2), symtab, argState, {});
+				return evaluate(args.at(2), symtab, argState, false);
 			}
 		}
 		return Zero;
@@ -231,10 +186,7 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			while (toBoolean(
-				(std::holds_alternative<std::shared_ptr<Object>>(args.at(0)) ? // If object
-				evaluate(std::get<std::shared_ptr<Object>>(args.at(0)), symtab, argState, true).valueHeld : // Get value of object
-				std::get<ast::value>(args.at(0)).valueHeld)))// If value, just use value
+			while (toBoolean(VALUEHELD_E(args.at(0))))// If value, just use value
 			{ 
 				std::vector<objectOrValue>::iterator it = args.begin() + 1;
 				while (it != args.end())
@@ -243,6 +195,23 @@ namespace rt
 					it++;
 				}
 			}
+		}
+		return Zero;
+	}
+
+	/// <summary>
+	///	Inverts a boolean contained within
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue Not(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0)
+		{
+			auto valueHeld VALUEHELD(args.at(0));
+			return not toBoolean(valueHeld);
 		}
 		return Zero;
 	}

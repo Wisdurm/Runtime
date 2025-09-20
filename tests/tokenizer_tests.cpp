@@ -14,6 +14,5 @@ TEST_CASE("String tokenizing", "[token]")
 		rt::Token(")", rt::TokenType::PUNCTUATION), rt::Token("Object", rt::TokenType::IDENTIFIER), rt::Token("(", rt::TokenType::PUNCTUATION) ,rt::Token("\"Main\"", rt::TokenType::LITERAL),
 		rt::Token(",", rt::TokenType::PUNCTUATION), rt::Token("Zero", rt::TokenType::IDENTIFIER), rt::Token("-", rt::TokenType::PUNCTUATION), rt::Token("0", rt::TokenType::LITERAL), rt::Token(")", rt::TokenType::PUNCTUATION)
 	};
-
 	REQUIRE(rt::tokenize(test1) == r1);
 }

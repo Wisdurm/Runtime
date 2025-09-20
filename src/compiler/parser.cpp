@@ -135,6 +135,7 @@ namespace rt
 	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function)
 	{
 		consume(tokens, "(");
+		
 		std::vector<ast::Expression*> args;
 		while (*peek(tokens).getText() != ")")
 		{

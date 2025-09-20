@@ -105,18 +105,22 @@ namespace rt
 	static void clearSymtab(SymbolTable& symtab)
 	{
 		symtab = SymbolTable({
+			{"Return", Return },
 			{"Print", Print },
 			{"Object", ObjectF },
 			{"Assign", Assign},
 			{"Exit", Exit},
 			{"Include", Include},
+			{"Not", Not},
 			{"If", If},
 			{"While", While},
 			// Math
 			{"Add", Add},
 			{"Minus", Minus},
+			{"Multiply", Multiply},
 			{"Divide", Divide},
 			{"Mod", Mod},
+			{"LargerThan", LargerThan},
 		});
 	}
 
