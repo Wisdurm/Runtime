@@ -166,7 +166,7 @@ namespace rt
 		pos = 0;
 		if (requireMain) // True by default
 		{
-			if (*tokens[3].getText() == "Main") // Check for main function
+			if (*tokens[2].getText() == "Main") // Check for main function
 				return parseExpression(tokens);
 			else
 				return parseMain(tokens);

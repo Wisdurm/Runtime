@@ -27,6 +27,15 @@ TEST_CASE("Expression comparison", "[parser]")
 	delete r2;
 }
 
+TEST_CASE("Literals", "[parser]")
+{
+	const char* test1 = "Object(Main, 1, 1.2, \"1.2\")";
+	ast::Expression* r1 = new ast::Call(L, new ast::Identifier(L, "Object"), { new ast::Identifier(L,"Main"), new ast::Literal(L, 1), new ast::Literal(L, 1.2) , new ast::Literal(L, ast::value("1.2")) });
+	auto v = parse(tokenize(test1));
+	REQUIRE(*v == *r1);
+	delete r1;
+}
+
 TEST_CASE("Top level statements", "[parser]")
 {
 	// Test basic top level statements

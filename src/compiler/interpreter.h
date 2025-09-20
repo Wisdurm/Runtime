@@ -54,8 +54,14 @@ namespace rt
 	/// Returns the value of a member, derived from it's contained expression and other values.
 	/// </summary>
 	/// <param name="member">Member to evaluate</param>
+	/// <param name="write">Whether or not to write the evaluated value down. Function calls need to be able to repeatedly evaluate</param>
 	/// <returns>An ast::value representing the ultimate value of the object</returns>
-	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args);
+	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write);
+	/// <summary>
+	/// Calls object
+	/// </summary>
+	/// <param name="object"></param>
+	ast::value callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
 	/// <summary>
 	/// Interprets ast tree, and returns everything printed to cout
 	/// </summary>
@@ -300,7 +306,14 @@ namespace rt
 				addMember(value, memberKey);
 			}
 		}
-
+		/// <summary>
+		/// Deletes the expression of this object
+		/// </summary>
+		void deleteExpression()
+		{
+			//delete expr; // NOT SURE IF THIS SHOULD BE DELETED?
+			expr = nullptr;
+		}
 		/// <summary>
 		/// Creates an object from an ast::value
 		/// </summary>

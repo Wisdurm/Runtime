@@ -1,6 +1,7 @@
 #include "Runtime.h"
 #include "interpreter.h"
 #include "Stlib/StandardLibrary.h"
+#include "Stlib/StandardMath.h"
 // C++
 #include <vector>
 
@@ -44,7 +45,9 @@ namespace rt
 		}
 
 		// Cannot find, create symbol
-		// Only place where objects are created. Values are created in rt::evaluate
+#ifdef RUNTIME_DEBUG
+		std::cerr << "Empty object initialized";
+#endif // RUNTIME_DEBUG
 		auto v = args.getArg();
 		if (v != nullptr)
 		{
@@ -107,6 +110,13 @@ namespace rt
 			{"Assign", Assign},
 			{"Exit", Exit},
 			{"Include", Include},
+			{"If", If},
+			{"While", While},
+			// Math
+			{"Add", Add},
+			{"Minus", Minus},
+			{"Divide", Divide},
+			{"Mod", Mod},
 		});
 	}
 
@@ -128,12 +138,6 @@ namespace rt
 	/// <param name="call">Whether or not to evaluate call values</param>
 	/// <returns>The value of the node</returns>
 	static const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& args);
-	/// <summary>
-	/// Calls object
-	/// </summary>
-	/// <param name="object"></param>
-	ast::value callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
-
 	/// <summary>
 	/// Whether or not members can be initialized by reference (ie. obj-0)
 	/// </summary>
@@ -194,6 +198,7 @@ namespace rt
 		bool prev = memberInitialization;
 		memberInitialization = false;
 		// Rename main to avoid conflict (I know this is a hacky workaround, but every way of doing this is hacky)
+		// This could also be done in the parser step, which would probably be a lot smarter :thinking:
 		auto node = dynamic_cast<ast::Call*>(expr);
 		delete (node->args[0]);
 		int mainCounter = 2;
@@ -222,7 +227,7 @@ namespace rt
 		if (dynamic_cast<ast::Identifier*>(expr) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Identifier*>(expr);
-			auto v = symtab->lookUp(node->name, argState);
+			objectOrBuiltin v = symtab->lookUp(node->name, argState);
 			if (std::holds_alternative<std::shared_ptr<Object>>(v))
 				return std::get<std::shared_ptr<Object>>(v);
 			else
@@ -310,28 +315,35 @@ namespace rt
 			throw;
 	}
 
-	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState)
+	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
 			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
 			if (object.get()->getExpression() != nullptr) // Parse expression
 			{
-				auto r = interpret_internal(object.get()->getExpression(), symtab, true, argState);
-				return evaluate(r, symtab, argState);
+				auto r = evaluate(interpret_internal(object.get()->getExpression(), symtab, true, argState), symtab, argState, write);
+				if (write)
+				{
+#ifdef RUNTIME_DEBUG
+				std::cerr << "Value evaluated to memory";
+#endif // RUNTIME_DEBUG
+					object->addMember(r);
+					object->deleteExpression();
+				}
+				return r;
 			}
 			else if (auto members = object.get()->getMembers(); members.size() > 0)
 			{
-				return evaluate(**(--members.end()), symtab, argState); // Evaluate last member
+				return evaluate(**(--members.end()), symtab, argState, write); // Evaluate last member
 			}
 			else // No value, generate empty member
 			{
-				// Only place where values are created. Objects are created in rt::lookUp
 #ifdef RUNTIME_DEBUG
 				std::cerr << "Empty value initialized";
 #endif // RUNTIME_DEBUG
 				object->addMember(ast::value(0));
-				return evaluate(object, symtab, argState); // Not particularly efficient but it works
+				return evaluate(object, symtab, argState, write); // Not particularly efficient but it works
 			}
 		}
 		else // Value
@@ -357,10 +369,10 @@ namespace rt
 			{
 				for (int i = 0; i < members.size() - 1; i++) // All except last one
 				{
-					evaluate(*members[i], symtab, newArgState);
+					evaluate(*members[i], symtab, newArgState, false);
 				}
 				// Return last member
-				return evaluate(*members[members.size() - 1], symtab, newArgState);
+				return evaluate(*members[members.size() - 1], symtab, newArgState, false);
 			}
 			else
 			{

@@ -52,7 +52,7 @@ namespace rt
 				do {
 					intLiteral += src[srcI];
 					srcI++;
-				} while (isdigit(src[srcI]));
+				} while (isdigit(src[srcI]) or src[srcI] == '.');
 				tokens.push_back(Token(intLiteral, TokenType::LITERAL, srcLoc));
 			}		
 			// Check for string literal

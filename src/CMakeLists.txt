@@ -15,6 +15,7 @@ ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.h
 ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.cpp
 # Runtime standard libraries
 ${CMAKE_SOURCE_DIR}/src/compiler/Stlib/StandardLibrary.h
+${CMAKE_SOURCE_DIR}/src/compiler/Stlib/StandardMath.h
 # Flowgraph
 ${CMAKE_SOURCE_DIR}/src/flowgraph.cpp
 ${CMAKE_SOURCE_DIR}/src/flowgraph.h
