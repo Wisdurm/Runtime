@@ -26,6 +26,8 @@ Commas are syntactic sugar, completely unnecessary
 
 TODO:
 * Rework Evaluation so that it doesn't work in a completely nonsensical and useless way ( Maybe done !? )
+* Input() function
+* Maybe remove advancedmath.rnt
 * Add negative values
 * Src location
 * Tests run succesfully on Linux
