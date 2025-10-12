@@ -196,13 +196,14 @@ namespace rt
 		/// Returns a vector containing all of the members
 		/// </summary>
 		/// <returns></returns>
-		std::vector<objectOrValue*> getMembers()
+		std::vector<objectOrValue> getMembers()
 		{
-			std::vector<objectOrValue*> r;
+			std::vector<objectOrValue> r;
 			for (std::unordered_map<int, objectOrValue>::iterator it = members.begin(); it != members.end(); ++it)
 			{
-				r.push_back(&it->second);
+				r.push_back(it->second);
 			};
+			std::reverse(r.begin(), r.end()); // What. the. fuck
 			return r; 
 		};
 		/// <summary>

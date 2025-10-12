@@ -339,7 +339,7 @@ namespace rt
 			}
 			else if (auto members = object.get()->getMembers(); members.size() > 0)
 			{
-				return evaluate(**(--members.end()), symtab, argState, write); // Evaluate last member
+				return evaluate(*(--members.end()), symtab, argState, write); // Evaluate last member
 			}
 			else // No value, generate empty member
 			{
@@ -373,10 +373,10 @@ namespace rt
 			{
 				for (int i = 0; i < members.size() - 1; i++) // All except last one
 				{
-					evaluate(*members[i], symtab, newArgState, false);
+					evaluate(members[i], symtab, newArgState, false);
 				}
 				// Return last member
-				return evaluate(*members[members.size() - 1], symtab, newArgState, false);
+				return evaluate(members[members.size() - 1], symtab, newArgState, false);
 			}
 			else
 			{
