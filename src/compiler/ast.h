@@ -139,7 +139,7 @@ namespace ast
 		/// <summary>
 		/// Value of literal
 		/// </summary>
-		const value litValue;
+		value litValue;
 	private:
 		/// <summary>
 		/// Compare two ast trees

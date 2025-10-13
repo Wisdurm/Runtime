@@ -107,6 +107,7 @@ namespace rt
 		symtab = SymbolTable({
 			{"Return", Return },
 			{"Print", Print },
+			{"Input", Input },
 			{"Object", ObjectF },
 			{"Assign", Assign},
 			{"Exit", Exit},
@@ -121,6 +122,8 @@ namespace rt
 			{"Divide", Divide},
 			{"Mod", Mod},
 			{"LargerThan", LargerThan},
+			{"Sine", Sine},
+			{"Cosine", Cosine},
 		});
 	}
 

@@ -87,3 +87,11 @@ TEST_CASE("Parsing complex nested calls", "[parser]")
 	REQUIRE(*parse(tokenize(test1)) == *r1);
 	delete r1;
 }
+
+TEST_CASE("Numeric values", "[parser]")
+{
+	const char* test1 = "Add(1 -1)";
+	ast::Expression* r1 = new ast::Call(L, new ast::Identifier(L, "Object"), { new ast::Identifier(L,"Main"), new ast::Call(L, new ast::Identifier(L,"Add"),{new ast::Literal(L,1) , new ast::Literal(L,-1)}) });
+	REQUIRE(*parse(tokenize(test1)) == *r1);
+	delete r1;
+}

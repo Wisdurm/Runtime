@@ -43,6 +43,8 @@ namespace rt
 
 		friend bool operator==(const SourceLocation src1, const SourceLocation src2)
 		{
+			if (src1.file == "_TEST" or src2.file == "_TEST") // "_TEST" if for debugging and testing
+				return true;
 			return src1.file == src2.file and src1.line == src2.line;
 		};
 	private:
@@ -115,6 +117,7 @@ namespace rt
 	/// Parses source code and returns a list tokens parsed from it
 	/// </summary>
 	/// <param name="src">Source code (C style string)</param>
+	/// <param name="srcFile">Source file path (C style string)</param>
 	/// <returns>List of tokens parsed from source code</returns>
-	std::vector<Token> tokenize(const char* src);
+	std::vector<Token> tokenize(const char* src, const char* srcFile = "_TEST");
 }

@@ -10,17 +10,24 @@ namespace rt
 	const char Token::punctuation[] = {'-','(', ')', ',', '<', '>'};
 	
 	// Tokenizer
-	std::vector<Token> tokenize(const char* src)
+	std::vector<Token> tokenize(const char* src, const char* srcFile)
 	{
-		//TODO, use std::string
-		// TODO: Implement srcLoc at later point
-		SourceLocation srcLoc = SourceLocation(-1, "\0");
+		// TODO: use std::string
+		int line = 0;
 
 		std::vector<Token> tokens;
+
 		// Parse src code
 		const int srcLen = strlen(src);
 		for (int srcI = 0; srcI < srcLen; )
 		{
+			// Advance forward in the text, while also keeping the source locations up to date
+			auto advance = [&srcI, &line, src]() {
+				srcI++;
+				if (src[srcI] == '\n')
+					line++;
+			};
+
 			// Whether or not any patterns have been matched. If none have been, iterate to prevent infinite loop
 			bool match = false;
 
@@ -30,7 +37,7 @@ namespace rt
 				match = true;
 				do // Skip until newline
 				{
-					srcI++;
+					advance();
 				} while (src[srcI] != '\n');
 			}
 			// Check for identifier
@@ -40,9 +47,9 @@ namespace rt
 				std::string identifier;
 				do {
 					identifier += src[srcI];
-					srcI++;
+					advance();
 				} while (isalnum(src[srcI]));
-				tokens.push_back(Token(identifier, TokenType::IDENTIFIER, srcLoc));
+				tokens.push_back(Token(identifier, TokenType::IDENTIFIER, SourceLocation(line, srcFile)));
 			}
 			// Check for int literal
 			if (isdigit(src[srcI]))
@@ -51,9 +58,9 @@ namespace rt
 				std::string intLiteral;
 				do {
 					intLiteral += src[srcI];
-					srcI++;
+					advance();
 				} while (isdigit(src[srcI]) or src[srcI] == '.');
-				tokens.push_back(Token(intLiteral, TokenType::LITERAL, srcLoc));
+				tokens.push_back(Token(intLiteral, TokenType::LITERAL, SourceLocation(line, srcFile)));
 			}		
 			// Check for string literal
 			if (src[srcI] == '\"')
@@ -62,15 +69,15 @@ namespace rt
 				std::string stringLiteral;
 				do {
 					stringLiteral += src[srcI];
-					srcI++;
+					advance();
 					if (srcI > srcLen)
 					{
 						throw;
 					}
 				} while (src[srcI] != '\"'); // Go until the end of the string literal
 				stringLiteral += '\"';
-				srcI++;
-				tokens.push_back(Token(stringLiteral, TokenType::LITERAL, srcLoc));
+				advance();
+				tokens.push_back(Token(stringLiteral, TokenType::LITERAL, SourceLocation(line, srcFile)));
 			}
 			// Check for punctuation
 			for (char punc : Token::punctuation)
@@ -80,13 +87,13 @@ namespace rt
 					match = true;
 					std::string character;
 					character += src[srcI];
-					tokens.push_back(Token( character, TokenType::PUNCTUATION, srcLoc));
-					srcI++;
+					tokens.push_back(Token( character, TokenType::PUNCTUATION, SourceLocation(line, srcFile)));
+					advance();
 				}
 			}
 
 			if (not match)
-				srcI++;
+				advance();
 		}
 		// Return result
 		return tokens;

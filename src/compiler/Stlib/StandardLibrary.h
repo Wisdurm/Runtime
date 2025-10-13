@@ -58,6 +58,14 @@ namespace rt
 		return Zero;
 	}
 
+	/// Retrives a line from std::cin
+	objectOrValue Input(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		std::string r;
+		std::getline(std::cin, r);
+		return r;
+	}
+
 	/// <summary>
 	/// Initializes object with specified arguments
 	/// </summary>
@@ -141,7 +149,7 @@ namespace rt
 				file.read(&fileText[0], size);
 				file.close();
 
-				rt::include(rt::parse((rt::tokenize(fileText.c_str())), true), symtab, argState);
+				rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true), symtab, argState);
 			}
 		}
 		return Zero;

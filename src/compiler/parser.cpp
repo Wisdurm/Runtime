@@ -33,6 +33,7 @@ namespace rt
 	};
 
 	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens);
+	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens);
 	static ast::Expression* parseLiteral(const std::vector<Token>& tokens);
 	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function);
 	static ast::Expression* parseBinaryLeft(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
@@ -59,15 +60,26 @@ namespace rt
 			expr = parseLiteral(tokens);
 			break;
 		}
+		case TokenType::PUNCTUATION:
+		{
+			expr = parsePunctuation(tokens);
+			return expr;
+			// The only time code will reach here is if we have a negative value
+			// and if we do, we know it's not going to need any of the otherwise
+			// following checks
+		}
 		default:
 			throw;
 		}
 
-		if (*peek(tokens).getText() == "-" and !parsePure) // Member being accessed
+		if (*peek(tokens).getText() == "-" and !parsePure)
 		{
-			expr = parseBinaryLeft(tokens, expr);
+			if (dynamic_cast<ast::Identifier*>(expr) != nullptr) // Member being accessed
+				expr = parseBinaryLeft(tokens, expr);
+			else return expr;
+			// If last one is not identifier, then this one is surely a negative value
+			// In order to parse the negative value, we need to first return the expression
 		}
-
 		while (*peek(tokens).getText() == "(" and !parsePure)
 		{
 			expr = parseFunction(tokens, expr);
@@ -83,6 +95,28 @@ namespace rt
 	{
 		Token token = consume(tokens);
 		return new ast::Identifier(token.getSrc(), *token.getText());
+	}
+	
+	/// <summary>
+	/// Parse punctuation token
+	/// </summary>
+	/// <returns>Ast tree</returns>
+	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens)
+	{
+		Token token = consume(tokens, "-");
+		ast::Literal* expr = dynamic_cast<ast::Literal*>(parseExpression(tokens, true));
+		if (expr == nullptr)
+			throw;
+		
+		// Invert value
+		if (std::holds_alternative<long>(expr->litValue.valueHeld))
+			expr->litValue.valueHeld = std::get<long>(expr->litValue.valueHeld) * -1;
+		else if (std::holds_alternative<double>(expr->litValue.valueHeld))
+			expr->litValue.valueHeld = std::get<double>(expr->litValue.valueHeld) * -1;
+		else
+			throw; // If you genuinely wrote -"1" in your code you don't deserve to have access to a computer
+
+		return expr;
 	}
 
 	/// <summary>

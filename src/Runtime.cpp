@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 		file.read(&fileText[0], size);
 		file.close();
 
-		rt::interpret(rt::parse((rt::tokenize(fileText.c_str())), true));
+		rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true));
 		return EXIT_SUCCESS;
 	}
 	else // Live interpret
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 				std::string input;
 			std::getline(std::cin, input);
 			if (not input.empty())
-				rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str()), false));
+				rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false));
 		}
 		return EXIT_SUCCESS;
 	}

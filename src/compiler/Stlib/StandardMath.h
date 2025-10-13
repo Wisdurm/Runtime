@@ -3,6 +3,7 @@
 #include "../interpreter.h"
 #include "../parser.h"
 // C++
+#include <cmath>
 #include <vector>
 #include <variant>
 
@@ -128,6 +129,26 @@ namespace rt
 		{
 			return getNumericalValue(VALUEHELD(args.at(0))) > getNumericalValue(VALUEHELD(args.at(1)));
 		}
+		return Zero;
+	}
+	
+	/// <summary>
+	/// Sine of first value
+	/// </summary>
+	objectOrValue Sine(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0)
+			return sin(getNumericalValue(VALUEHELD(args.at(0))));
+		return Zero;
+	}
+
+	/// <summary>
+	/// Cosine of first value
+	/// </summary>
+	objectOrValue Cosine(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0)
+			return cos(getNumericalValue(VALUEHELD(args.at(0))));
 		return Zero;
 	}
 }
