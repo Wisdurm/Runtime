@@ -6,7 +6,7 @@ add_compile_options(-std=c++20)
 cmake_minimum_required (VERSION 3.20)
 project (Runtime
 	LANGUAGES CXX
-	VERSION 0.9.3
+	VERSION 0.9.4
 )
 
 # Options
@@ -26,11 +26,16 @@ endif()
 # Global vars
 configure_file(
 	${CMAKE_SOURCE_DIR}/src/Runtime.h.in
-	${PROJECT_BINARY_DIR}/Runtime.h @ONLY)
+	${PROJECT_BINARY_DIR}/Runtime.h @ONLY
+)
+	
+# Libraries 
+add_subdirectory( ${CMAKE_SOURCE_DIR}/external/Tessil )
 
 # Main project CMake
 add_subdirectory(src)
 target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR})
+target_link_libraries( Runtime PRIVATE tsl::ordered_map)
 
 # Tests
 if (RUNTIME_BUILD_TESTS)

@@ -121,9 +121,21 @@ namespace rt
 			{"Multiply", Multiply},
 			{"Divide", Divide},
 			{"Mod", Mod},
+			{"Equal", Equal},
 			{"LargerThan", LargerThan},
 			{"Sine", Sine},
 			{"Cosine", Cosine},
+			{"Tangent", Tangent},
+			{"ArcSine", ArcSine},
+			{"ArcCosine", ArcCosine},
+			{"ArcTangent", ArcTangent},
+			{"ArcTangent2", ArcTangent2},
+			{"Power", Power},
+			{"SquareRoot", SquareRoot},
+			{"Floor", Floor},
+			{"Ceiling", Ceiling},
+			{"Round", Round},
+			{"NaturalLogarithm", NaturalLogarithm},
 		});
 	}
 

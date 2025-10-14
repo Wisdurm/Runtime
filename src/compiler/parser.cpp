@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "tokenizer.h"
+#include "exceptions.h"
 
 namespace rt
 {
@@ -69,7 +70,7 @@ namespace rt
 			// following checks
 		}
 		default:
-			throw;
+			throw ParserException("Unhandled token type");
 		}
 
 		if (*peek(tokens).getText() == "-" and !parsePure)
@@ -103,10 +104,10 @@ namespace rt
 	/// <returns>Ast tree</returns>
 	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens)
 	{
-		Token token = consume(tokens, "-");
+		consume(tokens, "-");
 		ast::Literal* expr = dynamic_cast<ast::Literal*>(parseExpression(tokens, true));
 		if (expr == nullptr)
-			throw;
+			throw ParserException("Expected literal after '-' token");
 		
 		// Invert value
 		if (std::holds_alternative<long>(expr->litValue.valueHeld))
@@ -114,7 +115,8 @@ namespace rt
 		else if (std::holds_alternative<double>(expr->litValue.valueHeld))
 			expr->litValue.valueHeld = std::get<double>(expr->litValue.valueHeld) * -1;
 		else
-			throw; // If you genuinely wrote -"1" in your code you don't deserve to have access to a computer
+			throw ParserException("You're mentally ill");
+			// If you genuinely wrote -"1" in your code you don't deserve to have access to a computer
 
 		return expr;
 	}

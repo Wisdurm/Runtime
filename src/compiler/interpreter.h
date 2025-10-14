@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast.h"
+#include <tsl/ordered_map.h>
 // C++
 #include <unordered_map> // Do testing later on to figure out if a normal map would be better
 #include <string>
@@ -148,9 +149,9 @@ namespace rt
 		objectOrValue* getMember(int key) 
 		{
 			// If exists, return
-			std::unordered_map<int, objectOrValue>::iterator it = members.find(key);
+			tsl::ordered_map<int, objectOrValue>::iterator it = members.find(key);
 			if (it != members.end()) // Exists
-				return &(it->second);
+				return &it.value();
 			// if not exist, create
 			addMember(key);
 			return getMember(key);
@@ -199,11 +200,10 @@ namespace rt
 		std::vector<objectOrValue> getMembers()
 		{
 			std::vector<objectOrValue> r;
-			for (std::unordered_map<int, objectOrValue>::iterator it = members.begin(); it != members.end(); ++it)
+			for (tsl::ordered_map<int, objectOrValue>::iterator it = members.begin(); it != members.end(); ++it)
 			{
 				r.push_back(it->second);
 			};
-			std::reverse(r.begin(), r.end()); // What. the. fuck
 			return r; 
 		};
 		/// <summary>
@@ -228,9 +228,9 @@ namespace rt
 			}
 			else
 			{
-				// TODO i wanna cry I don't want to implement this stupid ass way of doing things
-				// Hoping I figure out something better
-				throw;
+				// :(
+				counter++;
+				this->addMember(key);
 			}
 		}
 		/// <summary>
@@ -250,10 +250,17 @@ namespace rt
 		/// <param name="member"></param>
 		void addMember(objectOrValue member)
 		{
-			// TODO this can fuck up due to counter shenanigans.
-			// TODO: cry
-			members.insert({counter, member});
-			counter++;
+			if (not members.contains(counter))
+			{
+				members.insert({counter, member});
+				counter++;
+			}
+			else
+			{
+				// :(
+				counter++;
+				this->addMember(member);
+			}
 		}
 		/// <summary>
 		/// Adds member with string key
@@ -269,9 +276,9 @@ namespace rt
 			}
 			else
 			{
-				// TODO i wanna cry I don't want to implement this stupid ass way of doing things
-				// Hoping I figure out something better
-				throw;
+				// :(
+				counter++;
+				this->addMember(member, key);
 			}
 		};
 		/// <summary>
@@ -282,6 +289,8 @@ namespace rt
 		void setMember(ast::value key, objectOrValue& value)
 		{
 			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
+			// This probably isn't very efficient, but it does put the new value at the top, which is maybe kind off
+			// what it should do? I mean, I made the language, but I'm not really sure how stupid I want this to be
 			if (std::holds_alternative<long>(key.valueHeld)) // Number
 			{
 				int memberKey = std::get<long>(key.valueHeld);
@@ -371,7 +380,7 @@ namespace rt
 		/// <summary>
 		/// Members of the object. Can either be objects, or values
 		/// </summary>
-		std::unordered_map<int, objectOrValue> members;
+		tsl::ordered_map<int, objectOrValue> members;
 		/// <summary>
 		/// Maps strings to their placement on the members list. Definitely not the best way to implement this, but I can always change it later
 		/// </summary>

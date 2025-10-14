@@ -3,13 +3,14 @@
 #include "compiler/tokenizer.h"
 #include "compiler/parser.h"
 #include "compiler/interpreter.h"
+#include "compiler/exceptions.h"
 // C++
 #include <iostream> 
 #include <fstream>
 
 #ifdef _WIN32
-// Terminal coloring for windows
-	
+
+// Terminal coloring for windows	
 #include <windows.h>
 #define YELLOW_TEXT SetConsoleTextAttribute(hConsole, 6);
 #define WHITE_TEXT SetConsoleTextAttribute(hConsole, 7);
@@ -21,7 +22,6 @@
 #define WHITE_TEXT std::cout << "\033[37m";
 
 #endif // _WIN32
-
 
 int main(int argc, char* argv[])
 {
@@ -42,7 +42,27 @@ int main(int argc, char* argv[])
 		file.read(&fileText[0], size);
 		file.close();
 
+		try
+		{
 		rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true));
+		}
+		catch (ParserException e)
+		{
+			YELLOW_TEXT
+				std::cerr << "ParserException: ";
+			WHITE_TEXT
+				std::cerr << e.what() << std::endl;
+			return EXIT_FAILURE;
+		}
+		catch (TokenizerException e)
+		{
+			YELLOW_TEXT
+				std::cerr << "TokenizerException: ";
+			WHITE_TEXT
+				std::cerr << e.what() << std::endl;
+			return EXIT_FAILURE;
+		}
+
 		return EXIT_SUCCESS;
 	}
 	else // Live interpret
@@ -64,7 +84,26 @@ int main(int argc, char* argv[])
 				std::string input;
 			std::getline(std::cin, input);
 			if (not input.empty())
-				rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false));
+			{
+				try
+				{
+					rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false));
+				}
+				catch (ParserException e)
+				{
+					YELLOW_TEXT
+						std::cerr << "ParserException: ";
+					WHITE_TEXT
+						std::cerr << e.what() << std::endl;
+				}
+				catch (TokenizerException e)
+				{
+					YELLOW_TEXT
+						std::cerr << "TokenizerException: ";
+					WHITE_TEXT
+						std::cerr << e.what() << std::endl;
+				}
+			};
 		}
 		return EXIT_SUCCESS;
 	}

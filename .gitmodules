@@ -1,3 +1,6 @@
 [submodule "external/Catch2"]
 	path = external/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "external/Tessil"]
+	path = external/Tessil
+	url = https://github.com/Tessil/ordered-map.git

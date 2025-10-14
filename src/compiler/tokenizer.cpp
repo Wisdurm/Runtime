@@ -1,4 +1,5 @@
 #include "tokenizer.h"
+#include "exceptions.h"
 // C++
 #include <vector>
 #include <string>
@@ -72,7 +73,7 @@ namespace rt
 					advance();
 					if (srcI > srcLen)
 					{
-						throw;
+						throw TokenizerException("Unmatched string literal");
 					}
 				} while (src[srcI] != '\"'); // Go until the end of the string literal
 				stringLiteral += '\"';

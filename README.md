@@ -8,26 +8,53 @@
 [![Catch2 - Tests](https://github.com/Wisdurm/Runtime/actions/workflows/tests.yml/badge.svg)](https://github.com/Wisdurm/Runtime/actions/workflows/tests.yml)
 
 # The Runtime programming language  
+
 Runtime is a very-high-level, questionably-evaluated, spaghetti-typed, purely-object-oriented, interpreted programming language.  
 This language was made for fun and practice, and is not intended to be used for practical purposes.
 
-## Notes
+## The Present
+
 The current implementation of the interpreter is VERY inefficient. I am well aware of this, however I'm not particularly smart, and the amount
 of time this project has already taken also makes me not want to dive too deep in to optimization at the moment.  
 I definitely will keep this project in mind, and there's a chance I'll work on major improvements in the future, but for the time being,
 there are problems with this that I am well aware exist, but which I don't intend on fixing right now.
 
-## Building
-This is a standard CMake project, and the only dependency is Catch2, if you choose to build tests.
+## The Future
 
+The standard library will almost definitely be expanded over time, to support basic stuff like io.  
+Even though this language is just a funny exersize, I still want this to be technically capable of complex things,
+even if no one might necessarily want to bother with such.
+
+## Building
+
+This is a standard CMake project, and the only dependencies are Catch2 and Tessil's ordered maps,
+which are both included as git submodules.  
+You can choose not to build tests by setting RUNTIME_BUILD_TESTS to false, in which case Catch2 will not
+be required for building.
+
+## Examples
+
+The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) written in Runtime
+```
+Object(n, Input())
+Print(n)
+While( LargerThan(n,1),
+	If( Equal( Mod(n,2), 0),
+		Assign(n, 0, Divide(n,2) ),
+		# Else
+		Assign(n, 0, Add( Multiply(3,n) ,1) )
+	)
+	Print(n)
+)
+```
 ## Documentation
+
+TODO:
 Objects can be called, or evaluated
 Commas are syntactic sugar, completely unnecessary
 
 TODO:
-* Proper error messages
 * Other mathematical functions
-* Change members from unordered_map into normal map
 * Cleanup comments:
   * Remove useless stuff
   * Comment more thouroughly

@@ -12,11 +12,10 @@
 
 namespace ast
 {
-	enum class valueType { // TODO : maybe obsolete? REF type still valuable
+	enum class valueType { // TODO : maybe obsolete? 
 		INT,
 		DEC,
 		STR,
-		REF
 	};
 	class value { // Tried to do this with union but it was so difficult like genuinely i dont understand anything
 	public:
