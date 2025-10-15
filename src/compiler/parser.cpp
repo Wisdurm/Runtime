@@ -70,7 +70,7 @@ namespace rt
 			// following checks
 		}
 		default:
-			throw ParserException("Unhandled token type");
+			throw ParserException("Unhandled token type", expr->src.getLine(), expr->src.getFile()->c_str());
 		}
 
 		if (*peek(tokens).getText() == "-" and !parsePure)
@@ -107,7 +107,7 @@ namespace rt
 		consume(tokens, "-");
 		ast::Literal* expr = dynamic_cast<ast::Literal*>(parseExpression(tokens, true));
 		if (expr == nullptr)
-			throw ParserException("Expected literal after '-' token");
+			throw ParserException("Expected literal after '-' token", expr->src.getLine(), expr->src.getFile()->c_str());
 		
 		// Invert value
 		if (std::holds_alternative<long>(expr->litValue.valueHeld))
@@ -115,7 +115,7 @@ namespace rt
 		else if (std::holds_alternative<double>(expr->litValue.valueHeld))
 			expr->litValue.valueHeld = std::get<double>(expr->litValue.valueHeld) * -1;
 		else
-			throw ParserException("You're mentally ill");
+			throw ParserException("You're mentally ill", expr->src.getLine(), expr->src.getFile()->c_str());
 			// If you genuinely wrote -"1" in your code you don't deserve to have access to a computer
 
 		return expr;
@@ -176,8 +176,6 @@ namespace rt
 		while (*peek(tokens).getText() != ")")
 		{
 			args.push_back(parseExpression(tokens));
-			if (*peek(tokens).getText() == ",")
-				consume(tokens, ",");
 		}
 		consume(tokens, ")");
 		return new ast::Call(peek(tokens).getSrc(), function, args);

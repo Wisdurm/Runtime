@@ -1,3 +1,10 @@
+## v0.9.5
+
+* Added source code location to exceptions
+* Commas are no longer recognized as tokens, however they still work the same as they never really affected anything
+* StandardMath.h
+	* SmallerThan() added for convenience
+
 ## v0.9.4
 
 * Changed implementation of object class to not depend on undefined behaviour :)

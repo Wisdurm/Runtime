@@ -8,7 +8,7 @@
 
 namespace rt
 {
-	const char Token::punctuation[] = {'-','(', ')', ',', '<', '>'};
+	const char Token::punctuation[] = {'-','(', ')'};
 	
 	// Tokenizer
 	std::vector<Token> tokenize(const char* src, const char* srcFile)
@@ -73,7 +73,7 @@ namespace rt
 					advance();
 					if (srcI > srcLen)
 					{
-						throw TokenizerException("Unmatched string literal");
+						throw TokenizerException("Unmatched string literal", line-1, srcFile);
 					}
 				} while (src[srcI] != '\"'); // Go until the end of the string literal
 				stringLiteral += '\"';

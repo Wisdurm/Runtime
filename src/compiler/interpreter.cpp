@@ -123,6 +123,7 @@ namespace rt
 			{"Mod", Mod},
 			{"Equal", Equal},
 			{"LargerThan", LargerThan},
+			{"SmallerThan", SmallerThan},
 			{"Sine", Sine},
 			{"Cosine", Cosine},
 			{"Tangent", Tangent},

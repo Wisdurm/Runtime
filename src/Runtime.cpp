@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 				std::cerr << "ParserException: ";
 			WHITE_TEXT
 				std::cerr << e.what() << std::endl;
-			return EXIT_FAILURE;
+				std::cerr << e.where() << std::endl;
 		}
 		catch (TokenizerException e)
 		{
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 				std::cerr << "TokenizerException: ";
 			WHITE_TEXT
 				std::cerr << e.what() << std::endl;
-			return EXIT_FAILURE;
+				std::cerr << e.where() << std::endl;
 		}
 
 		return EXIT_SUCCESS;
@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
 						std::cerr << "ParserException: ";
 					WHITE_TEXT
 						std::cerr << e.what() << std::endl;
+						std::cerr << e.where() << std::endl;
 				}
 				catch (TokenizerException e)
 				{
@@ -102,6 +103,7 @@ int main(int argc, char* argv[])
 						std::cerr << "TokenizerException: ";
 					WHITE_TEXT
 						std::cerr << e.what() << std::endl;
+						std::cerr << e.where() << std::endl;
 				}
 			};
 		}

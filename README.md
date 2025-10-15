@@ -36,25 +36,24 @@ be required for building.
 
 The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) written in Runtime
 ```
-Object(n, Input())
+Object(n Input())
 Print(n)
-While( LargerThan(n,1),
-	If( Equal( Mod(n,2), 0),
-		Assign(n, 0, Divide(n,2) ),
+While( LargerThan(n 1)
+	If( Equal( Mod(n 2) 0)
+		Assign(n 0 Divide(n 2) )
 		# Else
-		Assign(n, 0, Add( Multiply(3,n) ,1) )
+		Assign(n 0 Add( Multiply(3 n) 1) )
 	)
 	Print(n)
 )
 ```
+
 ## Documentation
 
 TODO:
 Objects can be called, or evaluated
-Commas are syntactic sugar, completely unnecessary
 
 TODO:
-* Other mathematical functions
 * Cleanup comments:
   * Remove useless stuff
   * Comment more thouroughly

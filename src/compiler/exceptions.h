@@ -5,25 +5,43 @@
 class ParserException : public std::exception
 {
 private:
-    char const * const msg;
+    const char * const msg;
+    int const line;
+    const std::string file;
 public:
     // Constructor
-    ParserException(char const* const message) : msg(message) {};
+    ParserException(const char * const message, const int line, const std::string& file) : msg(message), line(line), file(file) {};
     const char* what() const throw() override
     {
         return msg;    
+    }
+    std::string where() const 
+    {
+        std::string loc = "File \"" + file; 
+        loc += "\", line ";
+        loc += std::to_string(line);
+        return loc;    
     }
 };
 
 class TokenizerException : public std::exception
 {
 private:
-    char const * const msg;
+    const char * const msg;
+    int const line;
+    const std::string file;
 public:
     // Constructor
-    TokenizerException(char const* const message) : msg(message) {};
+    TokenizerException(const char * const message, const int line, const std::string& file) : msg(message), line(line), file(file) {};
     const char* what() const throw() override
     {
         return msg;    
+    }
+    std::string where() const
+    {
+        std::string loc = "File \"" + file; 
+        loc += "\", line ";
+        loc += std::to_string(line);
+        return loc.c_str();    
     }
 };
