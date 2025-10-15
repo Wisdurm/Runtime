@@ -177,12 +177,7 @@ namespace rt
 		/// <returns></returns>
 		objectOrValue* getMember(ast::value key)
 		{
-			if (std::holds_alternative<long>(key.valueHeld)) // Number
-			{
-				int memberKey = std::get<long>(key.valueHeld);
-				return getMember(memberKey);
-			}
-			else if (std::holds_alternative<double>(key.valueHeld)) // Decimal
+			if (std::holds_alternative<double>(key.valueHeld)) // Number
 			{
 				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
 				return getMember(memberKey);
@@ -291,14 +286,7 @@ namespace rt
 			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
 			// This probably isn't very efficient, but it does put the new value at the top, which is maybe kind off
 			// what it should do? I mean, I made the language, but I'm not really sure how stupid I want this to be
-			if (std::holds_alternative<long>(key.valueHeld)) // Number
-			{
-				int memberKey = std::get<long>(key.valueHeld);
-				if (members.contains(memberKey))
-					members.erase(memberKey);
-				addMember(value, memberKey);
-			}
-			else if (std::holds_alternative<double>(key.valueHeld)) // Decimal
+			if (std::holds_alternative<double>(key.valueHeld)) // Number
 			{
 				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
 				if (members.contains(memberKey))
@@ -324,14 +312,7 @@ namespace rt
 		void setMember(ast::value key, objectOrValue value)
 		{
 			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
-			if (std::holds_alternative<long>(key.valueHeld)) // Number
-			{
-				int memberKey = std::get<long>(key.valueHeld);
-				if (members.contains(memberKey))
-					members.erase(memberKey);
-				addMember(value, memberKey);
-			}
-			else if (std::holds_alternative<double>(key.valueHeld)) // Decimal
+			if (std::holds_alternative<double>(key.valueHeld)) // Number
 			{
 				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
 				if (members.contains(memberKey))

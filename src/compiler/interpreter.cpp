@@ -45,8 +45,8 @@ namespace rt
 		}
 
 		// Cannot find, create symbol
-#ifdef RUNTIME_DEBUG
-		std::cerr << "Empty object initialized";
+#if RUNTIME_DEBUG==1
+		std::cerr << "Empty object initialized" << std::endl;
 #endif // RUNTIME_DEBUG
 		auto v = args.getArg();
 		if (v != nullptr)
@@ -345,7 +345,7 @@ namespace rt
 				auto r = evaluate(interpret_internal(object.get()->getExpression(), symtab, true, argState), symtab, argState, write);
 				if (write)
 				{
-#ifdef RUNTIME_DEBUG
+#if RUNTIME_DEBUG==1
 				std::cerr << "Value evaluated to memory";
 #endif // RUNTIME_DEBUG
 					object->addMember(r);
@@ -359,8 +359,8 @@ namespace rt
 			}
 			else // No value, generate empty member
 			{
-#ifdef RUNTIME_DEBUG
-				std::cerr << "Empty value initialized";
+#if RUNTIME_DEBUG==1
+				std::cerr << "Empty value initialized" << std::endl;
 #endif // RUNTIME_DEBUG
 				object->addMember(ast::value(0));
 				return evaluate(object, symtab, argState, write); // Not particularly efficient but it works
@@ -396,8 +396,8 @@ namespace rt
 			}
 			else
 			{
-#ifdef RUNTIME_DEBUG
-				std::cerr << "Empty value initialized";
+#if RUNTIME_DEBUG==1
+				std::cerr << "Empty value initialized" << std::endl;
 #endif // RUNTIME_DEBUG
 				object->addMember(ast::value(0));
 				return callObject(member, symtab, argState, args);

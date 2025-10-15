@@ -30,7 +30,7 @@ TEST_CASE("Assignment", "[interpreter]")
 	// )
 	// Excepted output: "2"
 
-	const std::string test1 = "2";
+	const std::string test1 = "2.000000";
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(num, 1)\nAssign(num, 0, 2)\nPrint(num)"));
 	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 	delete r1;
@@ -96,7 +96,7 @@ TEST_CASE("Reference passing and explicit evaluation", "[interpreter]")
 	//	Print(reference),
 	// )
 	// Expected output: "1\n2"
-	std::string* test1 = new std::string[] { "1", "2" };
+	std::string* test1 = new std::string[] { "1.000000", "2.000000" };
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(one, 1)\nObject(value, one-0)\nObject(reference, one)\nAssign(one, 0, 2)\nPrint(value)\nPrint(reference)"));
 	auto v = rt::interpretAndReturn(r1);
 	REQUIRE(v[0] == test1[0]);
@@ -115,7 +115,7 @@ TEST_CASE("Params", "[interpreter]")
 	//	PrintArg(1),
 	//	)
 	// Expected output: "0\n1"
-	std::string* test1 = new std::string[]{ "0", "1" };
+	std::string* test1 = new std::string[]{ "0.000000", "1.000000" };
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(PrintArg,Print(arg))\nPrintArg()\nPrintArg(1)"));
 	auto v = rt::interpretAndReturn(r1);
 	REQUIRE(v[0] == test1[0]);
@@ -132,7 +132,7 @@ TEST_CASE("Params", "[interpreter]")
 	//	PrintArg(1,2),
 	//	)
 	// Expected output: "1\n0\n1\n2"
-	std::string* test2 = new std::string[]{ "1", "0", "1", "2"};
+	std::string* test2 = new std::string[]{ "1.000000", "0.000000", "1.000000", "2.000000"};
 	ast::Expression* r2 = rt::parse(rt::tokenize("Object(PrintArg,Print(argone),Print(argtwo))\nPrintArg(1)\nPrintArg(1,2)"));
 	auto v2 = rt::interpretAndReturn(r2);
 	REQUIRE(v2[0] == test2[0]);

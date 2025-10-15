@@ -12,19 +12,14 @@
 
 namespace ast
 {
-	enum class valueType { // TODO : maybe obsolete? 
-		INT,
+	enum class valueType { // TODO : Definitely obsolete 
 		DEC,
 		STR,
 	};
 	class value { // Tried to do this with union but it was so difficult like genuinely i dont understand anything
 	public:
 		/// <summary>
-		/// Int constructor
-		/// </summary>
-		value(int value) : valueHeld(value), type(valueType::INT) {};
-		/// <summary>
-		/// Decimal constructor
+		/// Number constructor
 		/// </summary>
 		value(double value) : valueHeld(value), type(valueType::DEC) {};
 		/// <summary>
@@ -41,7 +36,7 @@ namespace ast
 		/// <summary>
 		/// Value of the class
 		/// </summary>
-		std::variant<long, double, std::string> valueHeld;
+		std::variant<double, std::string> valueHeld;
 
 		// Operators
 
@@ -53,11 +48,6 @@ namespace ast
 			{
 				switch (v1.type)
 				{
-				case valueType::INT:
-				{
-					return v1.valueHeld == v2.valueHeld;
-					break;
-				}
 				case valueType::DEC:
 				{
 					return v1.valueHeld == v2.valueHeld;

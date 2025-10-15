@@ -1,3 +1,6 @@
+// This was supposed to be something more significant, but it's clear now that it's
+// not really a fit for what this project has become
+#if RUNTIME_DEBUG==1
 // Runtime
 #include "compiler/tokenizer.h"
 #include "compiler/parser.h"
@@ -8,15 +11,7 @@
 
 namespace rt
 {
-	/// <summary>
-	/// Prints a visual representation of an ast tree to cout
-	/// </summary>
-	/// <param name="ast"></param>
-	static void visualizeTree(ast::Expression* ast)
-	{
-		// TODO: Use Graphviz for visual graph
-	}
-	std::string dot(ast::Expression* ast)
+	std::string treeViz(ast::Expression* ast)
 	{
 		// Quick way to print all info from object
 		if (dynamic_cast<ast::Identifier*>(ast) != nullptr)
@@ -31,26 +26,25 @@ namespace rt
 
 			if (std::holds_alternative<std::string>(node->litValue.valueHeld))
 				std::cout << std::get<std::string>(node->litValue.valueHeld) << std::endl;
-			else if (std::holds_alternative<long>(node->litValue.valueHeld))
-				std::cout << std::to_string(std::get<long>(node->litValue.valueHeld)) << std::endl;
 			else
 				std::cout << std::to_string(std::get<double>(node->litValue.valueHeld)) << std::endl;
 		}
 		else if (dynamic_cast<ast::Call*>(ast) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Call*>(ast);
-			dot(node->object);
+			treeViz(node->object);
 			for (auto arg : node->args)
 			{
-				dot(arg);
+				treeViz(arg);
 			}
 		}
 		else if (dynamic_cast<ast::BinaryOperator*>(ast) != nullptr)
 		{
 			auto node = dynamic_cast<ast::BinaryOperator*>(ast);
-			dot(const_cast<ast::Expression*>(node->left));
-			dot(const_cast<ast::Expression*>(node->right));
+			treeViz(const_cast<ast::Expression*>(node->left));
+			treeViz(const_cast<ast::Expression*>(node->right));
 		}
 		return "";
 	}
 }
+#endif

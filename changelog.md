@@ -4,6 +4,8 @@
 * Commas are no longer recognized as tokens, however they still work the same as they never really affected anything
 * StandardMath.h
 	* SmallerThan() added for convenience
+* Removed int/long type because if Lua can survive without it, so can Runtime. Also all math functions
+only returned doubles anyway so it really just streamlined the language a bit.
 
 ## v0.9.4
 

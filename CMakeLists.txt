@@ -11,6 +11,9 @@ project (Runtime
 
 # Options
 option(RUNTIME_BUILD_TESTS "Configure and build tests" TRUE)
+# Whether or not to build debug code. If you think this way of doing it sucks, I agree, but CMake
+# is a piece of shit and will not let #cmakedefine work no matter what I do 
+set(RUNTIME_DEBUG 1)
 
 # Output
 if(NOT MSVC)
@@ -24,6 +27,7 @@ if (POLICY CMP0141)
 endif()
 
 # Global vars
+
 configure_file(
 	${CMAKE_SOURCE_DIR}/src/Runtime.h.in
 	${PROJECT_BINARY_DIR}/Runtime.h @ONLY
@@ -34,7 +38,7 @@ add_subdirectory( ${CMAKE_SOURCE_DIR}/external/Tessil )
 
 # Main project CMake
 add_subdirectory(src)
-target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR})
+target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
 target_link_libraries( Runtime PRIVATE tsl::ordered_map)
 
 # Tests

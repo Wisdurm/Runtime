@@ -110,9 +110,7 @@ namespace rt
 			throw ParserException("Expected literal after '-' token", expr->src.getLine(), expr->src.getFile()->c_str());
 		
 		// Invert value
-		if (std::holds_alternative<long>(expr->litValue.valueHeld))
-			expr->litValue.valueHeld = std::get<long>(expr->litValue.valueHeld) * -1;
-		else if (std::holds_alternative<double>(expr->litValue.valueHeld))
+		if (std::holds_alternative<double>(expr->litValue.valueHeld))
 			expr->litValue.valueHeld = std::get<double>(expr->litValue.valueHeld) * -1;
 		else
 			throw ParserException("You're mentally ill", expr->src.getLine(), expr->src.getFile()->c_str());
@@ -136,13 +134,9 @@ namespace rt
 			stringValue.pop_back();
 			return new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
 		}
-		else if ((*token.getText()).find('.') != std::string::npos) // Contains not implemented in MSVC yet :(
-		{	// Decimal literal
+		else 
+		{	// Number literal
 			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
-		}
-		else
-		{	// Int literal
-			return new ast::Literal(token.getSrc(), std::stoi(*token.getText()));
 		}
 	}
 
@@ -206,7 +200,7 @@ namespace rt
 			else
 				return parseMain(tokens);
 		}
-		else // Don't use main function. This will only accept a single statement
+		else // Don't use main function. This will only accept a single statement. Used for live interpret
 		{
 			return parseExpression(tokens);
 		}

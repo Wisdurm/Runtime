@@ -42,8 +42,6 @@ namespace rt
 			// Convert type to string
 			if (std::holds_alternative<std::string>(valueHeld))
 				output = std::get<std::string>(valueHeld);
-			else if (std::holds_alternative<long>(valueHeld))
-				output = std::to_string(std::get<long>(valueHeld));
 			else
 				output = std::to_string(std::get<double>(valueHeld));
 			
@@ -112,9 +110,7 @@ namespace rt
 		if (args.size() > 0)
 		{
 			auto r = rt::evaluate(args.at(0), symtab, argState, true);
-			if (r.type == ast::valueType::INT)
-				exit(std::get<long>(r.valueHeld));
-			else if (r.type == ast::valueType::DEC)
+			if (r.type == ast::valueType::DEC)
 				exit(std::get<double>(r.valueHeld));
 		}
 		exit(0);

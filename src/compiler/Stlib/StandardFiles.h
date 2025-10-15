@@ -25,7 +25,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false).valueHel
 		return std::ranges::equal(lhs, rhs, ichar_equals);
 	}
 	// Evaluates a valueHeld as a bool
-	bool toBoolean(std::variant<long, double, std::string> val)
+	bool toBoolean(std::variant<double, std::string> val)
 	{
 		if (std::holds_alternative<std::string>(val))
 		{
@@ -41,19 +41,8 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false).valueHel
 					if (not isalnum(c) or c == '.') // If string is not "true", "false" or a number, then it can't be evaluated as a boolean
 						goto BAIL;
 				}
-				if (str.find('.') != std::string::npos)
-				{
-					return std::stod(str) >= 1;
-				}
-				else
-				{
-					return std::stoi(str) >= 1;
-				}
+				return std::stod(str) >= 1;
 			}
-		}
-		else if (std::holds_alternative<long>(val))
-		{
-			return std::get<long>(val) >= 1;
 		}
 		else
 		{
@@ -66,7 +55,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false).valueHel
 	/// Returns the numerical value of ast::value.valueHeld
 	/// </summary>
 	/// <returns></returns>
-	double getNumericalValue(std::variant<long, double, std::string> val)
+	double getNumericalValue(std::variant<double, std::string> val)
 	{
 		// Convert type to number
 		if (std::holds_alternative<std::string>(val))
@@ -77,8 +66,6 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false).valueHel
 			else
 				return std::stoi(str);
 		}
-		else if (std::holds_alternative<long>(val))
-			return std::get<long>(val);
 		else
 			return std::get<double>(val);
 	}
