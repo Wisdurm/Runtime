@@ -5,13 +5,13 @@ namespace rt
 {
 	// Retrieves the value held by an object, or value. Uses ternary operator to do everything in a single line
 #define VALUEHELD(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
-evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, true).valueHeld : /* Get value of object */ \
-	std::get<ast::value>(x).valueHeld /* If value, just use value */ \
+evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, true) : /* Get value of object */ \
+	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
 	)
 	// Variant of VALUEHELD which does not write evaluated values to memory
 #define VALUEHELD_E(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
-evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false).valueHeld : /* Get value of object */ \
-	std::get<ast::value>(x).valueHeld /* If value, just use value */ \
+evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get value of object */ \
+	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
 	)
 
 	// Stack overflow
@@ -52,7 +52,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false).valueHel
 		return 0;
 	}
 	/// <summary>
-	/// Returns the numerical value of ast::value.valueHeld
+	/// Returns the numerical value of std::variant<double, std::string>.valueHeld
 	/// </summary>
 	/// <returns></returns>
 	double getNumericalValue(std::variant<double, std::string> val)

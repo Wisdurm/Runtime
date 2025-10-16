@@ -9,7 +9,7 @@
 
 # The Runtime programming language  
 
-Runtime is a very-high-level, questionably-evaluated, spaghetti-typed, purely-object-oriented, interpreted programming language.  
+Runtime is a very-high-level, questionably-evaluated, purely-object-oriented, interpreted programming language.  
 This language was made for fun and practice, and is not intended to be used for practical purposes.
 
 ## The Present
@@ -54,6 +54,8 @@ TODO:
 Objects can be called, or evaluated
 
 TODO:
+* Fix debug CMake bullshit
+* Get rid of ast::value class
 * Cleanup comments:
   * Remove useless stuff
   * Comment more thouroughly

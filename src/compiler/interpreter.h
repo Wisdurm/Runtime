@@ -21,7 +21,7 @@ namespace rt
 /// <summary>
 /// Object member type
 /// </summary>
-typedef std::variant<std::shared_ptr<rt::Object>, ast::value> objectOrValue;
+typedef std::variant<std::shared_ptr<rt::Object>, std::variant<double, std::string>> objectOrValue;
 /// <summary>
 /// Built-in Runtime function
 /// </summary>
@@ -56,13 +56,13 @@ namespace rt
 	/// </summary>
 	/// <param name="member">Member to evaluate</param>
 	/// <param name="write">Whether or not to write the evaluated value down. Function calls need to be able to repeatedly evaluate</param>
-	/// <returns>An ast::value representing the ultimate value of the object</returns>
-	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write);
+	/// <returns>An std::variant<double, std::string> representing the ultimate value of the object</returns>
+	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write);
 	/// <summary>
 	/// Calls object
 	/// </summary>
 	/// <param name="object"></param>
-	ast::value callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
+	std::variant<double, std::string> callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
 	/// <summary>
 	/// Interprets ast tree, and returns everything printed to cout
 	/// </summary>
@@ -124,7 +124,7 @@ namespace rt
 		/// Creates an empty unnamed object with a single value as a member
 		/// </summary>
 		/// <param name="value"></param>
-		Object(ast::value& value)
+		Object(std::variant<double, std::string>& value)
 		{
 			name = "";
 			expr = nullptr;
@@ -175,16 +175,16 @@ namespace rt
 		/// Returns member by key
 		/// </summary>
 		/// <returns></returns>
-		objectOrValue* getMember(ast::value key)
+		objectOrValue* getMember(std::variant<double, std::string> key)
 		{
-			if (std::holds_alternative<double>(key.valueHeld)) // Number
+			if (std::holds_alternative<double>(key)) // Number
 			{
-				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
+				int memberKey = static_cast<int>(std::get<double>(key));
 				return getMember(memberKey);
 			}
 			else
 			{
-				std::string memberKey = std::get<std::string>(key.valueHeld); // String
+				std::string memberKey = std::get<std::string>(key); // String
 				return getMember(memberKey);
 			}
 		}
@@ -233,7 +233,7 @@ namespace rt
 		/// </summary>
 		/// <param name="member"></param>
 		/// <param name="key"></param>
-		void addMember(objectOrValue& member, int key) { 
+		void addMember(objectOrValue member, int key) { 
 			if (key == counter) 
 				counter++;
 			members.insert({ key, member });
@@ -262,7 +262,7 @@ namespace rt
 		/// </summary>
 		/// <param name="member"></param>
 		/// <param name="key"></param>
-		void addMember(objectOrValue& member, std::string key) {
+		void addMember(objectOrValue member, std::string key) {
 			if (not members.contains(counter))
 			{
 				members.insert({counter, member});
@@ -281,21 +281,21 @@ namespace rt
 		/// </summary>
 		/// <param name="key"></param>
 		/// <param name="value"></param>
-		void setMember(ast::value key, objectOrValue& value)
+		void setMember(std::variant<double, std::string> key, objectOrValue& value)
 		{
 			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
 			// This probably isn't very efficient, but it does put the new value at the top, which is maybe kind off
 			// what it should do? I mean, I made the language, but I'm not really sure how stupid I want this to be
-			if (std::holds_alternative<double>(key.valueHeld)) // Number
+			if (std::holds_alternative<double>(key)) // Number
 			{
-				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
+				int memberKey = static_cast<int>(std::get<double>(key));
 				if (members.contains(memberKey))
 					members.erase(memberKey);
 				addMember(value, memberKey);
 			}
 			else
 			{
-				std::string memberKey = std::get<std::string>(key.valueHeld); // String
+				std::string memberKey = std::get<std::string>(key); // String
 				if (memberStringMap.contains(memberKey))
 				{
 					members.erase(memberStringMap.at(memberKey));
@@ -309,19 +309,19 @@ namespace rt
 		/// </summary>
 		/// <param name="key"></param>
 		/// <param name="value"></param>
-		void setMember(ast::value key, objectOrValue value)
+		void setMember(std::variant<double, std::string> key, objectOrValue value)
 		{
 			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
-			if (std::holds_alternative<double>(key.valueHeld)) // Number
+			if (std::holds_alternative<double>(key)) // Number
 			{
-				int memberKey = static_cast<int>(std::get<double>(key.valueHeld));
+				int memberKey = static_cast<int>(std::get<double>(key));
 				if (members.contains(memberKey))
 					members.erase(memberKey);
 				addMember(value, memberKey);
 			}
 			else
 			{
-				std::string memberKey = std::get<std::string>(key.valueHeld); // String
+				std::string memberKey = std::get<std::string>(key); // String
 				if (memberStringMap.contains(memberKey))
 				{
 					members.erase(memberStringMap.at(memberKey));
@@ -339,11 +339,11 @@ namespace rt
 			expr = nullptr;
 		}
 		/// <summary>
-		/// Creates an object from an ast::value
+		/// Creates an object from an std::variant<double, std::string>
 		/// </summary>
 		/// <param name=""></param>
 		/// <returns></returns>
-		static std::shared_ptr<Object> objectFromValue(ast::value value)
+		static std::shared_ptr<Object> objectFromValue(std::variant<double, std::string> value)
 		{
 			// TODO: Might not be needed, depends...
 			// Remember the constructor associated with this!

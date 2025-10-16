@@ -12,67 +12,6 @@
 
 namespace ast
 {
-	enum class valueType { // TODO : Definitely obsolete 
-		DEC,
-		STR,
-	};
-	class value { // Tried to do this with union but it was so difficult like genuinely i dont understand anything
-	public:
-		/// <summary>
-		/// Number constructor
-		/// </summary>
-		value(double value) : valueHeld(value), type(valueType::DEC) {};
-		/// <summary>
-		/// String constructor
-		/// </summary>
-		value(std::string value) : valueHeld(value), type(valueType::STR) {};
-
-		// TODO: Encapsulation
-
-		/// <summary>
-		/// Current type of value
-		/// </summary>
-		valueType type;
-		/// <summary>
-		/// Value of the class
-		/// </summary>
-		std::variant<double, std::string> valueHeld;
-
-		// Operators
-
-		//TODO: I have no idea how to do operator overloading
-
-		friend bool operator==(const value v1, const value v2)
-		{
-			if (v1.type == v2.type)
-			{
-				switch (v1.type)
-				{
-				case valueType::DEC:
-				{
-					return v1.valueHeld == v2.valueHeld;
-					break;
-				}
-				case valueType::STR:
-				{
-					return v1.valueHeld == v2.valueHeld;
-					break;
-				}
-				default:
-					throw;
-				}
-			}
-			else
-				return false;
-		}
-		value& operator=(const value newValue)
-		{
-			valueHeld = newValue.valueHeld;
-			type = newValue.type;
-			return *this;
-		}
-	};
-
 	/// <summary>
 	/// Base class for ast expression
 	/// </summary>
@@ -123,12 +62,12 @@ namespace ast
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		Literal(const rt::SourceLocation src, const value value) : litValue(value), Expression(src) {};
+		Literal(const rt::SourceLocation src, const std::variant<double, std::string> value) : litValue(value), Expression(src) {};
 
 		/// <summary>
 		/// Value of literal
 		/// </summary>
-		value litValue;
+		std::variant<double, std::string> litValue;
 	private:
 		/// <summary>
 		/// Compare two ast trees

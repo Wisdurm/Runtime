@@ -110,8 +110,8 @@ namespace rt
 			throw ParserException("Expected literal after '-' token", expr->src.getLine(), expr->src.getFile()->c_str());
 		
 		// Invert value
-		if (std::holds_alternative<double>(expr->litValue.valueHeld))
-			expr->litValue.valueHeld = std::get<double>(expr->litValue.valueHeld) * -1;
+		if (std::holds_alternative<double>(expr->litValue)) // Kind of weird to have this in the parser but it works :shrug:
+			expr->litValue = std::get<double>(expr->litValue) * -1;
 		else
 			throw ParserException("You're mentally ill", expr->src.getLine(), expr->src.getFile()->c_str());
 			// If you genuinely wrote -"1" in your code you don't deserve to have access to a computer
@@ -132,11 +132,11 @@ namespace rt
 			// Remove quatation marks
 			stringValue.erase(0,1);
 			stringValue.pop_back();
-			return new ast::Literal(token.getSrc(), ast::value(stringValue)); // Using value constructor for clarity
+			return new ast::Literal(token.getSrc(), std::variant<double, std::string>(stringValue)); // Using value constructor for clarity
 		}
 		else 
 		{	// Number literal
-			return new ast::Literal(token.getSrc(), ast::value(std::stod(*token.getText()) ));
+			return new ast::Literal(token.getSrc(), std::variant<double, std::string>(std::stod(*token.getText()) ));
 		}
 	}
 
@@ -164,11 +164,13 @@ namespace rt
 	/// <returns>Ast tree</returns>
 	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function)
 	{
-		consume(tokens, "(");
+		auto beg = consume(tokens, "(");
 		
 		std::vector<ast::Expression*> args;
 		while (*peek(tokens).getText() != ")")
 		{
+			if (pos == tokens.size())
+				throw ParserException("Unmatched parentheses, starting at", beg.getSrc().getLine(), beg.getSrc().getFile()->c_str());
 			args.push_back(parseExpression(tokens));
 		}
 		consume(tokens, ")");

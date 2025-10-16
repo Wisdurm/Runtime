@@ -15,7 +15,7 @@
 
 namespace rt
 {
-	static const ast::value Zero = ast::value(0);
+	static const double Zero = 0;
 
 	/// <summary>
 	/// Returns the first argument
@@ -93,7 +93,7 @@ namespace rt
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
-			ast::value key = evaluate(args.at(1),symtab, argState, true);
+			std::variant<double, std::string> key = evaluate(args.at(1),symtab, argState, true);
 			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false)  );
 		}
 		return Zero;
@@ -110,8 +110,8 @@ namespace rt
 		if (args.size() > 0)
 		{
 			auto r = rt::evaluate(args.at(0), symtab, argState, true);
-			if (r.type == ast::valueType::DEC)
-				exit(std::get<double>(r.valueHeld));
+			if (std::holds_alternative<double>(r))
+				exit(std::get<double>(r));
 		}
 		exit(0);
 	}
@@ -215,7 +215,7 @@ namespace rt
 		if (args.size() > 0)
 		{
 			auto valueHeld VALUEHELD(args.at(0));
-			return not toBoolean(valueHeld);
+			return static_cast<double>(not toBoolean(valueHeld));
 		}
 		return Zero;
 	}

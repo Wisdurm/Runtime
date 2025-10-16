@@ -33,7 +33,7 @@ namespace rt
 			auto valueHeld VALUEHELD(arg);
 			sum += getNumericalValue(valueHeld);
 		}
-		return ast::value(sum);
+		return std::variant<double, std::string>(sum);
 	}
 	/// <summary>
 	/// Negates the value of all args
@@ -56,7 +56,7 @@ namespace rt
 				result -= getNumericalValue(valueHeld);
 			}
 		}
-		return ast::value(result);
+		return std::variant<double, std::string>(result);
 	}
 	/// <summary>
 	/// Multiplies the value of all args and returns the result
@@ -79,7 +79,7 @@ namespace rt
 				result *= getNumericalValue(valueHeld);
 			}
 		}
-		return ast::value(result);
+		return std::variant<double, std::string>(result);
 	}
 	/// <summary>
 	/// Divides the value of all args and returns the result
@@ -102,7 +102,7 @@ namespace rt
 				result /= getNumericalValue(valueHeld);
 			}
 		}
-		return ast::value(result);
+		return std::variant<double, std::string>(result);
 	}
 
 	/// <summary>
@@ -126,7 +126,7 @@ namespace rt
 				result = result % static_cast<int>(getNumericalValue(valueHeld));
 			}
 		}
-		return ast::value(result);
+		return static_cast<double>(result);
 	}
 
 	/// <summary>
@@ -143,9 +143,9 @@ namespace rt
 			auto val1 = VALUEHELD(args.at(0));
 			auto val2 = VALUEHELD(args.at(1));
 			if (std::holds_alternative<std::string>(val1) and std::holds_alternative<std::string>(val2))
-				return val1 == val2;
+				return static_cast<double>(val1 == val2);
 			// Only really needed for stoi
-			return getNumericalValue(VALUEHELD(args.at(0))) == getNumericalValue(VALUEHELD(args.at(1)));
+			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) == getNumericalValue(VALUEHELD(args.at(1))));
 		}
 		return Zero;
 	}
@@ -161,7 +161,7 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			return getNumericalValue(VALUEHELD(args.at(0))) > getNumericalValue(VALUEHELD(args.at(1)));
+			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) > getNumericalValue(VALUEHELD(args.at(1))));
 		}
 		return Zero;
 	}
@@ -177,7 +177,7 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			return getNumericalValue(VALUEHELD(args.at(0))) < getNumericalValue(VALUEHELD(args.at(1)));
+			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) < getNumericalValue(VALUEHELD(args.at(1))));
 		}
 		return Zero;
 	}

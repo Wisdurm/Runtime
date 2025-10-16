@@ -55,7 +55,7 @@ namespace rt
 				updateSymbol(key, std::get<std::shared_ptr<Object>>(*v));
 			else // Argument is value
 			{
-				std::shared_ptr<Object> obj = std::make_shared<Object>(std::get<ast::value>(*v));
+				std::shared_ptr<Object> obj = std::make_shared<Object>(std::get<std::variant<double, std::string>>(*v));
 				updateSymbol(key, obj);
 			}
 		}
@@ -248,10 +248,12 @@ namespace rt
 		{
 			auto node = dynamic_cast<ast::Identifier*>(expr);
 			objectOrBuiltin v = symtab->lookUp(node->name, argState);
-			if (std::holds_alternative<std::shared_ptr<Object>>(v))
+			if (std::holds_alternative<std::shared_ptr<Object>>(v)) // Object
 				return std::get<std::shared_ptr<Object>>(v);
 			else
-				return nullptr;
+			{
+				throw; // Builtin function
+			}
 		}
 		else if (dynamic_cast<ast::Literal*>(expr) != nullptr)
 		{
@@ -289,7 +291,7 @@ namespace rt
 					calledObject = std::get<std::shared_ptr<Object>>(callee);
 				}
 				else
-					return std::get<ast::value>(callee); // If value, return the value
+					return std::get<std::variant<double, std::string>>(callee); // If value, return the value
 			}
 
 			if (call)
@@ -323,7 +325,7 @@ namespace rt
 			if (memberInitialization)
 			{
 				std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true, argState));
-				ast::value member = std::get<ast::value>(interpret_internal(node->right, symtab, true, argState));
+				std::variant<double, std::string> member = std::get<std::variant<double, std::string>>(interpret_internal(node->right, symtab, true, argState));
 				return *(object->getMember(member));
 			}
 			else
@@ -335,7 +337,7 @@ namespace rt
 			throw;
 	}
 
-	ast::value evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
+	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
@@ -362,17 +364,21 @@ namespace rt
 #if RUNTIME_DEBUG==1
 				std::cerr << "Empty value initialized" << std::endl;
 #endif // RUNTIME_DEBUG
-				object->addMember(ast::value(0));
+				objectOrValue z = 0.0;
+				// This is required to activate the right constructor
+				// it's a leftover of an older system (ast::value)
+				// probably could be improved 
+				object->addMember(z);
 				return evaluate(object, symtab, argState, write); // Not particularly efficient but it works
 			}
 		}
 		else // Value
 		{
-			return std::get<ast::value>(member);
+			return std::get<std::variant<double, std::string>>(member);
 		}
 	}
 
-	ast::value callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args)
+	std::variant<double, std::string> callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
@@ -399,13 +405,14 @@ namespace rt
 #if RUNTIME_DEBUG==1
 				std::cerr << "Empty value initialized" << std::endl;
 #endif // RUNTIME_DEBUG
-				object->addMember(ast::value(0));
+				objectOrValue z = 0.0;
+				object->addMember(z);
 				return callObject(member, symtab, argState, args);
 			}
 		}
 		else // If value, return value
 		{
-			return std::get<ast::value>(member);
+			return std::get<std::variant<double, std::string>>(member);
 		}
 	}
 }

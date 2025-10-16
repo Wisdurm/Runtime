@@ -1,3 +1,8 @@
+## v0.9.6
+
+* Large internal rework (removed ast::value)
+* More exception updates
+
 ## v0.9.5
 
 * Added source code location to exceptions
