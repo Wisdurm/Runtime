@@ -13,9 +13,7 @@ namespace rt
 	// Tokenizer
 	std::vector<Token> tokenize(const char* src, const char* srcFile)
 	{
-		// TODO: use std::string
 		int line = 0;
-
 		std::vector<Token> tokens;
 
 		// Parse src code

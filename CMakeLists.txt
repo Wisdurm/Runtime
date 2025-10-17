@@ -12,7 +12,7 @@ project (Runtime
 # Options
 option(RUNTIME_BUILD_TESTS "Configure and build tests" TRUE)
 # Whether or not to build debug code. If you think this way of doing it sucks, I agree, but CMake
-# is a piece of shit and will not let #cmakedefine work no matter what I do 
+# is annoying and I can't get cmakedefine to work
 set(RUNTIME_DEBUG 0)
 
 # Output

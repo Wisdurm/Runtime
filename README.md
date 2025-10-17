@@ -21,9 +21,11 @@ there are problems with this that I am well aware exist, but which I don't inten
 
 ## The Future
 
-The standard library will almost definitely be expanded over time, to support basic stuff like io.  
+The standard library will almost definitely be expanded over time, to support basic stuff like io.
+I also want to comment to code more thouroughly to make it easier to understand.
 Even though this language is just a funny exersize, I still want this to be technically capable of complex things,
 even if no one might necessarily want to bother with such.
+
 
 ## Building
 
@@ -50,14 +52,4 @@ While( LargerThan(n 1)
 
 ## Documentation
 
-TODO:
-Objects can be called, or evaluated
-
-TODO:
-* Fix debug CMake bullshit
-* Get rid of ast::value class
-* Cleanup comments:
-  * Remove useless stuff
-  * Comment more thouroughly
-* Final todo's
-TODO: Fix all "todos" before publishing code
+TODO
