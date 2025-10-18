@@ -18,8 +18,7 @@ jobs:
           sudo apt-get install -yq \
           cmake \
           ninja-build \
-          git && \
-          git && \
+          git \
 
       - name : "CMake"
         uses: lukka/run-cmake@v10
