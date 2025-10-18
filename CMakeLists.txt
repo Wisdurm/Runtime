@@ -10,7 +10,7 @@ project (Runtime
 )
 
 # Options
-option(RUNTIME_BUILD_TESTS "Configure and build tests" TRUE)
+option(RUNTIME_BUILD_TESTS "Configure and build tests" FALSE)
 option(RUNTIME_INSTALL "Run the install command when building" TRUE)
 # Whether or not to build debug code. If you think this way of doing it sucks, I agree, but CMake
 # is annoying and I can't get cmakedefine to work
@@ -39,7 +39,7 @@ add_subdirectory( ${CMAKE_SOURCE_DIR}/external/Tessil )
 # Main project CMake
 add_subdirectory(src)
 target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
-target_link_libraries( Runtime PRIVATE tsl::ordered_map)
+target_link_libraries( Runtime PUBLIC tsl::ordered_map)
 
 # Tests
 if (RUNTIME_BUILD_TESTS)
@@ -49,11 +49,19 @@ if (RUNTIME_BUILD_TESTS)
 		NAME Runtime_test
 		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests_runtime
 	)
-	target_include_directories(tests_runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
+	target_include_directories(tests_runtime PRIVATE ${PROJECT_BINARY_DIR}) # Runtime.h
 endif()
 
-# Install
+# Packaging
 if (RUNTIME_INSTALL)
+
+	# Generic
+	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Small interpreted programming language")
+	set(CPACK_PACKAGE_CONTACT "Wisdurm")
+	# Debian
+	set(CPACK_GENERATOR "DEB")
+	# Windows
+
 	if(RUNTIME_BUILD_TESTS) # For debugging this might be useful
 		install(TARGETS Runtime tests_runtime RUNTIME DESTINATION bin)
 	else()
