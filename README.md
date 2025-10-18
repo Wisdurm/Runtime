@@ -37,32 +37,11 @@ You can choose not to build tests by setting RUNTIME_BUILD_TESTS to false.
 First make sure Git and Ninja are installed.  
 ```sudo apt install git ninja-build```  
 Then install and setup vcpkg.  
-Start by cloning the repository:  
-```git clone https://github.com/microsoft/vcpkg.git```  
-Then run the bootstrap script:  
-```cd vcpkg; .\bootstrap-vcpkg.bat``` On Windows  
-```cd vcpkg && ./bootstrap-vcpkg.sh``` On Linux  
-Now all dependencies are setup.  
-For the next steps, cd into this repository.   
-Create ```CMakeUserPresets.json``` in the project folder,  
-and paste the following:  
-```
-{
-  "version": 2,
-  "configurePresets": [
-    {
-      "name": "default",
-      "inherits": "ninja-vcpkg",
-      "environment": {
-        "VCPKG_ROOT": "<path to vcpkg>"
-      }
-    }
-  ]
-}
-```
-Then finally, compile the program with:  
-```cmake --preset=default```  
-```cmake --build build```  
+[Vcpkg install](https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash)  
+Cd into this repository and run:  
+```cmake --preset=ninja-vcpkg```  
+And finally, go into the build folder and simply run:  
+```ninja```  
 
 ## Examples
 
