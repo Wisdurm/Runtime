@@ -6,7 +6,7 @@ add_compile_options(-std=c++20)
 cmake_minimum_required (VERSION 3.20)
 project (Runtime
 	LANGUAGES CXX
-	VERSION 0.9.6
+	VERSION 0.9.7
 )
 
 # Options

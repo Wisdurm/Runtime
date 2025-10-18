@@ -9,11 +9,12 @@
 namespace rt
 {
 	const char Token::punctuation[] = {'-','(', ')'};
+	const char* li = "live-input";
 	
 	// Tokenizer
 	std::vector<Token> tokenize(const char* src, const char* srcFile)
 	{
-		int line = 0;
+		int line = 1;
 		std::vector<Token> tokens;
 
 		// Parse src code
@@ -71,7 +72,10 @@ namespace rt
 					advance();
 					if (srcI > srcLen)
 					{
-						throw TokenizerException("Unmatched string literal", line-1, srcFile);
+						if (strcmp(srcFile, li) == 0)
+							throw TokenizerException("Unmatched string literal", line, srcFile);
+						else // Bruhhh
+							throw TokenizerException("Unmatched string literal", line-1, srcFile);
 					}
 				} while (src[srcI] != '\"'); // Go until the end of the string literal
 				stringLiteral += '\"';
