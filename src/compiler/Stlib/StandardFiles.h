@@ -60,11 +60,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		// Convert type to number
 		if (std::holds_alternative<std::string>(val))
 		{
-			std::string str = std::get<std::string>(val);
-			if (str.find('.') != std::string::npos)
-				return std::stod(str);
-			else
-				return std::stoi(str);
+			return std::stod(std::get<std::string>(val));
 		}
 		else
 			return std::get<double>(val);

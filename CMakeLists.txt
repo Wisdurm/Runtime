@@ -11,6 +11,7 @@ project (Runtime
 
 # Options
 option(RUNTIME_BUILD_TESTS "Configure and build tests" TRUE)
+option(RUNTIME_INSTALL "Run the install command when building" TRUE)
 # Whether or not to build debug code. If you think this way of doing it sucks, I agree, but CMake
 # is annoying and I can't get cmakedefine to work
 set(RUNTIME_DEBUG 0)
@@ -49,4 +50,14 @@ if (RUNTIME_BUILD_TESTS)
 		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests_runtime
 	)
 	target_include_directories(tests_runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
+endif()
+
+# Install
+if (RUNTIME_INSTALL)
+	if(RUNTIME_BUILD_TESTS) # For debugging this might be useful
+		install(TARGETS Runtime tests_runtime RUNTIME DESTINATION bin)
+	else()
+		install(TARGETS Runtime RUNTIME DESTINATION bin)
+	endif()
+	include(CPack)
 endif()
