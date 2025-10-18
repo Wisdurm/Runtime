@@ -3,7 +3,7 @@
 enable_testing()
 
 # Tests using Catch2
-find_package(catch2 CONFIG REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)
 add_executable( tests_runtime
 ${CMAKE_SOURCE_DIR}/tests/tokenizer_tests.cpp
 ${CMAKE_SOURCE_DIR}/tests/interpreter_tests.cpp
