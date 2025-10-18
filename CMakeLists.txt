@@ -10,8 +10,8 @@ project (Runtime
 )
 
 # Options
-option(RUNTIME_BUILD_TESTS "Configure and build tests" FALSE)
-option(RUNTIME_INSTALL "Run the install command when building" TRUE)
+option(RUNTIME_BUILD_TESTS "Configure and build tests" TRUE)
+option(RUNTIME_INSTALL "Run the install command when building" FALSE)
 # Whether or not to build debug code. If you think this way of doing it sucks, I agree, but CMake
 # is annoying and I can't get cmakedefine to work
 set(RUNTIME_DEBUG 0)
