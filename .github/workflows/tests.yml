@@ -8,8 +8,9 @@ jobs:
     steps:
       - name: "Checkout repo"
         uses: actions/checkout@v3
-        with:
-          submodules: 'true'
+
+      - name: "Setup vcpkg"
+        uses: lukka/run-vcpkg@v11
 
       - name: "Dependencies"
         run: |
@@ -17,10 +18,14 @@ jobs:
           sudo apt-get install -yq \
           cmake \
           ninja-build \
+          git && \
+          git && \
 
       - name : "CMake"
-        run: |
-          cmake -S . -B build
+        uses: lukka/run-cmake@v10
+        with:
+          cmakeListsTxtPath: ${{github.workspace}}/CMakeLists.txt
+          workflowPreset: vcpkg
 
       - name: "Build"
         run: |
