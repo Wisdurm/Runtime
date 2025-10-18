@@ -3,7 +3,7 @@
 enable_testing()
 
 # Tests using Catch2
-add_subdirectory( ${CMAKE_SOURCE_DIR}/external/Catch2 build )
+find_package(catch2 CONFIG REQUIRED)
 add_executable( tests_runtime
 ${CMAKE_SOURCE_DIR}/tests/tokenizer_tests.cpp
 ${CMAKE_SOURCE_DIR}/tests/interpreter_tests.cpp

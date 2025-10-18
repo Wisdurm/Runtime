@@ -34,7 +34,7 @@ configure_file(
 )
 	
 # Libraries 
-add_subdirectory( ${CMAKE_SOURCE_DIR}/external/Tessil )
+find_package(tsl-ordered-map CONFIG REQUIRED)
 
 # Main project CMake
 add_subdirectory(src)
