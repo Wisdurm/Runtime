@@ -52,7 +52,7 @@ and paste the following:
   "configurePresets": [
     {
       "name": "default",
-      "inherits": "vcpkg",
+      "inherits": "ninja-vcpkg",
       "environment": {
         "VCPKG_ROOT": "<path to vcpkg>"
       }
