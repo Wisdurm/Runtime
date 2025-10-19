@@ -2,6 +2,7 @@
 #include "interpreter.h"
 #include "Stlib/StandardLibrary.h"
 #include "Stlib/StandardMath.h"
+#include "Stlib/StandardIO.h"
 // C++
 #include <vector>
 
@@ -138,6 +139,11 @@ namespace rt
 			{"Ceiling", Ceiling},
 			{"Round", Round},
 			{"NaturalLogarithm", NaturalLogarithm},
+			// I/O
+			{"FileCreate", FileCreate},
+			{"FileOpen", FileOpen},
+			{"FileClose", FileClose},
+			{"FileRead", FileRead},
 		});
 	}
 

@@ -18,7 +18,7 @@
 
 namespace rt
 {
-	static constexpr double Zero = 0;
+
 
 	/// <summary>
 	/// Returns the first argument
@@ -56,7 +56,7 @@ namespace rt
 		}
 		if (not isCapture())
 			std::cout << std::endl;
-		return Zero;
+		return True;
 	}
 
 	/// Retrives a line from std::cin
@@ -81,9 +81,9 @@ namespace rt
 			{
 				init.get()->addMember(*it);
 			}
-			return Zero;
+			return True;
 		}
-		return Zero;
+		return False;
 	}
 
 	/// <summary>
@@ -98,8 +98,9 @@ namespace rt
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
 			std::variant<double, std::string> key = evaluate(args.at(1),symtab, argState, true);
 			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false)  );
+			return True;
 		}
-		return Zero;
+		return False;
 	}
 
 	/// <summary>
@@ -139,7 +140,7 @@ namespace rt
 				if (file.fail())
 				{
 					std::cout << "Unable to open file " << fileName << std::endl;
-					return Zero;
+					return False;
 				}
 				file.seekg(0, std::ios::end);
 				size_t size = file.tellg();
@@ -149,9 +150,10 @@ namespace rt
 				file.close();
 
 				rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true), symtab, argState);
+				return True;
 			}
 		}
-		return Zero;
+		return False;
 	}
 
 	/// <summary>
@@ -178,8 +180,9 @@ namespace rt
 			{
 				return evaluate(args.at(2), symtab, argState, false);
 			}
+			return True;
 		}
-		return Zero;
+		return False;
 	}
 
 	/// <summary>
@@ -202,8 +205,9 @@ namespace rt
 					it++;
 				}
 			}
+			return True;
 		}
-		return Zero;
+		return False;
 	}
 
 	/// <summary>
@@ -220,7 +224,7 @@ namespace rt
 			auto valueHeld = VALUEHELD(args.at(0));
 			return static_cast<double>(not toBoolean(valueHeld));
 		}
-		return Zero;
+		return False; // Not really detectable :)
 	}
 	
 	/// <summary>
@@ -239,7 +243,7 @@ namespace rt
 			if (std::holds_alternative<std::string>(val))
 				format = std::get<std::string>(val);
 			else
-				return Zero;
+				return True;
 		}
 		std::vector<std::variant<double, std::string>> values;
 		for(std::vector<objectOrValue>::iterator it = args.begin()+1; it != args.end(); ++it )

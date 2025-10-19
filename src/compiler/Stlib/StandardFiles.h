@@ -14,6 +14,9 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
 	)
 
+	constexpr double True = 1; // Represents success
+	constexpr double False = 0; // Represents failure
+
 	// Stack overflow
 	bool ichar_equals(char a, char b)
 	{

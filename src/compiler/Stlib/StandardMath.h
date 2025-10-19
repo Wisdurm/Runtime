@@ -1,4 +1,5 @@
 #pragma once
+// This file contains all the math functions in Runtime
 #include "StandardFiles.h"
 #include "../interpreter.h"
 #include "../parser.h"
@@ -11,13 +12,13 @@
 #define SINGLE_ARG_FUNCTION(func, name) objectOrValue name(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) \
 	{ if (args.size() > 0) \
 		return func(getNumericalValue(VALUEHELD(args.at(0))));	\
-		return Zero; }
+		else return False; }
 
 // Same thing but two args
 #define DOUBLE_ARG_FUNCTION(func, name) objectOrValue name(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) \
 	{ if (args.size() > 1) \
 		return func(getNumericalValue(VALUEHELD(args.at(0))), getNumericalValue(VALUEHELD(args.at(1))));	\
-		return Zero; }
+		else return False; }
 
 namespace rt
 {
@@ -140,6 +141,10 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
+			// Check if literally the same object, as in same memory address
+			if (std::holds_alternative<std::shared_ptr<Object>>(args.at(0)) and std::holds_alternative<std::shared_ptr<Object>>(args.at(1))
+				and std::get<std::shared_ptr<Object>>(args.at(0)).get() == std::get<std::shared_ptr<Object>>(args.at(1)).get()) 
+				return 1.0;
 			auto val1 = VALUEHELD(args.at(0));
 			auto val2 = VALUEHELD(args.at(1));
 			if (std::holds_alternative<std::string>(val1) and std::holds_alternative<std::string>(val2))
@@ -147,7 +152,7 @@ namespace rt
 			// Only really needed for stoi
 			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) == getNumericalValue(VALUEHELD(args.at(1))));
 		}
-		return Zero;
+		return False;
 	}
 
 	/// <summary>
@@ -163,7 +168,7 @@ namespace rt
 		{
 			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) > getNumericalValue(VALUEHELD(args.at(1))));
 		}
-		return Zero;
+		return False;
 	}
 	
 	/// <summary>
@@ -179,7 +184,7 @@ namespace rt
 		{
 			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) < getNumericalValue(VALUEHELD(args.at(1))));
 		}
-		return Zero;
+		return False;
 	}
 
 	// This is kind of terrible but I don't feel like copying the same code 10000 times

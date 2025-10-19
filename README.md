@@ -9,7 +9,7 @@
 
 # The Runtime programming language  
 
-Runtime is a very-high-level, questionably-evaluated, purely-object-oriented, interpreted programming language.  
+Runtime is a questionably-evaluated, classless yet purely-object-oriented, interpreted programming language.  
 This language was made for fun and practice, and is not intended to be used for practical purposes.
 
 ## The Present

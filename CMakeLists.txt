@@ -6,7 +6,7 @@ add_compile_options(-std=c++20)
 cmake_minimum_required (VERSION 3.20)
 project (Runtime
 	LANGUAGES CXX
-	VERSION 0.9.8
+	VERSION 0.10.0
 )
 
 # Options
@@ -59,7 +59,7 @@ if (RUNTIME_INSTALL)
 	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Small interpreted programming language")
 	set(CPACK_PACKAGE_CONTACT "Wisdurm")
 	# Debian
-	set(CPACK_GENERATOR "DEB")
+	set(CPACK_GENERATOR "DEB;TZ;TGZ")
 	# Windows
 
 	if(RUNTIME_BUILD_TESTS) # For debugging this might be useful

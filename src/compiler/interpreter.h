@@ -171,6 +171,7 @@ namespace rt
 			addMember(name);
 			return getMember(name);
 		}; // TODO: idfk man
+
 		/// <summary>
 		/// Returns member by key
 		/// </summary>
@@ -312,6 +313,7 @@ namespace rt
 		void setMember(std::variant<double, std::string> key, objectOrValue value)
 		{
 			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
+			// TODO: Probably not particularly hard to fix, at least anymore
 			if (std::holds_alternative<double>(key)) // Number
 			{
 				int memberKey = static_cast<int>(std::get<double>(key));
