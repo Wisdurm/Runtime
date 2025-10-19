@@ -115,6 +115,7 @@ namespace rt
 			{"Not", Not},
 			{"If", If},
 			{"While", While},
+			{"Format", Format},
 			// Math
 			{"Add", Add},
 			{"Minus", Minus},

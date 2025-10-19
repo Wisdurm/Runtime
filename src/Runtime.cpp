@@ -27,6 +27,10 @@ int main(int argc, char* argv[])
 {
 	if (argc > 1) // File input
 	{
+#ifdef _WIN32
+		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+#endif // _WIN32
+
 		std::ifstream file;
 		// Open file
 		file.open(argv[1], std::fstream::in);
@@ -53,6 +57,7 @@ int main(int argc, char* argv[])
 			WHITE_TEXT
 				std::cerr << e.what() << std::endl;
 				std::cerr << e.where() << std::endl;
+			return EXIT_FAILURE;
 		}
 		catch (TokenizerException e)
 		{
@@ -61,6 +66,7 @@ int main(int argc, char* argv[])
 			WHITE_TEXT
 				std::cerr << e.what() << std::endl;
 				std::cerr << e.where() << std::endl;
+			return EXIT_FAILURE;
 		}
 
 		return EXIT_SUCCESS;

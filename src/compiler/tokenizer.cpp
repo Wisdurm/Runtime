@@ -77,7 +77,7 @@ namespace rt
 						else // Bruhhh
 							throw TokenizerException("Unmatched string literal", line-1, srcFile);
 					}
-				} while (src[srcI] != '\"'); // Go until the end of the string literal
+				} while (not(src[srcI] == '\"' and src[srcI-1] != '\\')); // Go until the end of the string literal
 				stringLiteral += '\"';
 				advance();
 				tokens.push_back(Token(stringLiteral, TokenType::LITERAL, SourceLocation(line, srcFile)));

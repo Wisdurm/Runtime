@@ -13,9 +13,12 @@
 #include <algorithm>   // std::equal
 #include <string_view> // std::string_view
 
+#include <iomanip>
+#include <sstream>
+
 namespace rt
 {
-	static const double Zero = 0;
+	static constexpr double Zero = 0;
 
 	/// <summary>
 	/// Returns the first argument
@@ -135,7 +138,7 @@ namespace rt
 				file.open(fileName, std::fstream::in);
 				if (file.fail())
 				{
-					std::cout << "Unable to open file " << fileName;
+					std::cout << "Unable to open file " << fileName << std::endl;
 					return Zero;
 				}
 				file.seekg(0, std::ios::end);
@@ -214,9 +217,78 @@ namespace rt
 	{
 		if (args.size() > 0)
 		{
-			auto valueHeld VALUEHELD(args.at(0));
+			auto valueHeld = VALUEHELD(args.at(0));
 			return static_cast<double>(not toBoolean(valueHeld));
 		}
 		return Zero;
+	}
+	
+	/// <summary>
+	///	Formats together all args into a string
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue Format(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		std::string format;
+		if (args.size() > 0)
+		{
+			auto val = VALUEHELD(args.at(0));
+			if (std::holds_alternative<std::string>(val))
+				format = std::get<std::string>(val);
+			else
+				return Zero;
+		}
+		std::vector<std::variant<double, std::string>> values;
+		for(std::vector<objectOrValue>::iterator it = args.begin()+1; it != args.end(); ++it )
+		{
+			values.push_back(VALUEHELD(*it));
+		}
+		// snprintf and std::format require args... soooo have to do this myself
+		std::string result = "";
+		int vali = 0;
+		for (int i = 0; i < format.size(); i++)
+		{
+			if (format.at(i) == '$')
+			{
+				int digits = 6;
+				if (i+1 < format.size() and isdigit(format.at(i+1))) // If num, specify double decimal digits
+				{
+					digits = format.at(i+1) - '0';
+					i++;
+				}
+				if (std::holds_alternative<std::string>(values.at(vali)))
+					result += std::get<std::string>(values.at(vali));
+				else
+				{
+					// I love C++ :)
+					std::stringstream stream;
+					stream << std::fixed << std::setprecision(digits) << std::get<double>(values.at(vali));
+					result += stream.str();
+				}
+				vali++;
+			}
+			else if (format.at(i) == '\\')
+			{
+				i++;
+				switch (format.at(i))
+				{
+				case '\\': result += '\\'; break;
+				case 'n': result += '\n'; break;
+				case '$': result += '$'; break;
+				case 't': result += '\t'; break;
+				case 'r': result += '\r'; break;
+				case '"': result += '\"'; break;
+				default:
+					break;
+				}
+			}
+			else
+				result += format.at(i);
+		}
+
+		return result;
 	}
 }

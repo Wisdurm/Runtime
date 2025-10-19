@@ -3,7 +3,7 @@
 
 namespace rt
 {
-	// Retrieves the value held by an object, or value. Uses ternary operator to do everything in a single line
+	// Retrieves the value held by an object, or value
 #define VALUEHELD(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
 evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, true) : /* Get value of object */ \
 	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
