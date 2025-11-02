@@ -140,4 +140,40 @@ namespace rt
 	    }    
 		return False;
 	}  
+
+    /// <summary>
+	/// Writes the first second argument to the file in the first argument
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue FileWrite(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		// Write line
+        if (args.size() > 1)
+	    {
+            std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
+            // Get path
+            std::string path;
+            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            if (std::holds_alternative<std::string>(p))
+                path = std::get<std::string>(p);
+            else
+                return False;
+            // Open file
+            std::fstream* f = &openedFiles.at(path);
+            if (not f->is_open())
+                return False;
+            // Get text to add
+            auto write = VALUEHELD(args.at(1));
+			if (std::holds_alternative<std::string>(write))
+			{
+				// Write value to file
+				*f << std::get<std::string>(write);
+				return True;
+			}
+	    }    
+		return False;
+	}
 }

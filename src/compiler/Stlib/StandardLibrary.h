@@ -18,8 +18,6 @@
 
 namespace rt
 {
-
-
 	/// <summary>
 	/// Returns the first argument
 	/// </summary>

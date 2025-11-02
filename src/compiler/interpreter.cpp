@@ -144,6 +144,7 @@ namespace rt
 			{"FileOpen", FileOpen},
 			{"FileClose", FileClose},
 			{"FileRead", FileRead},
+			{"FileWrite", FileWrite},
 		});
 	}
 
