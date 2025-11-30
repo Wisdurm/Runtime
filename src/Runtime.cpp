@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 
 		try
 		{
-		rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true));
+		rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true), argc, argv);
 		}
 		catch (ParserException e)
 		{

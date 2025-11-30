@@ -209,14 +209,24 @@ namespace rt
 		return capturedCout.data();
 	}
 
-	void interpret(ast::Expression* expr)
+	void interpret(ast::Expression* expr, int argc, char** argv)
 	{
 		memberInitialization = false;
+		// Load stdlib
 		clearSymtab(globalSymtab);
+		// Load command line arguments
+		for (int i = 0; i < argc; ++i) {
+			std::variant<double, std::string> value = argv[i];
+			std::string name = "carg";
+			name += std::to_string(i);
+			globalSymtab.updateSymbol(name, std::make_shared<Object>(value ));
+		}
+		// Get objects
 		capture = false;
 		interpret_internal(expr, &globalSymtab, true, mainArgState);
 		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main", mainArgState));
 		memberInitialization = true;
+		// Run code starting from main function
 		callObject(main, &globalSymtab, mainArgState);
 	}
 

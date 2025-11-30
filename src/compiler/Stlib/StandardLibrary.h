@@ -241,7 +241,7 @@ namespace rt
 			if (std::holds_alternative<std::string>(val))
 				format = std::get<std::string>(val);
 			else
-				return True;
+				return False;
 		}
 		std::vector<std::variant<double, std::string>> values;
 		for(std::vector<objectOrValue>::iterator it = args.begin()+1; it != args.end(); ++it )

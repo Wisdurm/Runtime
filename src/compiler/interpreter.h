@@ -45,7 +45,7 @@ namespace rt
 	/// Interprets ast tree
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
-	void interpret(ast::Expression* expr);
+	void interpret(ast::Expression* expr, int argc, char** argv);
 	/// <summary>
 	/// Evaluates ast tree and adds all of an it's symbols to another symbol table
 	/// </summary>

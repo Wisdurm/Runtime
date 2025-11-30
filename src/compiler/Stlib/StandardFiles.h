@@ -1,4 +1,9 @@
 #pragma once
+// Needed for clang completer
+#include <iostream>
+#include <variant>
+#include <ranges>
+
 // This file defines functions and macros which are useful for the development of the StandardLibraries
 
 namespace rt
@@ -42,7 +47,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 				for (char c : str)
 				{
 					if (not isalnum(c) or c == '.') // If string is not "true", "false" or a number, then it can't be evaluated as a boolean
-						goto BAIL;
+						return 0;
 				}
 				return std::stod(str) >= 1;
 			}
@@ -51,8 +56,6 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		{
 			return std::get<double>(val) >= 1;
 		}
-	BAIL:
-		return 0;
 	}
 	/// <summary>
 	/// Returns the numerical value of std::variant<double, std::string>.valueHeld

@@ -47,6 +47,8 @@ And finally, go into the build folder and simply run:
 
 The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) written in Runtime
 ```
+#!/usr/bin/Runtime
+
 Object(n Input())
 Print(n)
 While( LargerThan(n 1)
@@ -61,4 +63,4 @@ While( LargerThan(n 1)
 
 ## Documentation
 
-TODO
+Documentation is available at the official [Runtime site](https://runtime.wisdurm.fi/public/index.php).
