@@ -139,6 +139,8 @@ namespace rt
 			{"Ceiling", Ceiling},
 			{"Round", Round},
 			{"NaturalLogarithm", NaturalLogarithm},
+			{"RandomDecimal", RandomDecimal},
+			{"RandomInteger", RandomInteger},
 			// I/O
 			{"FileCreate", FileCreate},
 			{"FileOpen", FileOpen},

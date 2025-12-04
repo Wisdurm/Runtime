@@ -5,8 +5,10 @@
 #include "../parser.h"
 // C++
 #include <cmath>
+#include <stdexcept>
 #include <vector>
 #include <variant>
+#include <cstdlib>
 
 // Automatically make single argument functions from C++ functions
 #define SINGLE_ARG_FUNCTION(func, name) objectOrValue name(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) \
@@ -21,8 +23,7 @@
 		else return False; }
 
 namespace rt
-{
-	/// <summary>
+{ /// <summary>
 	/// Adds the value of all args together and retuns the sum
 	/// </summary>
 	/// <returns>Sum of all args</returns>
@@ -150,7 +151,11 @@ namespace rt
 			if (std::holds_alternative<std::string>(val1) and std::holds_alternative<std::string>(val2))
 				return static_cast<double>(val1 == val2);
 			// Only really needed for stoi
-			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) == getNumericalValue(VALUEHELD(args.at(1))));
+			try {
+				return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) == getNumericalValue(VALUEHELD(args.at(1))));
+			}catch(std::invalid_argument) {
+				return False;
+			}
 		}
 		return False;
 	}
@@ -185,6 +190,26 @@ namespace rt
 			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) < getNumericalValue(VALUEHELD(args.at(1))));
 		}
 		return False;
+	}
+
+	/// <summary>
+	/// Returns a random number between 0 and the integerlimit
+	/// </summary>
+	/// <returns></returns>
+	objectOrValue RandomInteger(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		srand(time(NULL)); // Need only be run once, but not sure where else to put this :shrug:
+		return static_cast<double>(rand());
+	}
+
+	/// <summary>
+	/// Returns a random decimal number between 0 and 1
+	/// </summary>
+	/// <returns></returns>
+	objectOrValue RandomDecimal(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		srand(time(NULL)); // Need only be run once, but not sure where else to put this :shrug:
+		return static_cast<double>(rand()) / RAND_MAX;
 	}
 
 	// This is kind of terrible but I don't feel like copying the same code 10000 times
