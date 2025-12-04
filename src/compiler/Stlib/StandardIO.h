@@ -3,6 +3,7 @@
 #include "StandardFiles.h"
 #include "../interpreter.h"
 // C++
+#include <variant>
 #include <vector>
 #include <unordered_map>
 #include <iostream>
@@ -35,7 +36,8 @@ namespace rt
             
             file->addMember(path, "path"); // Path to the file
             file->addMember(False, "open"); // Whether open or not
-            file->addMember(0.0, "line"); // Line to be read
+            file->addMember(0.0, "line"); // Last line read by FileReadLine
+            file->addMember(0.0, "pointer"); // Part in file from where to read and where to write
             return True;
 	    }    
 		return False;
@@ -62,6 +64,10 @@ namespace rt
             else
                 return False;
             // Open file
+			if (openedFiles.contains(path)) {
+				std::cout << "File is already opened";
+				return False;
+			}
             openedFiles.insert({path, std::fstream()});
             std::fstream* f = &openedFiles.at(path);
             f->open(path, std::ios::in | std::ios::out);
@@ -112,7 +118,7 @@ namespace rt
 	/// <param name="symtab"></param>
 	/// <param name="argState"></param>
 	/// <returns></returns>
-	objectOrValue FileRead(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	objectOrValue FileReadLine(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
         // Read line
         if (args.size() > 0)
@@ -125,11 +131,11 @@ namespace rt
                 path = std::get<std::string>(p);
             else
                 return False;
-            // Read line
+			// Open file
             std::fstream* f = &openedFiles.at(path);
             if (not f->is_open())
                 return False;
-            
+			// Read line
             std::string line;
             std::getline(*f, line);
             // Update member
@@ -140,6 +146,15 @@ namespace rt
 	    }    
 		return False;
 	}  
+
+	/// <summary>
+	/// Writes a line to the end of a file.
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue FileAppendLine(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState);
 
     /// <summary>
 	/// Writes the first second argument to the file in the first argument
@@ -176,4 +191,55 @@ namespace rt
 	    }    
 		return False;
 	}
+
+    /// <summary>
+	/// Reads a specified amount of data from a file.
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue FileRead(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+        // Read line
+        if (args.size() > 0)
+	    {
+            std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
+            // Get path
+            std::string path;
+            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            if (std::holds_alternative<std::string>(p))
+                path = std::get<std::string>(p);
+            else
+                return False;
+            // Open file
+            std::fstream* f = &openedFiles.at(path);
+            if (not f->is_open())
+                return False;
+            // Get file position
+			auto v = VALUEHELD(*file->getMember(std::string("pointer")));
+			if (not std::holds_alternative<double>(v)) {
+				std::cout << "Pointer is of wrong type";
+				return False;
+			}
+			const int pos = std::get<double>(v);
+			f->seekg(pos);
+			// Get data amount
+			auto a = VALUEHELD(args.at(1));
+			if (not std::holds_alternative<double>(a)) {
+				std::cout << "Amount is of wrong type";
+				return False;
+			}
+			const int amount = std::get<double>(a);
+			// Read data
+			char * memblock = new char [amount];
+			f->read(memblock, amount);
+			std::string data(memblock, amount);
+			delete[] memblock;
+			// Update pointer
+			file->setMember("pointer", static_cast<double>(f->tellg()));
+			return data;
+	    }    
+		return False;
+	}  
 }
