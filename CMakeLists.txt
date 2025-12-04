@@ -35,11 +35,12 @@ configure_file(
 	
 # Libraries 
 find_package(tsl-ordered-map CONFIG REQUIRED)
+include_directories(/usr/include/readline)
 
 # Main project CMake
 add_subdirectory(src)
 target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
-target_link_libraries( Runtime PUBLIC tsl::ordered_map)
+target_link_libraries( Runtime PUBLIC tsl::ordered_map readline)
 
 # Tests
 if (RUNTIME_BUILD_TESTS)
@@ -58,8 +59,9 @@ if (RUNTIME_INSTALL)
 	# Generic
 	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Small interpreted programming language")
 	set(CPACK_PACKAGE_CONTACT "Wisdurm")
-	# Debian
 	set(CPACK_GENERATOR "DEB;TZ;TGZ")
+	# Debian
+	# set(CPACK_DEBIAN_PACKAGE_DEPENDS "libreadline") TODO
 	# Windows
 
 	if(RUNTIME_BUILD_TESTS) # For debugging this might be useful

@@ -8,6 +8,10 @@
 #include <fstream>
 #include <vector>
 #include <variant>
+// Gnu
+#include <readline/readline.h>
+// C
+#include <stdlib.h>
 
 #include <cctype>      // std::tolower
 #include <algorithm>   // std::equal
@@ -60,8 +64,9 @@ namespace rt
 	/// Retrives a line from std::cin
 	objectOrValue Input(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
-		std::string r;
-		std::getline(std::cin, r);
+		char* tmp = readline(" ");
+		std::string r(tmp);
+		free(tmp);
 		return r;
 	}
 

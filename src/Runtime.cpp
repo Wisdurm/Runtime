@@ -7,6 +7,11 @@
 // C++
 #include <iostream> 
 #include <fstream>
+// C
+#include <stdlib.h>
+// Gnu
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #ifdef _WIN32
 
@@ -84,11 +89,15 @@ int main(int argc, char* argv[])
 		rt::liveIntrepretSetup();
 		while (true)
 		{
-			YELLOW_TEXT
-				std::cout << ">> ";
-			WHITE_TEXT
-				std::string input;
-			std::getline(std::cin, input);
+#ifdef _WIN32
+			TODO
+#else
+			char* in = readline("\033[33m>>\033[37m ");
+			std::string input(in);
+			if (not input.empty())
+				add_history(in);
+			free(in);
+#endif
 			if (not input.empty())
 			{
 				try

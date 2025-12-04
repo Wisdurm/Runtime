@@ -13,6 +13,6 @@ ${CMAKE_SOURCE_DIR}/src/compiler/parser.cpp
 ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.cpp
 ${CMAKE_SOURCE_DIR}/src/flowgraph.cpp
 )
-target_link_libraries( tests_runtime PRIVATE Catch2::Catch2WithMain tsl::ordered_map)
+target_link_libraries( tests_runtime PRIVATE Catch2::Catch2WithMain tsl::ordered_map readline)
 # Enforce C++ 20 (again)
 set_property(TARGET tests_runtime PROPERTY CXX_STANDARD 20)

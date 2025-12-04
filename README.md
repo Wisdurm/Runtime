@@ -28,11 +28,18 @@ even if no one might necessarily want to bother with such.
 
 ## Building
 
-This is a standard CMake project, and the only dependencies are Catch2 and Tessil's ordered maps,
-which are both vcpkg packages.  
-You can choose not to build tests by setting RUNTIME_BUILD_TESTS to false.
+### Dependencies 
+
+Dependencies are Catch2, Tessil's ordered maps and GNU readline,
+the former two of which which are both vcpkg packages.  
+GNU readline must for the time being be installed as a shared library, for example
+from your distribution's package manager.  
+That is, for Debian 13 you would do:  
+```sudo apt install libreadline-dev```  
 
 ### Instructions for building
+
+You can choose not to build tests by setting RUNTIME_BUILD_TESTS to false.
 
 First make sure Git and Ninja are installed.  
 ```sudo apt install git ninja-build```  
@@ -40,8 +47,8 @@ Then install and setup vcpkg.
 [Vcpkg install](https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash)  
 Cd into this repository and run:  
 ```cmake --preset=ninja-vcpkg```  
-And finally, go into the build folder and simply run:  
-```ninja```  
+And finally:  
+```cmake --build build```  
 
 ## Examples
 
