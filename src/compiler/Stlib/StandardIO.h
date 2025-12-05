@@ -32,7 +32,7 @@ namespace rt
             if (std::holds_alternative<std::string>(arg1))
                 path = std::get<std::string>(arg1);
             else
-                return False;
+				return giveException("Path is of wrong type");
             
             file->addMember(path, "path"); // Path to the file
             file->addMember(False, "open"); // Whether open or not
@@ -40,7 +40,7 @@ namespace rt
             file->addMember(0.0, "pointer"); // Part in file from where to read and where to write
             return True;
 	    }    
-		return False;
+		return giveException("Wrong amount of arguments");
 	}    
     
     /// <summary>
@@ -62,24 +62,22 @@ namespace rt
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
-                return False;
+				return giveException("Path is of wrong type");
             // Open file
 			if (openedFiles.contains(path)) {
-				std::cout << "File is already opened";
-				return False;
+				return giveException("File is already opened");
 			}
             openedFiles.insert({path, std::fstream()});
             std::fstream* f = &openedFiles.at(path);
             f->open(path, std::ios::in | std::ios::out);
             if (f->fail())
             {
-                std::cout << "Unable to open file " << path;
-                return False;
+				return giveException("Unable to open file");
 		    }
             file->setMember("open", True);
             return True;
 	    }    
-		return False;
+		return giveException("Wrong amount of arguments");
 	}  
 
     /// <summary>
@@ -101,14 +99,14 @@ namespace rt
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
-                return False;
+				return giveException("Path is of wrong type");
             // Close file
             openedFiles.at(path).close();
             openedFiles.erase(path);
             file->setMember("open", False);
             return True;
 	    }    
-		return False;
+		return giveException("Wrong amount of arguments");
 	}  
 
     /// <summary>
@@ -130,11 +128,11 @@ namespace rt
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
-                return False;
+				return giveException("Path is of wrong type");
 			// Open file
             std::fstream* f = &openedFiles.at(path);
             if (not f->is_open())
-                return False;
+				return giveException("File failed to open");
 			// Read line
             std::string line;
             std::getline(*f, line);
@@ -144,7 +142,7 @@ namespace rt
                 file->setMember("line", std::get<double>(ln) + 1);
             return line;
 	    }    
-		return False;
+		return giveException("Wrong amount of arguments");
 	}  
 
 	/// <summary>
@@ -175,11 +173,11 @@ namespace rt
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
-                return False;
+				return giveException("Path is of wrong type");
             // Open file
             std::fstream* f = &openedFiles.at(path);
             if (not f->is_open())
-                return False;
+				return giveException("File failed to open");
             // Get text to add
             auto write = VALUEHELD(args.at(1));
 			if (std::holds_alternative<std::string>(write))
@@ -189,7 +187,7 @@ namespace rt
 				return True;
 			}
 	    }    
-		return False;
+		return giveException("Wrong amount of arguments");
 	}
 
     /// <summary>
@@ -211,24 +209,22 @@ namespace rt
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
-                return False;
+				return giveException("Path is of wrong type");
             // Open file
             std::fstream* f = &openedFiles.at(path);
             if (not f->is_open())
-                return False;
+                return giveException("File failed to open");
             // Get file position
 			auto v = VALUEHELD(*file->getMember(std::string("pointer")));
 			if (not std::holds_alternative<double>(v)) {
-				std::cout << "Pointer is of wrong type";
-				return False;
+				return giveException("Pointer is of wrong type");
 			}
 			const int pos = std::get<double>(v);
 			f->seekg(pos);
 			// Get data amount
 			auto a = VALUEHELD(args.at(1));
 			if (not std::holds_alternative<double>(a)) {
-				std::cout << "Amount is of wrong type";
-				return False;
+				return giveException("Amount is of wrong type");
 			}
 			const int amount = std::get<double>(a);
 			// Read data
@@ -240,6 +236,6 @@ namespace rt
 			file->setMember("pointer", static_cast<double>(f->tellg()));
 			return data;
 	    }    
-		return False;
+		return giveException("Wrong amount of arguments");
 	}  
 }

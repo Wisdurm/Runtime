@@ -1,6 +1,8 @@
 #pragma once
+#include "../interpreter.h"
 // Needed for clang completer
 #include <iostream>
+#include <memory>
 #include <variant>
 #include <ranges>
 
@@ -70,5 +72,16 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		}
 		else
 			return std::get<double>(val);
+	}
+
+	/// <summary>
+	/// Creates a Runtime exception with the given error message.
+	/// </summary>
+	/// <returns>Exception object</returns>
+	std::shared_ptr<Object> giveException(const std::string& msg)
+	{
+		auto exception = std::make_shared<Object>("Exception");
+		exception->addMember(msg, "message");
+		return exception;
 	}
 }

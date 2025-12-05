@@ -27,8 +27,9 @@ namespace rt
 	static Token consume(const std::vector<Token>& tokens, std::string expected = "")
 	{
 		auto token = peek(tokens);
-		if (expected != "" and *token.getText() != expected)
-			throw;
+		if (expected != "" and *token.getText() != expected) {
+			throw ParserException("Unexpected token encountered", token.getSrc().getLine(), *token.getSrc().getFile());
+		}
 		pos++;
 		return token;
 	};

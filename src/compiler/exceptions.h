@@ -42,6 +42,28 @@ public:
         std::string loc = "File \"" + file; 
         loc += "\", line ";
         loc += std::to_string(line);
-        return loc.c_str();    
+        return loc;    
+    }
+};
+
+class InterpreterException : public std::exception
+{
+private:
+    const char * const msg;
+    int const line;
+    const std::string file;
+public:
+    // Constructor
+    InterpreterException(const char * const message, const int line, const std::string& file) : msg(message), line(line), file(file) {};
+    const char* what() const throw() override
+    {
+        return msg;    
+    }
+    std::string where() const
+    {
+        std::string loc = "File \"" + file; 
+        loc += "\", line ";
+        loc += std::to_string(line);
+        return loc;    
     }
 };

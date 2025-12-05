@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 
 		try
 		{
-		rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true), argc, argv);
+			rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true), argc, argv);
 		}
 		catch (ParserException e)
 		{
@@ -72,6 +72,14 @@ int main(int argc, char* argv[])
 				std::cerr << e.what() << std::endl;
 				std::cerr << e.where() << std::endl;
 			return EXIT_FAILURE;
+		}
+		catch (InterpreterException e)
+		{
+			YELLOW_TEXT
+				std::cerr << "InterpreterException: ";
+			WHITE_TEXT
+				std::cerr << e.what() << std::endl;
+				std::cerr << e.where() << std::endl;
 		}
 
 		return EXIT_SUCCESS;
@@ -120,8 +128,17 @@ int main(int argc, char* argv[])
 						std::cerr << e.what() << std::endl;
 						std::cerr << e.where() << std::endl;
 				}
+				catch (InterpreterException e)
+				{
+					YELLOW_TEXT
+						std::cerr << "InterpreterException: ";
+					WHITE_TEXT
+						std::cerr << e.what() << std::endl;
+						std::cerr << e.where() << std::endl;
+				}
 			};
 		}
+		rl_clear_history();
 		return EXIT_SUCCESS;
 	}
 }

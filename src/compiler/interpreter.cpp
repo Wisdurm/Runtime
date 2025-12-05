@@ -1,10 +1,13 @@
 #include "Runtime.h"
 #include "interpreter.h"
+#include "exceptions.h"
 #include "Stlib/StandardLibrary.h"
 #include "Stlib/StandardMath.h"
 #include "Stlib/StandardIO.h"
 // C++
 #include <vector>
+#include <unordered_set>
+#include <algorithm>
 
 namespace rt
 {
@@ -47,7 +50,7 @@ namespace rt
 
 		// Cannot find, create symbol
 #if RUNTIME_DEBUG==1
-		std::cerr << "Empty object initialized" << std::endl;
+		std::cout << "Empty object initialized" << std::endl;
 #endif // RUNTIME_DEBUG
 		auto v = args.getArg();
 		if (v != nullptr)
@@ -181,6 +184,10 @@ namespace rt
 	/// Main argument state, all arg states should be derived from this one
 	/// </summary>
 	static ArgState mainArgState = ArgState(mainArgs);
+	/// <summary>
+	/// Stores all objects currently being evaluated, in order to stop endless loops
+	/// </summary>
+	static std::unordered_set<std::shared_ptr<Object>> inEvaluation;
 
 	void liveIntrepretSetup()
 	{
@@ -273,7 +280,7 @@ namespace rt
 				return std::get<std::shared_ptr<Object>>(v);
 			else
 			{
-				throw; // Builtin function
+				throw InterpreterException("Attempt to evaluate built-in function", node->src.getLine(), *node->src.getFile());
 			}
 		}
 		else if (dynamic_cast<ast::Literal*>(expr) != nullptr)
@@ -355,7 +362,7 @@ namespace rt
 			}
 		}
 		else
-			throw;
+			throw InterpreterException("Unimplemented ast node encountered", 0, "Unknown"); // Too lazy to get proper src loc for this
 	}
 
 	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
@@ -363,34 +370,52 @@ namespace rt
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
 			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
-			if (object.get()->getExpression() != nullptr) // Parse expression
+			if (inEvaluation.contains(object)) { // TODO: Should maybe allow multiple ones
+				inEvaluation.erase(object);
+				// Get source location
+				if (object->getExpression() != nullptr) {
+					SourceLocation loc = object->getExpression()->src;
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", loc.getLine(), *loc.getFile());
+				}
+				else {
+					// TODO: expand search
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", 0, "Unknown");
+				}
+			}
+			inEvaluation.insert(object); // This is currently being evaluated
+			if (object->getExpression() != nullptr) // Parse expression
 			{
-				auto r = evaluate(interpret_internal(object.get()->getExpression(), symtab, true, argState), symtab, argState, write);
+				auto r = evaluate(interpret_internal(object->getExpression(), symtab, true, argState), symtab, argState, write);
 				if (write)
 				{
 #if RUNTIME_DEBUG==1
-				std::cerr << "Value evaluated to memory";
+				std::cout << "Value evaluated to memory";
 #endif // RUNTIME_DEBUG
 					object->addMember(r);
 					object->deleteExpression();
 				}
+				inEvaluation.erase(object);
 				return r;
 			}
-			else if (auto members = object.get()->getMembers(); members.size() > 0)
+			else if (auto members = object->getMembers(); members.size() > 0)
 			{
-				return evaluate(*(--members.end()), symtab, argState, write); // Evaluate last member
+				auto r = evaluate(*(--members.end()), symtab, argState, write); // Evaluate last member
+				inEvaluation.erase(object);
+				return r;
 			}
 			else // No value, generate empty member
 			{
+				inEvaluation.erase(object); // Immediately remove since this one is fine to double evaluate
 #if RUNTIME_DEBUG==1
-				std::cerr << "Empty value initialized" << std::endl;
+				std::cout << "Empty value initialized" << std::endl;
 #endif // RUNTIME_DEBUG
 				objectOrValue z = 0.0;
 				// This is required to activate the right constructor
 				// it's a leftover of an older system (ast::value)
 				// probably could be improved 
 				object->addMember(z);
-				return evaluate(object, symtab, argState, write); // Not particularly efficient but it works
+				auto r = evaluate(object, symtab, argState, write); // Not particularly efficient but it works
+				return r;
 			}
 		}
 		else // Value
@@ -424,7 +449,7 @@ namespace rt
 			else
 			{
 #if RUNTIME_DEBUG==1
-				std::cerr << "Empty value initialized" << std::endl;
+				std::cout << "Empty value initialized" << std::endl;
 #endif // RUNTIME_DEBUG
 				objectOrValue z = 0.0;
 				object->addMember(z);

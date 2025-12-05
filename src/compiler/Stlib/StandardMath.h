@@ -2,7 +2,6 @@
 // This file contains all the math functions in Runtime
 #include "StandardFiles.h"
 #include "../interpreter.h"
-#include "../parser.h"
 // C++
 #include <cmath>
 #include <stdexcept>
@@ -154,10 +153,10 @@ namespace rt
 			try {
 				return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) == getNumericalValue(VALUEHELD(args.at(1))));
 			}catch(std::invalid_argument) {
-				return False;
+				return giveException("Uncomparable arguments");
 			}
 		}
-		return False;
+		return giveException("Wrong amount of arguments");
 	}
 
 	/// <summary>
@@ -173,7 +172,7 @@ namespace rt
 		{
 			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) > getNumericalValue(VALUEHELD(args.at(1))));
 		}
-		return False;
+		return giveException("Wrong amount of arguments");
 	}
 	
 	/// <summary>
@@ -189,7 +188,7 @@ namespace rt
 		{
 			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) < getNumericalValue(VALUEHELD(args.at(1))));
 		}
-		return False;
+		return giveException("Wrong amount of arguments");
 	}
 
 	/// <summary>

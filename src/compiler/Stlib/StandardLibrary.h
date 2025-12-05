@@ -86,7 +86,7 @@ namespace rt
 			}
 			return True;
 		}
-		return False;
+		return giveException("Incorrect arguments");
 	}
 
 	/// <summary>
@@ -103,7 +103,7 @@ namespace rt
 			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false)  );
 			return True;
 		}
-		return False;
+		return giveException("Incorrect arguments");
 	}
 
 	/// <summary>
@@ -142,8 +142,7 @@ namespace rt
 				file.open(fileName, std::fstream::in);
 				if (file.fail())
 				{
-					std::cout << "Unable to open file " << fileName << std::endl;
-					return False;
+					return giveException("Unable to open file");
 				}
 				file.seekg(0, std::ios::end);
 				size_t size = file.tellg();
@@ -156,7 +155,7 @@ namespace rt
 				return True;
 			}
 		}
-		return False;
+		return giveException("Wrong amount of arguments");
 	}
 
 	/// <summary>
@@ -185,7 +184,7 @@ namespace rt
 			}
 			return True;
 		}
-		return False;
+		return giveException("Wrong amount of arguments");
 	}
 
 	/// <summary>
@@ -210,7 +209,7 @@ namespace rt
 			}
 			return True;
 		}
-		return False;
+		return giveException("Wrong amount of arguments");
 	}
 
 	/// <summary>
@@ -227,7 +226,7 @@ namespace rt
 			auto valueHeld = VALUEHELD(args.at(0));
 			return static_cast<double>(not toBoolean(valueHeld));
 		}
-		return False; // Not really detectable :)
+		return giveException("Wrong amount of arguments");
 	}
 	
 	/// <summary>
@@ -246,7 +245,7 @@ namespace rt
 			if (std::holds_alternative<std::string>(val))
 				format = std::get<std::string>(val);
 			else
-				return False;
+				return giveException("Format is of wrong type");
 		}
 		std::vector<std::variant<double, std::string>> values;
 		for(std::vector<objectOrValue>::iterator it = args.begin()+1; it != args.end(); ++it )
