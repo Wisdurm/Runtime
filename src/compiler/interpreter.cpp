@@ -150,6 +150,7 @@ namespace rt
 			{"FileClose", FileClose},
 			{"FileReadLine", FileReadLine},
 			{"FileWrite", FileWrite},
+			{"FileAppendLine", FileAppendLine},
 			{"FileRead", FileRead},
 		});
 	}

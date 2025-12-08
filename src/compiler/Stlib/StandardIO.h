@@ -36,7 +36,6 @@ namespace rt
             
             file->addMember(path, "path"); // Path to the file
             file->addMember(False, "open"); // Whether open or not
-            file->addMember(0.0, "line"); // Last line read by FileReadLine
             file->addMember(0.0, "pointer"); // Part in file from where to read and where to write
             return True;
 	    }    
@@ -136,10 +135,6 @@ namespace rt
 			// Read line
             std::string line;
             std::getline(*f, line);
-            // Update member
-            auto ln = VALUEHELD(*file->getMember(std::string("line")));
-            if (std::holds_alternative<double>(ln))
-                file->setMember("line", std::get<double>(ln) + 1);
             return line;
 	    }    
 		return giveException("Wrong amount of arguments");
@@ -152,10 +147,41 @@ namespace rt
 	/// <param name="symtab"></param>
 	/// <param name="argState"></param>
 	/// <returns></returns>
-	objectOrValue FileAppendLine(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState);
+	objectOrValue FileAppendLine(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		// Append line
+        if (args.size() > 1)
+	    {
+            std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
+            // Get path
+            std::string path;
+            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            if (std::holds_alternative<std::string>(p))
+                path = std::get<std::string>(p);
+            else
+				return giveException("Path is of wrong type");
+            // Open file
+            std::fstream* f = &openedFiles.at(path);
+            if (not f->is_open())
+				return giveException("File failed to open");
+            // Get text to add
+            auto write = VALUEHELD(args.at(1));
+			if (not std::holds_alternative<std::string>(write))
+			{
+				return giveException("String is of wrong type");
+			}
+			// Position at end
+			f->seekg (0, std::ios::end);
+			// Write value to file
+			*f << std::get<std::string>(write) << '\n';
+			return True;
+	    }    
+		return giveException("Wrong amount of arguments");
+
+	}
 
     /// <summary>
-	/// Writes the first second argument to the file in the first argument
+	/// Writes the second argument to the file in the first argument
 	/// </summary>
 	/// <param name="args"></param>
 	/// <param name="symtab"></param>
@@ -178,14 +204,22 @@ namespace rt
             std::fstream* f = &openedFiles.at(path);
             if (not f->is_open())
 				return giveException("File failed to open");
+			// Get file position
+			auto v = VALUEHELD(*file->getMember(std::string("pointer")));
+			if (not std::holds_alternative<double>(v)) {
+				return giveException("Pointer is of wrong type");
+			}
+			const int pos = std::get<double>(v);
+			f->seekp(pos);
             // Get text to add
             auto write = VALUEHELD(args.at(1));
-			if (std::holds_alternative<std::string>(write))
+			if (not std::holds_alternative<std::string>(write))
 			{
-				// Write value to file
-				*f << std::get<std::string>(write);
-				return True;
+				return giveException("String is of wrong type");
 			}
+			// Write value to file
+			*f << std::get<std::string>(write);
+			return True;
 	    }    
 		return giveException("Wrong amount of arguments");
 	}
