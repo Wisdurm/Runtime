@@ -126,7 +126,7 @@ namespace rt
 	/// <summary>
 	/// Includes a file in the current runtime
 	/// </summary>
-	/// <param name="args">Args are either the names of .rnt runtime files, or builtin libraries that end with .h</param>
+	/// <param name="args">Args are either the names of .rnt runtime files, or shared libraries (.so) following the C calling conventions</param>
 	/// <param name="symtab"></param>
 	/// <returns></returns>
 	objectOrValue Include(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
@@ -134,25 +134,38 @@ namespace rt
 		for (objectOrValue arg : args)
 		{
 			auto valueHeld VALUEHELD(arg);
-			if (std::holds_alternative<std::string>(valueHeld)) // If string, try load file
+			if (std::holds_alternative<std::string>(valueHeld)) // If string
 			{
 				std::string fileName = std::get<std::string>(valueHeld);
 				std::ifstream file;
-				// Open file
-				file.open(fileName, std::fstream::in);
-				if (file.fail())
-				{
-					return giveException("Unable to open file");
-				}
-				file.seekg(0, std::ios::end);
-				size_t size = file.tellg();
-				std::string fileText(size, ' ');
-				file.seekg(0);
-				file.read(&fileText[0], size);
-				file.close();
+				// Runtime library
+				if (fileName.ends_with(".rnt")) {
+					// Open file
+					file.open(fileName, std::fstream::in);
+					if (file.fail())
+					{
+						return giveException("Unable to open file");
+					}
+					file.seekg(0, std::ios::end);
+					size_t size = file.tellg();
+					std::string fileText(size, ' ');
+					file.seekg(0);
+					file.read(&fileText[0], size);
+					file.close();
 
-				rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true), symtab, argState);
-				return True;
+					rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true), symtab, argState);
+					return True;
+				}
+				else if (fileName.ends_with(".so") or fileName.ends_with(".dll")) {
+					loadSharedLibrary(fileName.c_str()); // Call function
+					return True;
+				}
+				else {
+					return giveException("File is not a Runtime file or a shared library");
+				}
+			}
+			else {
+				return giveException("Filepath is of wrong type");
 			}
 		}
 		return giveException("Wrong amount of arguments");

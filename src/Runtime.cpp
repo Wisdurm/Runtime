@@ -62,6 +62,7 @@ int main(int argc, char* argv[])
 			WHITE_TEXT
 				std::cerr << e.what() << std::endl;
 				std::cerr << e.where() << std::endl;
+			rt::cleanLibraries();
 			return EXIT_FAILURE;
 		}
 		catch (TokenizerException e)
@@ -71,6 +72,7 @@ int main(int argc, char* argv[])
 			WHITE_TEXT
 				std::cerr << e.what() << std::endl;
 				std::cerr << e.where() << std::endl;
+			rt::cleanLibraries();
 			return EXIT_FAILURE;
 		}
 		catch (InterpreterException e)
@@ -80,8 +82,10 @@ int main(int argc, char* argv[])
 			WHITE_TEXT
 				std::cerr << e.what() << std::endl;
 				std::cerr << e.where() << std::endl;
+			rt::cleanLibraries();
+			return EXIT_FAILURE;
 		}
-
+		rt::cleanLibraries();
 		return EXIT_SUCCESS;
 	}
 	else // Live interpret
@@ -139,6 +143,7 @@ int main(int argc, char* argv[])
 			};
 		}
 		rl_clear_history();
+		rt::cleanLibraries();
 		return EXIT_SUCCESS;
 	}
 }

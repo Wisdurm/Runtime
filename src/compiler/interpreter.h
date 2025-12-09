@@ -34,6 +34,14 @@ typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn> objectOrBuiltin;
 namespace rt
 {
 	/// <summary>
+	/// Loads a shared library
+	/// </summary>
+	void loadSharedLibrary(const char* fileName);
+	/// <summary>
+	/// Unloads all shared libraries
+	/// </summary>
+	void cleanLibraries();
+	/// <summary>
 	/// Sets up the required variables for live interpreting
 	/// </summary>
 	void liveIntrepretSetup();

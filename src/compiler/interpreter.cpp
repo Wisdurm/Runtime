@@ -8,6 +8,8 @@
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
+// C
+#include <dlfcn.h> // TODO: Windows?
 
 namespace rt
 {
@@ -189,6 +191,10 @@ namespace rt
 	/// Stores all objects currently being evaluated, in order to stop endless loops
 	/// </summary>
 	static std::unordered_set<std::shared_ptr<Object>> inEvaluation;
+	/// <summary>
+	/// Stores all currently loaded shared libraries
+	/// </summary>
+	static std::vector<void*> libraries;
 
 	void liveIntrepretSetup()
 	{
@@ -461,5 +467,28 @@ namespace rt
 		{
 			return std::get<std::variant<double, std::string>>(member);
 		}
+	}
+
+	void loadSharedLibrary(const char* fileName)
+	{
+		// Handle to the library
+		void* handle = nullptr;
+		handle = dlopen(fileName, RTLD_LAZY);
+		if (!handle) {
+			throw InterpreterException(dlerror(), 0, "Unknown");
+		}
+		// Function pointer DEBUG
+		void (*fptr)() = (void (*)()) dlsym(handle, "test");
+		(*fptr)(); // Call function
+		// 
+		libraries.push_back(handle);
+	}
+
+	void cleanLibraries()
+	{
+		for (auto lib : libraries) {
+			dlclose(lib);
+		}
+		libraries.clear();
 	}
 }

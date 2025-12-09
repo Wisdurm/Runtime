@@ -61,7 +61,7 @@ if (RUNTIME_INSTALL)
 	set(CPACK_PACKAGE_CONTACT "Wisdurm")
 	set(CPACK_GENERATOR "DEB;TZ;TGZ")
 	# Debian
-	# set(CPACK_DEBIAN_PACKAGE_DEPENDS "libreadline") TODO
+	set(CPACK_DEBIAN_PACKAGE_DEPENDS "libreadline8t64")
 	# Windows
 
 	if(RUNTIME_BUILD_TESTS) # For debugging this might be useful
