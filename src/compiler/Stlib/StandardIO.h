@@ -69,7 +69,7 @@ namespace rt
             openedFiles.insert({path, std::fstream()});
             std::fstream* f = &openedFiles.at(path);
             f->open(path, std::ios::in | std::ios::out);
-            if (f->fail())
+            if (not f->is_open())
             {
 				return giveException("Unable to open file");
 		    }
