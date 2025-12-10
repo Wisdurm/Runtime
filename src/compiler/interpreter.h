@@ -10,12 +10,16 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#include <span>
+// C
+#include <ffi.h>
 
 namespace rt
 {
 	class Object;
 	class SymbolTable;
 	class ArgState;
+	struct libFunc;
 };
 
 /// <summary>
@@ -27,12 +31,31 @@ typedef std::variant<std::shared_ptr<rt::Object>, std::variant<double, std::stri
 /// </summary>
 typedef std::function<objectOrValue(std::vector<objectOrValue>&, rt::SymbolTable*, rt::ArgState&)> BuiltIn;
 /// <summary>
-/// Type which symbol table points to. Either object, or a function object referencing a built in function.
+/// Type which symbol table points to object, a function object referencing a built in function or a function from a shared library.
 /// </summary>
-typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn> objectOrBuiltin;
+typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn> Symbol;
 
 namespace rt
 {
+	/// <summary>
+	///	Container for a function which has been loaded from a shared library
+	/// </summary>
+	struct libFunc
+	{
+		/// <summary>
+		///	Pointer to the function
+		/// </summary>
+		const void* function;
+		/// <summary>
+		/// Return type of the function
+		/// </summary>
+		ffi_type retTypes;
+		/// <summary>
+		/// Argument types
+		/// </summary>
+		std::span<const ffi_type> argTypes;
+	};
+
 	/// <summary>
 	/// Loads a shared library
 	/// </summary>
@@ -388,7 +411,7 @@ namespace rt
 		/// <summary>
 		/// Stores the values of variables in the local scope. Also points to built in functions
 		/// </summary>
-		std::unordered_map<std::string, objectOrBuiltin> locals;
+		std::unordered_map<std::string, Symbol> locals;
 		/// <summary>
 		/// Stores higher level variables
 		/// </summary>
@@ -404,10 +427,10 @@ namespace rt
 		/// <summary>
 		/// Initialized symbol constructor
 		/// </summary>
-		SymbolTable(const std::unordered_map<std::string, objectOrBuiltin> locals)
+		SymbolTable(const std::unordered_map<std::string, Symbol> locals)
 		{
 			parent = nullptr;
-			this->locals = std::unordered_map<std::string, objectOrBuiltin>(locals); // TODO what the fuck maaan
+			this->locals = std::unordered_map<std::string, Symbol>(locals); // TODO what the fuck maaan
 		}
 		/// <summary>
 		/// Parent constructor
@@ -424,7 +447,7 @@ namespace rt
 		/// <param name="key">Key to look for</param>
 		/// <param name="args">Arguments in current scope. If there are values here, they will be used instead of initializing a new one.</param>
 		/// <returns>The value of a key, if not found will create new empty value</returns>
-		objectOrBuiltin& lookUp(std::string key, ArgState& args);
+		Symbol& lookUp(std::string key, ArgState& args);
 		/// <summary>
 		/// Changes the value of a symbol, or adds a new one to the local scope if not found
 		/// </summary>

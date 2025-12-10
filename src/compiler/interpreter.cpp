@@ -5,11 +5,15 @@
 #include "Stlib/StandardMath.h"
 #include "Stlib/StandardIO.h"
 // C++
+#include <stdexcept>
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
 // C
 #include <dlfcn.h> // TODO: Windows?
+#include <elf.h> // WINDOWS!!
+#include <link.h>
+#include <cxxabi.h>  // needed for abi::__cxa_demangle
 
 namespace rt
 {
@@ -32,10 +36,10 @@ namespace rt
 	}
 
 	// Symbol table
-	objectOrBuiltin& SymbolTable::lookUp(std::string key, ArgState& args)
+	Symbol& SymbolTable::lookUp(std::string key, ArgState& args)
 	{
 		// Check if key exists
-		std::unordered_map<std::string, objectOrBuiltin>::iterator it = locals.find(key);
+		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
 		if (it != locals.end()) // Exists
 			return it->second;
 
@@ -43,7 +47,7 @@ namespace rt
 		while (p != nullptr) // Look for key in parent symbol table
 		{
 			// Check if key exists
-			std::unordered_map<std::string, objectOrBuiltin>::iterator it = p->locals.find(key);
+			std::unordered_map<std::string, Symbol>::iterator it = p->locals.find(key);
 			if (it != p->locals.end()) // Exists
 				return it->second;
 			else
@@ -94,7 +98,7 @@ namespace rt
 	void SymbolTable::updateSymbol(const std::string& key, const std::shared_ptr<Object> object)
 	{
 		// Check if key exists
-		std::unordered_map<std::string, objectOrBuiltin>::iterator it = locals.find(key);
+		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
 		if (it != locals.end()) // Exists
 			it->second = object; // I don't think there's any chance this works but I'm a bit tired atm so I'll figure this out in the coming days/weeks
 		else
@@ -282,7 +286,7 @@ namespace rt
 		if (dynamic_cast<ast::Identifier*>(expr) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Identifier*>(expr);
-			objectOrBuiltin v = symtab->lookUp(node->name, argState);
+			Symbol v = symtab->lookUp(node->name, argState);
 			if (std::holds_alternative<std::shared_ptr<Object>>(v)) // Object
 				return std::get<std::shared_ptr<Object>>(v);
 			else
@@ -302,12 +306,12 @@ namespace rt
 			//TODO: The next 20 or so lines of code suck REALLY bad and I HATE THEM VERY MUCH
 			// THIS FUNCTION IS SOOOOO BAD BUT I REALLY DONT WANT TO REWRITE IT
 
-			objectOrBuiltin calledObject;
+			Symbol calledObject;
 			objectOrValue callee;
 			if (dynamic_cast<ast::Identifier*>(node->object) != nullptr) // First check for builtin since interpret_internal can't handle that
 			{
 				auto bn = dynamic_cast<ast::Identifier*>(node->object);
-				auto v = (symtab->lookUp(bn->name, argState)); // Look up object in symtab
+				auto v = symtab->lookUp(bn->name, argState); // Look up object in symtab
 				if (std::holds_alternative<BuiltIn>(v)) // Builtin
 				{
 					calledObject = std::get<BuiltIn>(v);
@@ -469,22 +473,80 @@ namespace rt
 		}
 	}
 
+	static std::vector<std::string> getSymbols(void* library)
+	{
+		std::vector<std::string> symbols;
+		// Get symbols from library
+		struct link_map* map = nullptr;
+		dlinfo(library, RTLD_DI_LINKMAP, &map);
+		Elf64_Sym* symtab = nullptr;
+		char* strtab = nullptr;
+		int symentries;
+		// ???? straight from stack overflow
+	    for (auto section = map->l_ld; section->d_tag != DT_NULL; ++section)
+		{
+			if (section->d_tag == DT_SYMTAB)
+			{
+				symtab = (Elf64_Sym *)section->d_un.d_ptr;
+			}
+			if (section->d_tag == DT_STRTAB)
+			{
+				strtab = (char*)section->d_un.d_ptr;
+			}
+			if (section->d_tag == DT_SYMENT)
+			{
+				symentries = section->d_un.d_val;
+			}
+		}
+		int size = strtab - (char *)symtab;
+		for (int k = 0; k < size / symentries; ++k)
+		{
+			auto sym = &symtab[k];
+			// If sym is function
+			if (ELF64_ST_TYPE(symtab[k].st_info) == STT_FUNC)
+			{
+				//str is name of each symbol
+				auto str = &strtab[sym->st_name];
+				symbols.push_back(str);
+			}
+		}
+		return symbols;
+	}
+
+	[[nodiscard]] static const std::string cppDemangle(const char *abiName)
+	{
+		int status;    
+		char *ret = abi::__cxa_demangle(abiName, 0, 0, &status);  
+		const std::string r = std::string(ret);
+		free(ret);
+		return r;
+	}
+
 	void loadSharedLibrary(const char* fileName)
 	{
 		// Handle to the library
 		void* handle = nullptr;
-		handle = dlopen(fileName, RTLD_LAZY);
+		handle = dlopen(fileName, RTLD_LAZY | RTLD_GLOBAL);
 		if (!handle) {
 			throw InterpreterException(dlerror(), 0, "Unknown");
 		}
+		std::vector<std::string> symbols = getSymbols(handle);
+		// Demangle names (if C++)
+		try {
+			for (int i = 0; i < symbols.size(); ++i) {
+				symbols[i] = cppDemangle(symbols[i].c_str());
+			}
+		} catch (std::logic_error _) {
+			// Not C++
+		}
 		// Function pointer DEBUG
-		void (*fptr)() = (void (*)()) dlsym(handle, "test");
-		(*fptr)(); // Call function
+		// void (*fptr)() = (void (*)()) dlsym(handle, "test");
+		// (*fptr)(); // Call function
 		// 
 		libraries.push_back(handle);
 	}
 
-	void cleanLibraries()
+	void cleanLibraries() 
 	{
 		for (auto lib : libraries) {
 			dlclose(lib);
