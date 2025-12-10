@@ -9,6 +9,7 @@
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
+#include <any>
 // C
 #include <dlfcn.h> // TODO: Windows?
 #include <elf.h> // WINDOWS!!
@@ -77,7 +78,28 @@ namespace rt
 		return lookUp(key, args);
 	}
 
-	bool SymbolTable::contains(std::string& key)
+	Symbol& SymbolTable::lookUpHard(std::string key)
+	{
+		// Check if key exists
+		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
+		if (it != locals.end()) // Exists
+			return it->second;
+
+		auto p = parent;
+		while (p != nullptr) // Look for key in parent symbol table
+		{
+			// Check if key exists
+			std::unordered_map<std::string, Symbol>::iterator it = p->locals.find(key);
+			if (it != p->locals.end()) // Exists
+				return it->second;
+			else
+				p = p->parent;
+		}
+		// Cannot find, throw
+		throw InterpreterException("Unable to find symbol", 0, "Unknown");
+	}
+
+	bool SymbolTable::contains(std::string& key) const
 	{
 		// Check if key exists
 		if (locals.contains(key))
@@ -105,11 +127,40 @@ namespace rt
 			locals.insert({ key, object });
 	}
 
+	void SymbolTable::updateSymbol(const std::string& key, LibFunc object)
+	{
+		// TODO: Maybe use variant
+		// Check if key exists
+		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
+		if (it != locals.end()) // Exists
+			it->second = object; // I don't think there's any chance this works but I'm a bit tired atm so I'll figure this out in the coming days/weeks
+		else
+			locals.insert({ key, object });
+	}
+
 	void SymbolTable::clear()
 	{
 		locals.clear();
 		if (parent != nullptr)
 			parent->clear();
+	}
+		
+	std::vector<std::string> SymbolTable::getKeys()
+	{
+		std::vector<std::string> keys;
+		// Get from current
+		for (auto kv : this->locals) {
+			keys.push_back(kv.first);
+		}
+		// Get from parents
+		auto p = parent;
+		while (p != nullptr)
+		{
+			for (auto kv : p->locals) {
+				keys.push_back(kv.first);
+			}
+		}
+		return keys;
 	}
 
 	static void clearSymtab(SymbolTable& symtab)
@@ -126,6 +177,8 @@ namespace rt
 			{"If", If},
 			{"While", While},
 			{"Format", Format},
+			/* {"GetKeys", GetKeys}, */
+			{"Size", Size},
 			// Math
 			{"Add", Add},
 			{"Minus", Minus},
@@ -286,7 +339,7 @@ namespace rt
 		if (dynamic_cast<ast::Identifier*>(expr) != nullptr)
 		{
 			auto node = dynamic_cast<ast::Identifier*>(expr);
-			Symbol v = symtab->lookUp(node->name, argState);
+			const Symbol& v = symtab->lookUp(node->name, argState);
 			if (std::holds_alternative<std::shared_ptr<Object>>(v)) // Object
 				return std::get<std::shared_ptr<Object>>(v);
 			else
@@ -308,13 +361,21 @@ namespace rt
 
 			Symbol calledObject;
 			objectOrValue callee;
-			if (dynamic_cast<ast::Identifier*>(node->object) != nullptr) // First check for builtin since interpret_internal can't handle that
+
+			// If node->object is identifier,
+			// check for builtin since interpret_internal can't handle that.
+			// 
+			if (dynamic_cast<ast::Identifier*>(node->object) != nullptr)
 			{
 				auto bn = dynamic_cast<ast::Identifier*>(node->object);
-				auto v = symtab->lookUp(bn->name, argState); // Look up object in symtab
+				const auto& v = symtab->lookUp(bn->name, argState); // Look up object in symtab
 				if (std::holds_alternative<BuiltIn>(v)) // Builtin
 				{
 					calledObject = std::get<BuiltIn>(v);
+				}
+				else if (std::holds_alternative<LibFunc>(v)) // Library function
+				{
+					calledObject = std::get<LibFunc>(v);
 				}
 				else // Not builtin
 				{
@@ -323,7 +384,15 @@ namespace rt
 				callee = std::make_shared<Object>(bn->name, node);
 			}
 			else // Not builtin function
-			{
+			{	
+				// TODO:
+				// I don't actually know if this code ever gets called.
+				// This is the most complicated part of the project, and it's been months
+				// since I wrote this so I genuinely don't remember why execution would ever
+				// reach here
+				std::cerr << "Hello, you've found something interesting."
+					"Please report this message to me, as well as the code that caused this to appear.";
+
 				callee = interpret_internal(node->object, symtab, false, argState);
 				if (std::holds_alternative<std::shared_ptr<Object>>(callee)) // If object, call object
 				{
@@ -346,6 +415,51 @@ namespace rt
 				if (std::holds_alternative<BuiltIn>(calledObject)) // Call built-in
 				{
 					return std::get<BuiltIn>(calledObject)(args, symtab, argState);
+				}
+				else if (std::holds_alternative<LibFunc>(calledObject)) // Call library
+				{
+					// TODO: Windows
+					const LibFunc& func = std::get<LibFunc>(calledObject);
+					ffi_cif cif; // Function signature
+					ffi_type** params = const_cast<ffi_type**>(func.argTypes.data()); // TODO: AAAAAAAA
+					int ret;
+					const int narms = func.nargs; // n params
+					// Arguments
+					std::vector<std::any> arguments; // Actual arg storage
+				 	// Get arguments
+					for (int i = 0; i < narms; ++i) {
+						// Get value of arg
+						std::variant<double, std::string> val;
+						// Cast arg to type wanted by lib
+						ffi_type* type = func.argTypes[i];
+						if (type == &ffi_type_sint) { // I don't think this is right :sob:
+							// TODO: GetAsNumber()
+							const int v = static_cast<int>(std::get<double>(val));
+							arguments.push_back(v);
+						}
+						else throw;
+						// TODO: Other types
+					}
+					// Pointer shenanigans
+					std::unique_ptr<void* []> args; // Generic pointers to args
+					args = std::make_unique<void* []>(narms); // Create list to arg pointers
+					for (int i = 0; i < narms; ++i) {
+						args[i] = &arguments.at(i);
+					}
+					// Create CIF
+					if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, params) != FFI_OK)
+					{
+						throw;
+					}
+					// TODO
+					// Call
+					ffi_call(&cif, FFI_FN(func.function), &ret, args.get());
+					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
+					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
+					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
+					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
+					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
+					return static_cast<double>(static_cast<int>(ret));
 				}
 				else // Call Object
 				{
@@ -538,6 +652,15 @@ namespace rt
 			}
 		} catch (std::logic_error _) {
 			// Not C++
+		}
+		// Create objects
+		for (auto sym : symbols) {
+			void* fptr = dlsym(handle, sym.c_str());
+			// TODO: HARD CODED FOR DEBUGGING
+			globalSymtab.updateSymbol(sym, LibFunc(fptr, ffi_type_sint, {&ffi_type_sint}, 1));
+			// These are not yet able to be called, as they do not have
+			// their necessary argument and return types set
+			// The signature must be specified by calling Sign()
 		}
 		// Function pointer DEBUG
 		// void (*fptr)() = (void (*)()) dlsym(handle, "test");

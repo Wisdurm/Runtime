@@ -10,7 +10,6 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
-#include <span>
 // C
 #include <ffi.h>
 
@@ -19,7 +18,7 @@ namespace rt
 	class Object;
 	class SymbolTable;
 	class ArgState;
-	struct libFunc;
+	struct LibFunc;
 };
 
 /// <summary>
@@ -33,27 +32,31 @@ typedef std::function<objectOrValue(std::vector<objectOrValue>&, rt::SymbolTable
 /// <summary>
 /// Type which symbol table points to object, a function object referencing a built in function or a function from a shared library.
 /// </summary>
-typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn> Symbol;
+typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn, rt::LibFunc> Symbol;
 
 namespace rt
 {
 	/// <summary>
 	///	Container for a function which has been loaded from a shared library
 	/// </summary>
-	struct libFunc
+	struct LibFunc
 	{
 		/// <summary>
 		///	Pointer to the function
 		/// </summary>
-		const void* function;
+		void* function;
 		/// <summary>
 		/// Return type of the function
 		/// </summary>
-		ffi_type retTypes;
+		ffi_type retType;
 		/// <summary>
 		/// Argument types
 		/// </summary>
-		std::span<const ffi_type> argTypes;
+		std::vector<ffi_type*> argTypes;
+		/// <summary>
+		/// Argument amount
+		/// </summary>
+		int nargs;
 	};
 
 	/// <summary>
@@ -449,11 +452,23 @@ namespace rt
 		/// <returns>The value of a key, if not found will create new empty value</returns>
 		Symbol& lookUp(std::string key, ArgState& args);
 		/// <summary>
+		/// Looks up a key from the symbol table and its parents, will not create a new one in case it doesn't find anything.
+		/// </summary>
+		/// <param name="key">Key to look for</param>
+		/// <returns>The value of a key, throws an exception if not found</returns>
+		Symbol& lookUpHard(std::string key); // cant be const :(
+		/// <summary>
 		/// Changes the value of a symbol, or adds a new one to the local scope if not found
 		/// </summary>
 		/// <param name="key">Name of the symbol</param>
-		/// <param name="value">Value of the symbol</param>
+		/// <param name="object">Value of the symbol</param>
 		void updateSymbol(const std::string& key, const std::shared_ptr<rt::Object> object);
+		/// <summary>
+		/// Changes the value of a symbol, or adds a new one to the local scope if not found
+		/// </summary>
+		/// <param name="key">Name of the symbol</param>
+		/// <param name="object">Value of the symbol</param>
+		void updateSymbol(const std::string& key, LibFunc object);
 		/// <summary>
 		/// Clears the symbol table
 		/// </summary>
@@ -463,7 +478,13 @@ namespace rt
 		/// </summary>
 		/// <param name="key">Key to look for</param>
 		/// <returns></returns>
-		bool contains(std::string& key);
+		bool contains(std::string& key) const;
+		/// <summary>
+		/// Returns all keys from the symbol table and it's parents
+		/// </summary>
+		/// <param name="key">Key to look for</param>
+		/// <returns></returns>
+		std::vector<std::string> getKeys();
 	};
 
 	/// <summary>

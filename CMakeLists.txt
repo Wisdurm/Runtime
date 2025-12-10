@@ -40,7 +40,7 @@ include_directories(/usr/include/readline)
 # Main project CMake
 add_subdirectory(src)
 target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
-target_link_libraries( Runtime PUBLIC tsl::ordered_map readline)
+target_link_libraries( Runtime PUBLIC tsl::ordered_map readline ffi)
 
 # Tests
 if (RUNTIME_BUILD_TESTS)

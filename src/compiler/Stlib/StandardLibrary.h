@@ -310,4 +310,43 @@ namespace rt
 
 		return result;
 	}
+
+	// On hold while I figure out what I want to do with my life
+	/* /// <summary> */
+	/* ///	Returns all keys from the symbol table of the current scope */
+	/* /// </summary> */
+	/* /// <param name="args"></param> */
+	/* /// <param name="symtab"></param> */
+	/* /// <param name="argState"></param> */
+	/* /// <returns></returns> */
+	/* objectOrValue GetKeys(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) */
+	/* { */
+	/* 	auto smt = std::make_shared<Object>("symbols"); */
+	/* 	for (auto i : symtab->getKeys()) { */
+	/* 		std::variant<double, std::string> v = i; // ast::value :( */
+	/* 		smt->addMember(v); */
+	/* 	} */
+	/* 	return smt; */
+	/* } */
+
+	/// <summary>
+	///	Returns the size of an object; that is, how many members it has
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue Size(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0)
+		{
+			if (std::holds_alternative<std::variant<double, std::string>>(args.at(0))) {
+				return giveException("Object must be object");
+			}
+			auto obj = std::get<std::shared_ptr<Object>>(args.at(0));
+			return static_cast<double>(obj->getMembers().size());
+		}
+		return giveException("Wrong amount of arguments");
+	}
+
 }
