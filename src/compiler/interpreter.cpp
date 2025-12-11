@@ -5,11 +5,15 @@
 #include "Stlib/StandardMath.h"
 #include "Stlib/StandardIO.h"
 // C++
+#include <ffi.h>
 #include <stdexcept>
+#include <variant>
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
 #include <any>
+// DEBUG: TODO
+#include <cassert>
 // C
 #include <dlfcn.h> // TODO: Windows?
 #include <elf.h> // WINDOWS!!
@@ -423,29 +427,36 @@ namespace rt
 					ffi_cif cif; // Function signature
 					ffi_type** params = const_cast<ffi_type**>(func.argTypes.data()); // TODO: AAAAAAAA
 					int ret;
-					const int narms = func.nargs; // n params
+					const int narms = func.argTypes.size(); // n params
+					assert(narms == 1);
+					assert(func.argTypes.at(0) == &ffi_type_sint);
+					assert(params[0] == &ffi_type_sint);
 					// Arguments
 					std::vector<std::any> arguments; // Actual arg storage
 				 	// Get arguments
 					for (int i = 0; i < narms; ++i) {
 						// Get value of arg
-						std::variant<double, std::string> val;
+						std::variant<double, std::string> val = std::get<std::variant<double, std::string>>(args.at(i));
 						// Cast arg to type wanted by lib
 						ffi_type* type = func.argTypes[i];
 						if (type == &ffi_type_sint) { // I don't think this is right :sob:
 							// TODO: GetAsNumber()
+							assert(std::holds_alternative<double>(val));
 							const int v = static_cast<int>(std::get<double>(val));
+							assert(v == 5);
 							arguments.push_back(v);
 						}
 						else throw;
 						// TODO: Other types
 					}
+					assert(std::any_cast<int>(arguments.at(0)) == 5);
 					// Pointer shenanigans
 					std::unique_ptr<void* []> args; // Generic pointers to args
 					args = std::make_unique<void* []>(narms); // Create list to arg pointers
 					for (int i = 0; i < narms; ++i) {
 						args[i] = &arguments.at(i);
 					}
+					assert(*static_cast<int*>(args[0]) == 5);
 					// Create CIF
 					if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, params) != FFI_OK)
 					{
@@ -459,7 +470,9 @@ namespace rt
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
-					return static_cast<double>(static_cast<int>(ret));
+					double val = static_cast<double>(static_cast<int>(ret));
+					assert(val == 10.0);
+					return val;
 				}
 				else // Call Object
 				{
@@ -657,7 +670,7 @@ namespace rt
 		for (auto sym : symbols) {
 			void* fptr = dlsym(handle, sym.c_str());
 			// TODO: HARD CODED FOR DEBUGGING
-			globalSymtab.updateSymbol(sym, LibFunc(fptr, ffi_type_sint, {&ffi_type_sint}, 1));
+			globalSymtab.updateSymbol(sym, LibFunc(fptr, ffi_type_sint, {&ffi_type_sint}));
 			// These are not yet able to be called, as they do not have
 			// their necessary argument and return types set
 			// The signature must be specified by calling Sign()

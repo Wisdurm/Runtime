@@ -53,10 +53,6 @@ namespace rt
 		/// Argument types
 		/// </summary>
 		std::vector<ffi_type*> argTypes;
-		/// <summary>
-		/// Argument amount
-		/// </summary>
-		int nargs;
 	};
 
 	/// <summary>
