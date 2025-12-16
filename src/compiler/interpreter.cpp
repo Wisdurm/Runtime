@@ -6,6 +6,7 @@
 #include "Stlib/StandardIO.h"
 // C++
 #include <ffi.h>
+#include <memory>
 #include <stdexcept>
 #include <variant>
 #include <vector>
@@ -181,6 +182,7 @@ namespace rt
 			{"If", If},
 			{"While", While},
 			{"Format", Format},
+			{"Bind", Bind},
 			/* {"GetKeys", GetKeys}, */
 			{"Size", Size},
 			// Math
@@ -424,57 +426,60 @@ namespace rt
 				{
 					// TODO: Windows
 					const LibFunc& func = std::get<LibFunc>(calledObject);
+					if (not func.initialized)
+						throw InterpreterException("Shared function is not yet bound.", 0, "Unknown");
 					ffi_cif cif; // Function signature
 					ffi_type** params = const_cast<ffi_type**>(func.argTypes.data()); // TODO: AAAAAAAA
 					int ret;
 					const int narms = func.argTypes.size(); // n params
-					assert(narms == 1);
-					assert(func.argTypes.at(0) == &ffi_type_sint);
-					assert(params[0] == &ffi_type_sint);
+					// assert(func.argTypes.at(0) == &ffi_type_sint);
+					// assert(params[0] == &ffi_type_sint);
 					// Arguments
-					std::vector<std::any> arguments; // Actual arg storage
+					std::vector<std::any> arguments;
 				 	// Get arguments
 					for (int i = 0; i < narms; ++i) {
 						// Get value of arg
-						std::variant<double, std::string> val = std::get<std::variant<double, std::string>>(args.at(i));
+						auto value = VALUEHELD(args.at(i));
 						// Cast arg to type wanted by lib
 						ffi_type* type = func.argTypes[i];
 						if (type == &ffi_type_sint) { // I don't think this is right :sob:
-							// TODO: GetAsNumber()
-							assert(std::holds_alternative<double>(val));
-							const int v = static_cast<int>(std::get<double>(val));
-							assert(v == 5);
-							arguments.push_back(v);
+							const int val = getNumericalValue(value);
+							// Shared because vector requires copyable types
+							arguments.push_back(std::make_shared<int>(val));
 						}
-						else throw;
+						else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 						// TODO: Other types
 					}
-					assert(std::any_cast<int>(arguments.at(0)) == 5);
+					// assert(*std::any_cast<std::shared_ptr<int>>(arguments.at(0)) == 5);
+					assert(arguments.at(0).type() == typeid(std::shared_ptr<int>)); // or smart ptr
+					// Void pointer array of length narms
+					std::unique_ptr<void* []> call_args; // Generic pointers to args
+					call_args = std::make_unique<void* []>(narms); // Create list to arg pointers
 					// Pointer shenanigans
-					std::unique_ptr<void* []> args; // Generic pointers to args
-					args = std::make_unique<void* []>(narms); // Create list to arg pointers
 					for (int i = 0; i < narms; ++i) {
-						args[i] = &arguments.at(i);
+						// nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
+						if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
+							call_args[i] = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
 					}
-					assert(*static_cast<int*>(args[0]) == 5);
+					// assert(*static_cast<int*>(call_args[0]) == 5);
 					// Create CIF
 					if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, params) != FFI_OK)
 					{
-						throw;
+						throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 					}
 					// TODO
 					// Call
-					ffi_call(&cif, FFI_FN(func.function), &ret, args.get());
+					ffi_call(&cif, FFI_FN(func.function), &ret, call_args.get());
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 					double val = static_cast<double>(static_cast<int>(ret));
-					assert(val == 10.0);
+					// assert(val == 10.0);
 					return val;
 				}
-				else // Call Object
+				else // Call Runtime Object
 				{
 					SymbolTable localSt = SymbolTable(symtab); // Going down in scope
 					return callObject(std::get<std::shared_ptr<Object>>(calledObject), &localSt, argState, args);
@@ -669,8 +674,7 @@ namespace rt
 		// Create objects
 		for (auto sym : symbols) {
 			void* fptr = dlsym(handle, sym.c_str());
-			// TODO: HARD CODED FOR DEBUGGING
-			globalSymtab.updateSymbol(sym, LibFunc(fptr, ffi_type_sint, {&ffi_type_sint}));
+			globalSymtab.updateSymbol(sym, LibFunc(fptr, false, nullptr, {}));
 			// These are not yet able to be called, as they do not have
 			// their necessary argument and return types set
 			// The signature must be specified by calling Sign()

@@ -6,6 +6,7 @@
 // C++
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 #include <vector>
 #include <variant>
 // Gnu
@@ -22,6 +23,12 @@
 
 namespace rt
 {
+	/// <summary>
+	/// Maps type names to their ffi type pointers
+	/// </summary>
+	static std::unordered_map<std::string, ffi_type*> typeNames = {
+		{"int", &ffi_type_sint}
+	};
 	/// <summary>
 	/// Returns the first argument
 	/// </summary>
@@ -349,4 +356,53 @@ namespace rt
 		return giveException("Wrong amount of arguments");
 	}
 
+	/// <summary>
+	///	Creates a binding for a shared function, by specifying it's parameters and return value.
+	///	Arg0 is the name of the function, arg1 is the return type and the rest of the args are 
+	///	parameter types.
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue Bind(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		// TODO: If fails midway through, undefined behaviour
+		if (args.size() < 3)
+			return giveException("Wrong amount of arguments");
+		// Get function by name
+		LibFunc* func = nullptr; // Function to bind
+		{
+			auto v = VALUEHELD(args.at(0));
+			if (const std::string* name = std::get_if<std::string>(&v)){
+				if ((func = std::get_if<LibFunc>(&globalSymtab.lookUpHard(*name)))) {}
+				else {
+					return giveException("Func name was not of a shared function");
+				}
+			}
+			else
+				return giveException("Func name was of wrong type");
+		}
+		// Get return value
+		{
+			ffi_type* ret;
+			auto rV = VALUEHELD(args.at(1));
+			if (const std::string* rType = std::get_if<std::string>(&rV)){
+				ret = typeNames.at(*rType);
+			}
+			else
+				return giveException("Return name was of wrong type");
+			func->retType = ret;
+		}
+		// Get parameters
+		for (auto it = args.begin() + 2; it != args.end(); ++it) {
+			auto rP = VALUEHELD(*it);
+			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
+				func->argTypes.push_back(typeNames.at(*pType));
+			}
+		}
+		// Finished
+		func->initialized = true;
+		return True;
+	}
 }
