@@ -24,6 +24,10 @@
 namespace rt
 {
 	/// <summary>
+	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for TODO
+	/// </summary>
+	ffi_type ffi_type_cstring = ffi_type_pointer;
+	/// <summary>
 	/// Maps type names to their ffi type pointers
 	/// </summary>
 	static const std::unordered_map<std::string, ffi_type*> typeNames = {
@@ -57,6 +61,7 @@ namespace rt
 		{"long", &ffi_type_ulong}, // Default
 		{"longdouble", &ffi_type_longdouble},
 		{"pointer", &ffi_type_pointer}, // Generic pointer
+		{"cstring", &ffi_type_cstring}, // Char pointer, TODO: interpreter should make this a string
 		{"complex_float", &ffi_type_complex_float},
 		{"complex_double", &ffi_type_complex_double},
 		{"complex_longdouble", &ffi_type_complex_longdouble},

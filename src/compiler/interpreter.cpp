@@ -643,6 +643,12 @@ namespace rt
 		libraries.clear();
 	}
 
+	// Please help
+	static void argAppend(std::vector<std::any> arguments, ffi_type* type, std::variant<double, std::string> value)
+	{
+		
+	}
+
 	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: Windows
@@ -660,14 +666,56 @@ namespace rt
 			auto value = VALUEHELD(args.at(i));
 			// Cast arg to type wanted by lib
 			ffi_type* type = func.argTypes.at(i);
-			// :cry: :sob:
-			if (type == &ffi_type_sint)
+			// Please help :(
+			{
+			/*{{{*/
+			if (type == &ffi_type_uint8)
 				// Shared because vector requires copyable types
-				arguments.push_back(std::make_shared<int>(getNumericalValue(value)));
+				arguments.push_back(std::make_shared<uint8_t>(getNumericalValue(value)));
+			else if (type == &ffi_type_sint8)
+				arguments.push_back(std::make_shared<int8_t>(getNumericalValue(value)));
+			else if (type == &ffi_type_uint16)
+				arguments.push_back(std::make_shared<uint16_t>(getNumericalValue(value)));
+			else if (type == &ffi_type_sint16)
+				arguments.push_back(std::make_shared<int16_t>(getNumericalValue(value)));
+			else if (type == &ffi_type_uint32)
+				arguments.push_back(std::make_shared<uint32_t>(getNumericalValue(value)));
+			else if (type == &ffi_type_sint32)
+				arguments.push_back(std::make_shared<int32_t>(getNumericalValue(value)));
+			else if (type == &ffi_type_uint64)
+				arguments.push_back(std::make_shared<uint64_t>(getNumericalValue(value)));
+			else if (type == &ffi_type_sint64)
+				arguments.push_back(std::make_shared<int64_t>(getNumericalValue(value)));
 			else if (type == &ffi_type_float)
 				arguments.push_back(std::make_shared<float>(getNumericalValue(value)));
+			else if (type == &ffi_type_double)
+				arguments.push_back(std::make_shared<double>(getNumericalValue(value)));
+			else if (type == &ffi_type_uchar)
+				arguments.push_back(std::make_shared<unsigned char>(getNumericalValue(value)));
+			else if (type == &ffi_type_schar)
+				arguments.push_back(std::make_shared<signed char>(getNumericalValue(value)));
+			else if (type == &ffi_type_ushort)
+				arguments.push_back(std::make_shared<unsigned short>(getNumericalValue(value)));
+			else if (type == &ffi_type_sshort)
+				arguments.push_back(std::make_shared<short>(getNumericalValue(value)));
+			else if (type == &ffi_type_uint)
+				arguments.push_back(std::make_shared<unsigned int>(getNumericalValue(value)));
+			else if (type == &ffi_type_sint)
+				arguments.push_back(std::make_shared<int>(getNumericalValue(value)));
+			else if (type == &ffi_type_ulong)
+				arguments.push_back(std::make_shared<unsigned long>(getNumericalValue(value)));
+			else if (type == &ffi_type_slong)
+				arguments.push_back(std::make_shared<long>(getNumericalValue(value)));
+			else if (type == &ffi_type_longdouble)
+				arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
+			// TODO: Allow passing pointers, then update the objects with the values of
+			// the pointers after the function has been called
+			/* else if (type == &ffi_type_pointer) */
+			/* 	arguments.push_back(std::make_shared<void *>(getNumericalValue(value))); */
 			else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 			// TODO: Other types
+			/*}}}*/
+			}
 		}
 		// Void pointer array of length narms
 		std::unique_ptr<void* []> call_args; // Generic pointers to args
@@ -675,18 +723,56 @@ namespace rt
 		// Pointer shenanigans
 		for (int i = 0; i < narms; ++i) {
 			// nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
-			if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
-				call_args[i] = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
+			// This is EXTREMELY prone to errors, errors which are likely quite hard to spot
+			{
+			/*{{{*/
+			if (arguments.at(i).type() == typeid(std::shared_ptr<uint8_t>))
+				call_args[i] = std::any_cast<std::shared_ptr<uint8_t>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<int8_t>))
+				call_args[i] = std::any_cast<std::shared_ptr<int8_t>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint16_t>))
+				call_args[i] = std::any_cast<std::shared_ptr<uint16_t>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<int16_t>))
+				call_args[i] = std::any_cast<std::shared_ptr<int16_t>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint32_t>))
+				call_args[i] = std::any_cast<std::shared_ptr<uint32_t>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<int64_t>))
+				call_args[i] = std::any_cast<std::shared_ptr<int64_t>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<float>))
 				call_args[i] = std::any_cast<std::shared_ptr<float>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<double>))
+				call_args[i] = std::any_cast<std::shared_ptr<double>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned char>))
+				call_args[i] = std::any_cast<std::shared_ptr<unsigned char>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<signed char>))
+				call_args[i] = std::any_cast<std::shared_ptr<signed char>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned short>))
+				call_args[i] = std::any_cast<std::shared_ptr<unsigned short>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<short>))
+				call_args[i] = std::any_cast<std::shared_ptr<short>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned int>))
+				call_args[i] = std::any_cast<std::shared_ptr<unsigned int>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
+				call_args[i] = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned long>))
+				call_args[i] = std::any_cast<std::shared_ptr<unsigned long>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<long>))
+				call_args[i] = std::any_cast<std::shared_ptr<long>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<long double>))
+				call_args[i] = std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<void*>))
+				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
+			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
+			/*}}}*/
+			}
 		}
 		// Create CIF
 		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, params) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
-		// TODO
 		// Call
 		ffi_call(&cif, FFI_FN(func.function), &ret, call_args.get());
 		// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
+		// TODO TODO TODO TODO TODO TODO TODO TODO 
 		double val = static_cast<double>(static_cast<int>(ret));
 		return val;
 	}
