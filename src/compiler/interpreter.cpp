@@ -13,8 +13,6 @@
 #include <unordered_set>
 #include <algorithm>
 #include <any>
-// DEBUG: TODO
-#include <cassert>
 // C
 #include <dlfcn.h> // TODO: Windows?
 #include <elf.h> // WINDOWS!!
@@ -237,7 +235,11 @@ namespace rt
 	/// <param name="expr">Ast node to interpret</param>
 	/// <param name="call">Whether or not to evaluate call values</param>
 	/// <returns>The value of the node</returns>
-	static const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& args);
+	static objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& args);
+	/// <summary>
+	/// Calls a shared library function
+	/// </summary>
+	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState);
 	/// <summary>
 	/// Whether or not members can be initialized by reference (ie. obj-0)
 	/// </summary>
@@ -340,7 +342,7 @@ namespace rt
 		memberInitialization = prev;
 	}
 
-	const objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& argState)
+	objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& argState)
 	{
 		if (dynamic_cast<ast::Identifier*>(expr) != nullptr)
 		{
@@ -424,60 +426,7 @@ namespace rt
 				}
 				else if (std::holds_alternative<LibFunc>(calledObject)) // Call library
 				{
-					// TODO: Windows
-					const LibFunc& func = std::get<LibFunc>(calledObject);
-					if (not func.initialized)
-						throw InterpreterException("Shared function is not yet bound.", 0, "Unknown");
-					ffi_cif cif; // Function signature
-					ffi_type** params = const_cast<ffi_type**>(func.argTypes.data()); // TODO: AAAAAAAA
-					int ret;
-					const int narms = func.argTypes.size(); // n params
-					// assert(func.argTypes.at(0) == &ffi_type_sint);
-					// assert(params[0] == &ffi_type_sint);
-					// Arguments
-					std::vector<std::any> arguments;
-				 	// Get arguments
-					for (int i = 0; i < narms; ++i) {
-						// Get value of arg
-						auto value = VALUEHELD(args.at(i));
-						// Cast arg to type wanted by lib
-						ffi_type* type = func.argTypes[i];
-						if (type == &ffi_type_sint) { // I don't think this is right :sob:
-							const int val = getNumericalValue(value);
-							// Shared because vector requires copyable types
-							arguments.push_back(std::make_shared<int>(val));
-						}
-						else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
-						// TODO: Other types
-					}
-					// assert(*std::any_cast<std::shared_ptr<int>>(arguments.at(0)) == 5);
-					assert(arguments.at(0).type() == typeid(std::shared_ptr<int>)); // or smart ptr
-					// Void pointer array of length narms
-					std::unique_ptr<void* []> call_args; // Generic pointers to args
-					call_args = std::make_unique<void* []>(narms); // Create list to arg pointers
-					// Pointer shenanigans
-					for (int i = 0; i < narms; ++i) {
-						// nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
-						if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
-							call_args[i] = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
-					}
-					// assert(*static_cast<int*>(call_args[0]) == 5);
-					// Create CIF
-					if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, params) != FFI_OK)
-					{
-						throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
-					}
-					// TODO
-					// Call
-					ffi_call(&cif, FFI_FN(func.function), &ret, call_args.get());
-					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
-					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
-					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
-					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
-					// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
-					double val = static_cast<double>(static_cast<int>(ret));
-					// assert(val == 10.0);
-					return val;
+					return callShared(args, std::get<LibFunc>(calledObject), symtab, argState);
 				}
 				else // Call Runtime Object
 				{
@@ -692,5 +641,53 @@ namespace rt
 			dlclose(lib);
 		}
 		libraries.clear();
+	}
+
+	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
+	{
+		// TODO: Windows
+		if (not func.initialized)
+			throw InterpreterException("Shared function is not yet bound", 0, "Unknown");
+		ffi_cif cif; // Function signature
+		ffi_type** params = const_cast<ffi_type**>(func.argTypes.data());
+		int ret;
+		const int narms = func.argTypes.size(); // n params
+		// Arguments
+		std::vector<std::any> arguments;
+		// Get arguments
+		for (int i = 0; i < narms; ++i) {
+			// Get value of arg
+			auto value = VALUEHELD(args.at(i));
+			// Cast arg to type wanted by lib
+			ffi_type* type = func.argTypes.at(i);
+			// :cry: :sob:
+			if (type == &ffi_type_sint)
+				// Shared because vector requires copyable types
+				arguments.push_back(std::make_shared<int>(getNumericalValue(value)));
+			else if (type == &ffi_type_float)
+				arguments.push_back(std::make_shared<float>(getNumericalValue(value)));
+			else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
+			// TODO: Other types
+		}
+		// Void pointer array of length narms
+		std::unique_ptr<void* []> call_args; // Generic pointers to args
+		call_args = std::make_unique<void* []>(narms); // Create list to arg pointers
+		// Pointer shenanigans
+		for (int i = 0; i < narms; ++i) {
+			// nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
+			if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
+				call_args[i] = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<float>))
+				call_args[i] = std::any_cast<std::shared_ptr<float>>(arguments.at(i)).get();
+		}
+		// Create CIF
+		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, params) != FFI_OK)
+			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
+		// TODO
+		// Call
+		ffi_call(&cif, FFI_FN(func.function), &ret, call_args.get());
+		// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
+		double val = static_cast<double>(static_cast<int>(ret));
+		return val;
 	}
 }

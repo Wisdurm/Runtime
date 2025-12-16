@@ -26,8 +26,40 @@ namespace rt
 	/// <summary>
 	/// Maps type names to their ffi type pointers
 	/// </summary>
-	static std::unordered_map<std::string, ffi_type*> typeNames = {
-		{"int", &ffi_type_sint}
+	static const std::unordered_map<std::string, ffi_type*> typeNames = {
+		{"void", &ffi_type_void}, // Only for return values
+		{"uint8", &ffi_type_uint8}, // u int8
+		{"sint8", &ffi_type_sint8}, // s int8
+		{"int8", &ffi_type_sint8}, // Default
+		{"uint16", &ffi_type_uint16}, // u int16
+		{"sint16", &ffi_type_sint16}, // s int16
+		{"int16", &ffi_type_sint16}, // Default
+		{"uint32", &ffi_type_uint32}, // u int32
+		{"sint32", &ffi_type_sint32}, // s int32
+		{"int32", &ffi_type_sint32}, // Default
+		{"uint64", &ffi_type_uint64}, // u int64
+		{"sint64", &ffi_type_sint64}, // s int64
+		{"int64", &ffi_type_sint64}, // Default
+		{"float", &ffi_type_float},
+		{"double", &ffi_type_double},
+		{"uchar", &ffi_type_uchar}, // u char
+		{"schar", &ffi_type_schar}, // s char
+		// No default char since the standard does not specify whether or not
+		// char is signed by default :/
+		{"ushort", &ffi_type_ushort}, // u short
+		{"sshort", &ffi_type_sshort}, // s short
+		{"short", &ffi_type_sshort}, // Default
+		{"uint", &ffi_type_uint}, // u int
+		{"sint", &ffi_type_sint}, // s int
+		{"int", &ffi_type_sint}, // Int is signed by default, so we have default :)
+		{"ulong", &ffi_type_ulong}, // u long
+		{"slong", &ffi_type_ulong}, // s long
+		{"long", &ffi_type_ulong}, // Default
+		{"longdouble", &ffi_type_longdouble},
+		{"pointer", &ffi_type_pointer}, // Generic pointer
+		{"complex_float", &ffi_type_complex_float},
+		{"complex_double", &ffi_type_complex_double},
+		{"complex_longdouble", &ffi_type_complex_longdouble},
 	};
 	/// <summary>
 	/// Returns the first argument
@@ -370,8 +402,8 @@ namespace rt
 		// TODO: If fails midway through, undefined behaviour
 		if (args.size() < 3)
 			return giveException("Wrong amount of arguments");
-		// Get function by name
 		LibFunc* func = nullptr; // Function to bind
+		 // Get function by name
 		{
 			auto v = VALUEHELD(args.at(0));
 			if (const std::string* name = std::get_if<std::string>(&v)){
@@ -383,6 +415,10 @@ namespace rt
 			else
 				return giveException("Func name was of wrong type");
 		}
+		// Reset function
+		func->argTypes.clear();
+		func->initialized = false;
+		func->retType = nullptr;
 		// Get return value
 		{
 			ffi_type* ret;
@@ -399,6 +435,9 @@ namespace rt
 			auto rP = VALUEHELD(*it);
 			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
 				func->argTypes.push_back(typeNames.at(*pType));
+				if (*pType == "void") { // TODO: Faster comparison
+					return giveException("Shared function cannot have parameters of type void");
+				}
 			}
 		}
 		// Finished
