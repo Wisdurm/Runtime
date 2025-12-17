@@ -1,6 +1,5 @@
 #pragma once
 #include "../interpreter.h"
-// Needed for clang completer
 #include <iostream>
 #include <memory>
 #include <variant>

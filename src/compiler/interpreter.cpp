@@ -643,19 +643,13 @@ namespace rt
 		libraries.clear();
 	}
 
-	// Please help
-	static void argAppend(std::vector<std::any> arguments, ffi_type* type, std::variant<double, std::string> value)
-	{
-		
-	}
-
 	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: Windows
 		if (not func.initialized)
 			throw InterpreterException("Shared function is not yet bound", 0, "Unknown");
 		ffi_cif cif; // Function signature
-		ffi_type** params = const_cast<ffi_type**>(func.argTypes.data());
+		ffi_type** params = const_cast<ffi_type**>(func.argTypes.data()); // Doesn't modify? Maybe undefined behaviour... TODO
 		void* ret;
 		const int narms = func.argTypes.size(); // n params
 		// Arguments
@@ -709,7 +703,7 @@ namespace rt
 			else if (type == &ffi_type_longdouble)
 				arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
 			else if (type == &ffi_type_cstring)
-				arguments.push_back(std::get<std::string>(value).data());
+				arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data()));
 			// TODO: Allow passing pointers, then update the objects with the values of
 			// the pointers after the function has been called
 			/* else if (type == &ffi_type_pointer) */
@@ -764,15 +758,15 @@ namespace rt
 				call_args[i] = std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<void*>))
 				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(char*)) // C string
-				call_args[i] = new char[]{"kikkeli"};
-				// call_args[i] = std::any_cast<char *>(arguments.at(i));
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<char*>)) // C string
+				call_args[i] = std::any_cast<std::shared_ptr<char*>>(arguments.at(i)).get(); 
 			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
 			/*}}}*/
 			}
 		}
 		// Turn custom ffi_types into real ones
-		// TODO: Reverse this or something at the end idk :cry:
+		// Doesn't modify params because of some cursed
+		// evil ass const cast bull idfk
 		for (int i = 0; i < narms; ++i) {
 			if (params[i] == &ffi_type_cstring)
 				params[i] = &ffi_type_pointer;
@@ -782,9 +776,15 @@ namespace rt
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Call
 		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
-		// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
-		// TODO TODO TODO TODO TODO TODO TODO TODO 
-		double val = static_cast<double>(*static_cast<int*>(ret));
-		return val;
+		// Return value
+		if (func.retType == &ffi_type_void)
+			return True;
+		else if (func.retType == &ffi_type_sint) // TODO: The rest... :/
+			return static_cast<double>(*static_cast<int*>(ret));
+		else if (func.retType == &ffi_type_float)
+			return static_cast<double>(*static_cast<float*>(ret));
+		else if (func.retType == &ffi_type_double)
+			return static_cast<double>(*static_cast<double*>(ret));
+		else throw InterpreterException("Unimplemented return type", 0, "Unknown");
 	}
 }
