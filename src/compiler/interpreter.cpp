@@ -656,7 +656,7 @@ namespace rt
 			throw InterpreterException("Shared function is not yet bound", 0, "Unknown");
 		ffi_cif cif; // Function signature
 		ffi_type** params = const_cast<ffi_type**>(func.argTypes.data());
-		int ret;
+		void* ret;
 		const int narms = func.argTypes.size(); // n params
 		// Arguments
 		std::vector<std::any> arguments;
@@ -708,6 +708,8 @@ namespace rt
 				arguments.push_back(std::make_shared<long>(getNumericalValue(value)));
 			else if (type == &ffi_type_longdouble)
 				arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
+			else if (type == &ffi_type_cstring)
+				arguments.push_back(std::get<std::string>(value).data());
 			// TODO: Allow passing pointers, then update the objects with the values of
 			// the pointers after the function has been called
 			/* else if (type == &ffi_type_pointer) */
@@ -762,18 +764,27 @@ namespace rt
 				call_args[i] = std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<void*>))
 				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(char*)) // C string
+				call_args[i] = new char[]{"kikkeli"};
+				// call_args[i] = std::any_cast<char *>(arguments.at(i));
 			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
 			/*}}}*/
 			}
 		}
+		// Turn custom ffi_types into real ones
+		// TODO: Reverse this or something at the end idk :cry:
+		for (int i = 0; i < narms; ++i) {
+			if (params[i] == &ffi_type_cstring)
+				params[i] = &ffi_type_pointer;
+		}
 		// Create CIF
-		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, &ffi_type_sint, params) != FFI_OK)
+		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms, func.retType, params) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Call
-		ffi_call(&cif, FFI_FN(func.function), &ret, call_args.get());
+		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
 		// DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG 
 		// TODO TODO TODO TODO TODO TODO TODO TODO 
-		double val = static_cast<double>(static_cast<int>(ret));
+		double val = static_cast<double>(*static_cast<int*>(ret));
 		return val;
 	}
 }

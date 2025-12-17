@@ -36,6 +36,12 @@ typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn, rt::LibFunc> Symbol;
 
 namespace rt
 {
+	/// <summary>
+	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for TODO
+	/// </summary>
+	inline ffi_type ffi_type_cstring = ffi_type_pointer;
+
+
 	// Retrieves the value held by an object, or value
 #define VALUEHELD(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
 evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, true) : /* Get value of object */ \

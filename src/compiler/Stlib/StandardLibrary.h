@@ -24,10 +24,6 @@
 namespace rt
 {
 	/// <summary>
-	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for TODO
-	/// </summary>
-	ffi_type ffi_type_cstring = ffi_type_pointer;
-	/// <summary>
 	/// Maps type names to their ffi type pointers
 	/// </summary>
 	static const std::unordered_map<std::string, ffi_type*> typeNames = {
@@ -405,7 +401,7 @@ namespace rt
 	objectOrValue Bind(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: If fails midway through, undefined behaviour
-		if (args.size() < 3)
+		if (args.size() < 2)
 			return giveException("Wrong amount of arguments");
 		LibFunc* func = nullptr; // Function to bind
 		 // Get function by name
