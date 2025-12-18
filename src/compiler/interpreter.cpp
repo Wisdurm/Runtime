@@ -651,7 +651,9 @@ namespace rt
 		ffi_cif cif; // Function signature
 		const int narms = func.argTypes.size(); // n params
 		// Get argument types
-		std::unique_ptr<ffi_type*[]> params = std::make_unique<ffi_type*[]>(narms); // Array of pointers
+		ffi_type** params = new ffi_type*[narms]; // Array of pointers
+												  // Sometimes normal pointers are 
+												  // easier than smart pointers...
 		for (int i = 0; i < func.argTypes.size(); ++i) {
 			if (std::holds_alternative<std::shared_ptr<ffi_type>>(func.argTypes.at(i)))
 				params[i] = std::get<std::shared_ptr<ffi_type>>(func.argTypes.at(i)).get();
@@ -781,10 +783,11 @@ namespace rt
 		// Create CIF
 		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
 					std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get(), // TODO
-					params.get()) != FFI_OK)
+					params) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Call
 		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
+		delete[] params;
 		// Return value
 		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType)) {
 			if (rType->get() == &ffi_type_void)
