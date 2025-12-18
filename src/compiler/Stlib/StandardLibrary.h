@@ -441,6 +441,14 @@ namespace rt
 				if (*pType == "void") { // TODO: Faster comparison
 					return giveException("Shared function cannot have parameters of type void");
 				}
+			} else { // Struct
+				ffi_type* e[] = {&ffi_type_sint, &ffi_type_float, NULL};
+				func->argTypes.push_back(std::make_shared<ffi_type>(
+					0, // size (init 0)
+					0, // align (init 0)
+					FFI_TYPE_STRUCT,// type
+					e// elements
+							));
 			}
 		}
 		// Finished
