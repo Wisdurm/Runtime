@@ -623,7 +623,7 @@ namespace rt
 		// Create objects
 		for (auto sym : symbols) {
 			void* fptr = dlsym(handle, sym.c_str());
-			globalSymtab.updateSymbol(sym, LibFunc(fptr, false, nullptr, {}));
+			globalSymtab.updateSymbol(sym, LibFunc(fptr, false, std::experimental::make_observer<ffi_type>(nullptr), {}));
 			// These are not yet able to be called, as they do not have
 			// their necessary argument and return types set
 			// The signature must be specified by calling Sign()
@@ -649,9 +649,16 @@ namespace rt
 		if (not func.initialized)
 			throw InterpreterException("Shared function is not yet bound", 0, "Unknown");
 		ffi_cif cif; // Function signature
-		ffi_type** params = const_cast<ffi_type**>(func.argTypes.data()); // Doesn't modify? Maybe undefined behaviour... TODO
-		void* ret;
 		const int narms = func.argTypes.size(); // n params
+		// Get argument types
+		std::unique_ptr<ffi_type*[]> params = std::make_unique<ffi_type*[]>(narms); // Array of pointers
+		for (int i = 0; i < func.argTypes.size(); ++i) {
+			if (std::holds_alternative<std::shared_ptr<ffi_type>>(func.argTypes.at(i)))
+				params[i] = std::get<std::shared_ptr<ffi_type>>(func.argTypes.at(i)).get();
+			else
+				params[i] = std::get<std::experimental::observer_ptr<ffi_type>>(func.argTypes.at(i)).get();
+		}
+		void* ret;
 		// Arguments
 		std::vector<std::any> arguments;
 		// Get arguments
@@ -659,7 +666,7 @@ namespace rt
 			// Get value of arg
 			auto value = VALUEHELD(args.at(i));
 			// Cast arg to type wanted by lib
-			ffi_type* type = func.argTypes.at(i);
+			ffi_type* type = params[i];
 			// Please help :(
 			{
 			/*{{{*/
@@ -772,19 +779,23 @@ namespace rt
 				params[i] = &ffi_type_pointer;
 		}
 		// Create CIF
-		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms, func.retType, params) != FFI_OK)
+		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
+					std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get(), // TODO
+					params.get()) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Call
 		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
 		// Return value
-		if (func.retType == &ffi_type_void)
-			return True;
-		else if (func.retType == &ffi_type_sint) // TODO: The rest... :/
-			return static_cast<double>(*static_cast<int*>(ret));
-		else if (func.retType == &ffi_type_float)
-			return static_cast<double>(*static_cast<float*>(ret));
-		else if (func.retType == &ffi_type_double)
-			return static_cast<double>(*static_cast<double*>(ret));
-		else throw InterpreterException("Unimplemented return type", 0, "Unknown");
+		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType)) {
+			if (rType->get() == &ffi_type_void)
+				return True;
+			else if (rType->get() == &ffi_type_sint) // TODO: The rest... :/
+				return static_cast<double>(*static_cast<int*>(ret));
+			else if (rType->get() == &ffi_type_float)
+				return static_cast<double>(*static_cast<float*>(ret));
+			else if (rType->get() == &ffi_type_double)
+				return static_cast<double>(*static_cast<double*>(ret));
+			else throw InterpreterException("Unimplemented return type", 0, "Unknown");
+		} else throw;
 	}
 }

@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 #include <variant>
+#include <experimental/memory>
 // Gnu
 #include <readline/readline.h>
 // C
@@ -419,7 +420,7 @@ namespace rt
 		// Reset function
 		func->argTypes.clear();
 		func->initialized = false;
-		func->retType = nullptr;
+		func->retType = std::experimental::make_observer<ffi_type>(nullptr); // Unbelievable
 		// Get return value
 		{
 			ffi_type* ret;
@@ -429,13 +430,14 @@ namespace rt
 			}
 			else
 				return giveException("Return name was of wrong type");
-			func->retType = ret;
+			func->retType = std::experimental::make_observer<ffi_type>(ret);
 		}
 		// Get parameters
+		func->argTypes.reserve(args.size() - 2);; // Prepare for args
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
 			auto rP = VALUEHELD(*it);
 			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
-				func->argTypes.push_back(typeNames.at(*pType));
+				func->argTypes.push_back(std::experimental::make_observer<ffi_type>(typeNames.at(*pType)));
 				if (*pType == "void") { // TODO: Faster comparison
 					return giveException("Shared function cannot have parameters of type void");
 				}

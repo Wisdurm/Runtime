@@ -10,6 +10,7 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#include <experimental/memory>
 // C
 #include <ffi.h>
 
@@ -122,11 +123,11 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		/// <summary>
 		/// Return type of the function
 		/// </summary>
-		ffi_type* retType;
+		std::variant<std::experimental::observer_ptr<ffi_type>, std::shared_ptr<ffi_type>> retType;
 		/// <summary>
 		/// Argument types
 		/// </summary>
-		std::vector<ffi_type*> argTypes;
+		std::vector<std::variant<std::experimental::observer_ptr<ffi_type>, std::shared_ptr<ffi_type>>> argTypes;
 	};
 
 	/// <summary>
