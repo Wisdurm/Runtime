@@ -435,21 +435,29 @@ namespace rt
 		// Get parameters
 		func->argTypes.reserve(args.size() - 2);; // Prepare for args
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
+			if (std::holds_alternative<std::shared_ptr<Object>>(*it)) {
+				// Struct
+				ffi_type** e = new ffi_type*[3]; // MEMORY LEAK!! TODO!!
+				e[0] = &ffi_type_sint;
+				e[1] = &ffi_type_float;
+				e[2] = NULL;
+				func->argTypes.push_back(std::make_shared<ffi_type>(
+							0, // size (init 0)
+							0, // align (init 0)
+							FFI_TYPE_STRUCT,// type
+							e// elements
+							));
+				continue;
+			}
+			// Not struct
 			auto rP = VALUEHELD(*it);
 			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
 				func->argTypes.push_back(std::experimental::make_observer<ffi_type>(typeNames.at(*pType)));
 				if (*pType == "void") { // TODO: Faster comparison
 					return giveException("Shared function cannot have parameters of type void");
 				}
-			} else { // Struct
-				ffi_type* e[] = {&ffi_type_sint, &ffi_type_float, NULL};
-				func->argTypes.push_back(std::make_shared<ffi_type>(
-					0, // size (init 0)
-					0, // align (init 0)
-					FFI_TYPE_STRUCT,// type
-					e// elements
-							));
-			}
+			} else 
+			return giveException("Argument type was of wrong type");
 		}
 		// Finished
 		func->initialized = true;

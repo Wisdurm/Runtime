@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <any>
 // C
+#include <cstdlib>
 #include <dlfcn.h> // TODO: Windows?
 #include <elf.h> // WINDOWS!!
 #include <link.h>
@@ -256,10 +257,53 @@ namespace rt
 	/// Stores all objects currently being evaluated, in order to stop endless loops
 	/// </summary>
 	static std::unordered_set<std::shared_ptr<Object>> inEvaluation;
+
+	// TODO: ORGANIZE CODE OH MY DAYS
+
+	// Source - https://stackoverflow.com/a
+	// Posted by Andrew Top
+	// Retrieved 2025-12-20, License - CC BY-SA 2.5
+
+	template <class T>
+	class Traits
+	{
+	public:
+		struct AlignmentFinder
+		{
+			char a; 
+			T b;
+		};
+
+		enum {AlignmentOf = sizeof(AlignmentFinder) - sizeof(T)};
+	};
+
 	/// <summary>
-	/// Stores all currently loaded shared libraries
+	/// The alignment of all ffi_types
 	/// </summary>
 	static std::vector<void*> libraries;
+	static const std::unordered_map<ffi_type*, size_t> typeAlignments = {
+		{&ffi_type_uint8, Traits<uint8_t>::AlignmentOf},
+		{&ffi_type_sint8, Traits<int8_t>::AlignmentOf},
+		{&ffi_type_uint16, Traits<uint16_t>::AlignmentOf},
+		{&ffi_type_sint16, Traits<int16_t>::AlignmentOf},
+		{&ffi_type_uint32, Traits<uint32_t>::AlignmentOf},
+		{&ffi_type_sint32, Traits<int32_t>::AlignmentOf},
+		{&ffi_type_uint64, Traits<uint64_t>::AlignmentOf},
+		{&ffi_type_sint64, Traits<int64_t>::AlignmentOf},
+		{&ffi_type_float, Traits<float>::AlignmentOf},
+		{&ffi_type_double, Traits<double>::AlignmentOf},
+		{&ffi_type_uchar, Traits<unsigned char>::AlignmentOf},
+		{&ffi_type_schar, Traits<signed char>::AlignmentOf},
+		{&ffi_type_ushort, Traits<unsigned short>::AlignmentOf},
+		{&ffi_type_sshort, Traits<signed short>::AlignmentOf},
+		{&ffi_type_uint, Traits<unsigned int>::AlignmentOf},
+		{&ffi_type_sint, Traits<signed int>::AlignmentOf},
+		{&ffi_type_ulong, Traits<unsigned long>::AlignmentOf},
+		{&ffi_type_slong, Traits<signed long>::AlignmentOf},
+		{&ffi_type_longdouble, Traits<long double>::AlignmentOf},
+		{&ffi_type_pointer, Traits<void*>::AlignmentOf},
+		// TODO: Complex
+	};
 
 	void liveIntrepretSetup()
 	{
@@ -643,6 +687,62 @@ namespace rt
 		libraries.clear();
 	}
 
+	/// <summary>
+	/// Adds a shared ptr of a specified ffi_type to a vector
+	/// </summary>
+	static void addSharedType(std::vector<std::any>& arguments, ffi_type* const& type, std::variant<double, std::string> value)
+	{
+		/*{{{*/
+		if (type == &ffi_type_uint8)
+			// Shared because vector requires copyable types
+			arguments.push_back(std::make_shared<uint8_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_sint8)
+			arguments.push_back(std::make_shared<int8_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_uint16)
+			arguments.push_back(std::make_shared<uint16_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_sint16)
+			arguments.push_back(std::make_shared<int16_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_uint32)
+			arguments.push_back(std::make_shared<uint32_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_sint32)
+			arguments.push_back(std::make_shared<int32_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_uint64)
+			arguments.push_back(std::make_shared<uint64_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_sint64)
+			arguments.push_back(std::make_shared<int64_t>(getNumericalValue(value)));
+		else if (type == &ffi_type_float)
+			arguments.push_back(std::make_shared<float>(getNumericalValue(value)));
+		else if (type == &ffi_type_double)
+			arguments.push_back(std::make_shared<double>(getNumericalValue(value)));
+		else if (type == &ffi_type_uchar)
+			arguments.push_back(std::make_shared<unsigned char>(getNumericalValue(value)));
+		else if (type == &ffi_type_schar)
+			arguments.push_back(std::make_shared<signed char>(getNumericalValue(value)));
+		else if (type == &ffi_type_ushort)
+			arguments.push_back(std::make_shared<unsigned short>(getNumericalValue(value)));
+		else if (type == &ffi_type_sshort)
+			arguments.push_back(std::make_shared<short>(getNumericalValue(value)));
+		else if (type == &ffi_type_uint)
+			arguments.push_back(std::make_shared<unsigned int>(getNumericalValue(value)));
+		else if (type == &ffi_type_sint)
+			arguments.push_back(std::make_shared<int>(getNumericalValue(value)));
+		else if (type == &ffi_type_ulong)
+			arguments.push_back(std::make_shared<unsigned long>(getNumericalValue(value)));
+		else if (type == &ffi_type_slong)
+			arguments.push_back(std::make_shared<long>(getNumericalValue(value)));
+		else if (type == &ffi_type_longdouble)
+			arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
+		else if (type == &ffi_type_cstring)
+			arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data()));
+		// TODO: Allow passing pointers, then update the objects with the values of
+		// the pointers after the function has been called
+		/* else if (type == &ffi_type_pointer) */
+		/* 	arguments.push_back(std::make_shared<void *>(getNumericalValue(value))); */
+		else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
+		// TODO: Other types
+		/*}}}*/
+	}
+
 	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: Windows
@@ -654,73 +754,55 @@ namespace rt
 		ffi_type** params = new ffi_type*[narms]; // Array of pointers
 												  // Sometimes normal pointers are 
 												  // easier than smart pointers...
-		for (int i = 0; i < func.argTypes.size(); ++i) {
+		for (int i = 0; i < narms; ++i) {
 			if (std::holds_alternative<std::shared_ptr<ffi_type>>(func.argTypes.at(i)))
 				params[i] = std::get<std::shared_ptr<ffi_type>>(func.argTypes.at(i)).get();
 			else
 				params[i] = std::get<std::experimental::observer_ptr<ffi_type>>(func.argTypes.at(i)).get();
 		}
+		// Create CIF
+		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
+					std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get(), // TODO
+					params) != FFI_OK)
+			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
+		// Return value
 		void* ret;
 		// Arguments
 		std::vector<std::any> arguments;
 		// Get arguments
 		for (int i = 0; i < narms; ++i) {
-			// Get value of arg
-			auto value = VALUEHELD(args.at(i));
 			// Cast arg to type wanted by lib
 			ffi_type* type = params[i];
-			// Please help :(
-			{
-			/*{{{*/
-			if (type == &ffi_type_uint8)
-				// Shared because vector requires copyable types
-				arguments.push_back(std::make_shared<uint8_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint8)
-				arguments.push_back(std::make_shared<int8_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint16)
-				arguments.push_back(std::make_shared<uint16_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint16)
-				arguments.push_back(std::make_shared<int16_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint32)
-				arguments.push_back(std::make_shared<uint32_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint32)
-				arguments.push_back(std::make_shared<int32_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint64)
-				arguments.push_back(std::make_shared<uint64_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint64)
-				arguments.push_back(std::make_shared<int64_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_float)
-				arguments.push_back(std::make_shared<float>(getNumericalValue(value)));
-			else if (type == &ffi_type_double)
-				arguments.push_back(std::make_shared<double>(getNumericalValue(value)));
-			else if (type == &ffi_type_uchar)
-				arguments.push_back(std::make_shared<unsigned char>(getNumericalValue(value)));
-			else if (type == &ffi_type_schar)
-				arguments.push_back(std::make_shared<signed char>(getNumericalValue(value)));
-			else if (type == &ffi_type_ushort)
-				arguments.push_back(std::make_shared<unsigned short>(getNumericalValue(value)));
-			else if (type == &ffi_type_sshort)
-				arguments.push_back(std::make_shared<short>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint)
-				arguments.push_back(std::make_shared<unsigned int>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint)
-				arguments.push_back(std::make_shared<int>(getNumericalValue(value)));
-			else if (type == &ffi_type_ulong)
-				arguments.push_back(std::make_shared<unsigned long>(getNumericalValue(value)));
-			else if (type == &ffi_type_slong)
-				arguments.push_back(std::make_shared<long>(getNumericalValue(value)));
-			else if (type == &ffi_type_longdouble)
-				arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
-			else if (type == &ffi_type_cstring)
-				arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data()));
-			// TODO: Allow passing pointers, then update the objects with the values of
-			// the pointers after the function has been called
-			/* else if (type == &ffi_type_pointer) */
-			/* 	arguments.push_back(std::make_shared<void *>(getNumericalValue(value))); */
-			else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
-			// TODO: Other types
-			/*}}}*/
+			// First check for struct type, since then we cant
+			// immediately evaluate the argument
+			if (type->type == FFI_TYPE_STRUCT) {
+				// Get members of arg
+				// THIS IS ALL ASSUMING THERES NO packed ATTRIBUTE
+				//auto members = std::get<std::shared_ptr<Object>>(args.at(i))->getMembers(); // TODO: error handling
+				// Create struct
+				void* structMem = std::aligned_alloc(type->alignment, type->size); // TODO MEMORY LEAK LOOL
+				// Assign members
+				/* for (int j = 0; type->elements[j] != NULL; ++j) { */
+				/* 	// Loop through member types */
+				/* 	auto value = VALUEHELD(members.at(j)); */
+				/* 	struct */
+				/* } */
+				uint8_t* p = static_cast<uint8_t*>(structMem); // Move a byte at a time
+				// fields // DEBUG: HARDCODED
+				*reinterpret_cast<int*>(p+0)= 69; // in
+				*reinterpret_cast<float*>(p+4)= 4.20; // fl
+				arguments.push_back(structMem); // HEEELPP
 			}
+			else { // Not struct, feel free to evaluate
+				// Get value of arg
+				auto value = VALUEHELD(args.at(i));
+				addSharedType(arguments, type, value);
+			}
+		}
+		// Turn custom ffi_types into real ones
+		for (int i = 0; i < narms; ++i) {
+			if (params[i] == &ffi_type_cstring)
+				params[i] = &ffi_type_pointer;
 		}
 		// Void pointer array of length narms
 		std::unique_ptr<void* []> call_args; // Generic pointers to args
@@ -769,22 +851,12 @@ namespace rt
 				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<char*>)) // C string
 				call_args[i] = std::any_cast<std::shared_ptr<char*>>(arguments.at(i)).get(); 
+			else if (arguments.at(i).type() == typeid(void*)) // Struct
+				call_args[i] = std::any_cast<void*>(arguments.at(i));
 			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
 			/*}}}*/
 			}
 		}
-		// Turn custom ffi_types into real ones
-		// Doesn't modify params because of some cursed
-		// evil ass const cast bull idfk
-		for (int i = 0; i < narms; ++i) {
-			if (params[i] == &ffi_type_cstring)
-				params[i] = &ffi_type_pointer;
-		}
-		// Create CIF
-		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
-					std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get(), // TODO
-					params) != FFI_OK)
-			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Call
 		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
 		delete[] params;
