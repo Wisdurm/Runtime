@@ -435,12 +435,23 @@ namespace rt
 		// Get parameters
 		func->argTypes.reserve(args.size() - 2);; // Prepare for args
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
-			if (std::holds_alternative<std::shared_ptr<Object>>(*it)) {
+			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&(*it))) {
+				auto members = (*obj)->getMembers();
+				const int size = members.size();
 				// Struct
-				ffi_type** e = new ffi_type*[3]; // MEMORY LEAK!! TODO!!
-				e[0] = &ffi_type_sint;
-				e[1] = &ffi_type_float;
-				e[2] = NULL;
+				ffi_type** e = new ffi_type*[size + 1]; // THIS IS NOT FREED BECAUSE IT IS USED UNTIL PROGRAM EXIT
+												 // might code free for this later, but as of now it would
+												 // only give me more unnecessary work. TODO
+				// Member types
+				// TODO: Recursion
+				for (int i = 0; i < size; ++i) {
+					auto value = VALUEHELD(members.at(i));
+					if (const std::string* pType = std::get_if<std::string>(&value)){ 
+						e[i] = typeNames.at(*pType);
+					}
+					else return giveException("Struct member type was of wrong type"); 
+				}
+				e[size] = NULL; // Last one (NULL terminated array)
 				func->argTypes.push_back(std::make_shared<ffi_type>(
 							0, // size (init 0)
 							0, // align (init 0)

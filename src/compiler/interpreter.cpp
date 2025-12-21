@@ -276,11 +276,13 @@ namespace rt
 
 		enum {AlignmentOf = sizeof(AlignmentFinder) - sizeof(T)};
 	};
-
+	/// <summary>
+	/// Stores all currently loaded shared libraries
+	/// </summary>
+	static std::vector<void*> libraries;
 	/// <summary>
 	/// The alignment of all ffi_types
 	/// </summary>
-	static std::vector<void*> libraries;
 	static const std::unordered_map<ffi_type*, size_t> typeAlignments = {
 		{&ffi_type_uint8, Traits<uint8_t>::AlignmentOf},
 		{&ffi_type_sint8, Traits<int8_t>::AlignmentOf},
@@ -302,6 +304,32 @@ namespace rt
 		{&ffi_type_slong, Traits<signed long>::AlignmentOf},
 		{&ffi_type_longdouble, Traits<long double>::AlignmentOf},
 		{&ffi_type_pointer, Traits<void*>::AlignmentOf},
+		// TODO: Complex
+	};
+	/// <summary>
+	/// The size of all ffi_types
+	/// </summary>
+	static const std::unordered_map<ffi_type*, size_t> typeSizes = {
+		{&ffi_type_uint8, sizeof(uint8_t)},
+		{&ffi_type_sint8, sizeof(int8_t)},
+		{&ffi_type_uint16, sizeof(uint16_t)},
+		{&ffi_type_sint16, sizeof(int16_t)},
+		{&ffi_type_uint32, sizeof(uint32_t)},
+		{&ffi_type_sint32, sizeof(int32_t)},
+		{&ffi_type_uint64, sizeof(uint64_t)},
+		{&ffi_type_sint64, sizeof(int64_t)},
+		{&ffi_type_float, sizeof(float)},
+		{&ffi_type_double, sizeof(double)},
+		{&ffi_type_uchar, sizeof(unsigned char)},
+		{&ffi_type_schar, sizeof(signed char)},
+		{&ffi_type_ushort, sizeof(unsigned short)},
+		{&ffi_type_sshort, sizeof(signed short)},
+		{&ffi_type_uint, sizeof(unsigned int)},
+		{&ffi_type_sint, sizeof(signed int)},
+		{&ffi_type_ulong, sizeof(unsigned long)},
+		{&ffi_type_slong, sizeof(signed long)},
+		{&ffi_type_longdouble, sizeof(long double)},
+		{&ffi_type_pointer, sizeof(void*)},
 		// TODO: Complex
 	};
 
@@ -778,19 +806,28 @@ namespace rt
 			if (type->type == FFI_TYPE_STRUCT) {
 				// Get members of arg
 				// THIS IS ALL ASSUMING THERES NO packed ATTRIBUTE
-				//auto members = std::get<std::shared_ptr<Object>>(args.at(i))->getMembers(); // TODO: error handling
+				auto members = std::get<std::shared_ptr<Object>>(args.at(i))->getMembers(); // TODO: error handling
 				// Create struct
 				void* structMem = std::aligned_alloc(type->alignment, type->size); // TODO MEMORY LEAK LOOL
 				// Assign members
-				/* for (int j = 0; type->elements[j] != NULL; ++j) { */
-				/* 	// Loop through member types */
-				/* 	auto value = VALUEHELD(members.at(j)); */
-				/* 	struct */
-				/* } */
 				uint8_t* p = static_cast<uint8_t*>(structMem); // Move a byte at a time
-				// fields // DEBUG: HARDCODED
-				*reinterpret_cast<int*>(p+0)= 69; // in
-				*reinterpret_cast<float*>(p+4)= 4.20; // fl
+				for (int j = 0, totSize = 0; type->elements[j] != NULL; ++j) {
+					// Loop through member types
+					const auto value = VALUEHELD(members.at(j));
+					const auto t = type->elements[j];
+					// DEBUG TODO
+					// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
+					double val = std::get<double>(value); // HARDCODED DEBUG TODO
+					// Depending on type :( once again...
+					const size_t size = typeSizes.at(t);
+					const size_t alignment = typeAlignments.at(t);
+					const int pos = totSize + (totSize%alignment); // Align position to next block of preferred alignment
+					if (t == &ffi_type_sint) 
+						*reinterpret_cast<int*>(p+pos) = static_cast<int>(val);
+					else if (t == &ffi_type_float) 
+						*reinterpret_cast<float*>(p+pos) = static_cast<float>(val);
+					totSize += size + (totSize%alignment);
+				}
 				arguments.push_back(structMem); // HEEELPP
 			}
 			else { // Not struct, feel free to evaluate

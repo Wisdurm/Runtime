@@ -38,7 +38,7 @@ typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn, rt::LibFunc> Symbol;
 namespace rt
 {
 	/// <summary>
-	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for TODO
+	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for
 	/// </summary>
 	inline ffi_type ffi_type_cstring = ffi_type_pointer;
 
