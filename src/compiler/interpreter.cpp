@@ -352,10 +352,14 @@ namespace rt
 
 	std::string* interpretAndReturn(ast::Expression* expr)
 	{
+		// Clear
+		mainArgs.clear();
+		mainArgState = ArgState(mainArgs);
 		memberInitialization = false;
 		clearSymtab(globalSymtab);
 		capture = true;
 		capturedCout.clear();
+		// Begin
 		interpret_internal(expr, &globalSymtab, true, mainArgState);
 		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main", mainArgState));
 		memberInitialization = true;
@@ -794,7 +798,11 @@ namespace rt
 					params) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Return value
+		// TODO: Allocate actual amount of memory needed
+		const auto rT = std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get();
 		void* ret;
+		if (rT != &ffi_type_void) // Void doesnt need memory allocated
+			ret = new char[typeSizes.at(rT)];
 		// Arguments
 		std::vector<std::any> arguments;
 		// Get arguments
@@ -899,15 +907,22 @@ namespace rt
 		delete[] params;
 		// Return value
 		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType)) {
+			double retVal;
 			if (rType->get() == &ffi_type_void)
-				return True;
+				return True; // Return True directly, since the return buffer has not had memory allocated here
 			else if (rType->get() == &ffi_type_sint) // TODO: The rest... :/
-				return static_cast<double>(*static_cast<int*>(ret));
-			else if (rType->get() == &ffi_type_float)
-				return static_cast<double>(*static_cast<float*>(ret));
-			else if (rType->get() == &ffi_type_double)
-				return static_cast<double>(*static_cast<double*>(ret));
-			else throw InterpreterException("Unimplemented return type", 0, "Unknown");
-		} else throw;
+				retVal = static_cast<double>(*static_cast<int*>(ret));
+			else if (rType->get() == &ffi_type_float) 
+				retVal = static_cast<double>(*static_cast<float*>(ret));
+			else if (rType->get() == &ffi_type_double) 
+				retVal = *static_cast<double*>(ret);
+			else {
+				delete[] reinterpret_cast<char*>(ret);
+				throw InterpreterException("Unimplemented return type", 0, "Unknown");
+			}
+			// Return value, and free memory
+			delete[] reinterpret_cast<char*>(ret);
+			return retVal;
+		} else throw; // TODO return structs :(
 	}
 }
