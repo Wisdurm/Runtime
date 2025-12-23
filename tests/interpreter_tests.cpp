@@ -181,3 +181,17 @@ TEST_CASE("Exceptions", "[interpreter]")
 	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r2), "Attempt to evaluate built-in function");
 	delete r2;
 }
+
+TEST_CASE("Runtime exceptions", "[interpreter]")
+{
+	// Object(Main,
+	//	Print(Object(1))
+	// )
+	// Expected output: Exception
+	std::string test1 = "Incorrect arguments";
+	ast::Expression* r1 = rt::parse(rt::tokenize("Print(Object(1))"));
+	auto v = rt::interpretAndReturn(r1);
+	REQUIRE(v[0] == test1);
+	delete r1;
+}
+

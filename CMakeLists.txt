@@ -49,6 +49,9 @@ if (RUNTIME_BUILD_TESTS)
 	if(CMAKE_COMPILER_IS_GNUCXX)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -g -O0")
 		set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} --coverage -g -O0")
+		set(GCOVR_ADDITIONAL_ARGS
+			"--exclude-unreachable-branches"
+			"--exclude-throw-branches")
 		include(CodeCoverage)
 		setup_target_for_coverage_gcovr_html(
 			NAME ${PROJECT_NAME}_coverage
