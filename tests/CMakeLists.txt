@@ -8,6 +8,7 @@ add_executable( tests_runtime
 ${CMAKE_SOURCE_DIR}/tests/tokenizer_tests.cpp
 ${CMAKE_SOURCE_DIR}/tests/interpreter_tests.cpp
 ${CMAKE_SOURCE_DIR}/tests/parser_tests.cpp
+${CMAKE_SOURCE_DIR}/tests/library_tests.cpp
 ${CMAKE_SOURCE_DIR}/tests/shared_library_tests.cpp
 ${CMAKE_SOURCE_DIR}/src/compiler/tokenizer.cpp
 ${CMAKE_SOURCE_DIR}/src/compiler/parser.cpp

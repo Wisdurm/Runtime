@@ -832,6 +832,8 @@ namespace rt
 					const int pos = totSize + (totSize%alignment); // Align position to next block of preferred alignment
 					if (t == &ffi_type_sint) 
 						*reinterpret_cast<int*>(p+pos) = static_cast<int>(val);
+					else if (t == &ffi_type_uchar) 
+						*reinterpret_cast<unsigned char*>(p+pos) = static_cast<unsigned char>(val);
 					else if (t == &ffi_type_float) 
 						*reinterpret_cast<float*>(p+pos) = static_cast<float>(val);
 					totSize += size + (totSize%alignment);

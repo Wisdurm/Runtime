@@ -155,11 +155,12 @@ TEST_CASE("Params", "[interpreter]")
 	//	PrintArg(1),
 	//	)
 	// Expected output: "0\n1"
-	/*std::string* test2 = new std::string[]{ "0", "1" };
-	ast::Expression* r2 = rt::parse(rt::tokenize("Object(PrintArg,Print(arg))\nPrintArg()\nPrintArg(1)"));
-	auto v2 = rt::interpretAndReturn(r2);
-	REQUIRE(v2[0] == test2[0]);
-	REQUIRE(v2[1] == test2[1]);
-	delete r2;
-	delete[]test2;*/
+	std::string* test3 = new std::string[]{ "0.000000", "1.000000" };
+	ast::Expression* r3 = rt::parse(rt::tokenize("Object(Display,Print(arg))\nObject(PrintArg,Display(arg))\nPrintArg()\nPrintArg(1)"));
+	// TODO: yeah
+	auto v3 = rt::interpretAndReturn(r3);
+	REQUIRE(v3[0] == test3[0]);
+	REQUIRE(v3[1] == test3[1]);
+	delete r3;
+	delete[]test3;
 }
