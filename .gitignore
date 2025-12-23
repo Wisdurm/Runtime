@@ -6,7 +6,6 @@ build.ninja
 # CMake
 CMakeCache.txt
 CMakeFiles/
-*.cmake
 # Should be setup manually by user
 CMakeUserPresets.json
 
