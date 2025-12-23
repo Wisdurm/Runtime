@@ -7,7 +7,7 @@
 // C++
 #include <vector>
 
-TEST_CASE("Basic conditionals and loops", "[interpreter]")
+TEST_CASE("Basic conditionals and loops", "[libraries]")
 {
 	// Object(Main,
 	//	If(Not(False)
@@ -41,4 +41,34 @@ TEST_CASE("Basic conditionals and loops", "[interpreter]")
 	delete r2;
 }
 
+TEST_CASE("Runtime libraries", "[libraries]")
+{
+	// Object(Main,
+	//	Include("../tests/test.rnt")
+	//	Print(testObj-1)
+	//	Print(Size(testObj))
+	// )
+	// Excepted output: "2\n3"
 
+	const std::string test1[]{"2.000000", "4.000000"};
+	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/test.rnt\")"
+				"Print(testObj-1)"
+				"Print(Size(testObj))"));
+	auto v1 = rt::interpretAndReturn(r1);
+	REQUIRE(v1[0] == test1[0]);
+	REQUIRE(v1[1] == test1[1]);
+	delete r1;
+}
+
+TEST_CASE("Format", "[libraries]")
+{
+	// Object(Main,
+	// 	Print(Format("0 == $2\n", False))
+	// )
+	// Excepted output: "0 == 0.00\n"
+
+	const std::string test1 = "0 == 0.00\n";
+	ast::Expression* r1 = rt::parse(rt::tokenize("Print(Format(\"0 == $2\\n\", False))"));
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
+	delete r1;
+}

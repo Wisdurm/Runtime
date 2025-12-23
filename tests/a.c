@@ -38,3 +38,7 @@ void testStruct(structure val)
 {
 	printf("in:%d\nfl:%f", val.in, val.fl);
 }
+int compareStruct(structure val)
+{
+	return val.in > val.fl;
+}

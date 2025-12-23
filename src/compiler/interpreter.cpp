@@ -364,6 +364,8 @@ namespace rt
 		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main", mainArgState));
 		memberInitialization = true;
 		callObject(main, &globalSymtab, mainArgState);
+		// Clear
+		cleanLibraries();
 		return capturedCout.data();
 	}
 

@@ -1,5 +1,6 @@
 // Catch 2
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
 // Runtime
 #include "../src/compiler/tokenizer.h"
 #include "../src/compiler/parser.h"
@@ -96,13 +97,12 @@ TEST_CASE("Reference passing and explicit evaluation", "[interpreter]")
 	//	Print(reference),
 	// )
 	// Expected output: "1\n2"
-	std::string* test1 = new std::string[] { "1.000000", "2.000000" };
+	std::string test1[] { "1.000000", "2.000000" };
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(one, 1)\nObject(value, one-0)\nObject(reference, one)\nAssign(one, 0, 2)\nPrint(value)\nPrint(reference)"));
 	auto v = rt::interpretAndReturn(r1);
 	REQUIRE(v[0] == test1[0]);
 	REQUIRE(v[1] == test1[1]);
 	delete r1;
-	delete []test1;
 }
 
 TEST_CASE("Params", "[interpreter]")
@@ -115,13 +115,12 @@ TEST_CASE("Params", "[interpreter]")
 	//	PrintArg(1),
 	//	)
 	// Expected output: "0\n1"
-	std::string* test1 = new std::string[]{ "0.000000", "1.000000" };
+	std::string test1 []{ "0.000000", "1.000000" };
 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(PrintArg,Print(arg))\nPrintArg()\nPrintArg(1)"));
 	auto v = rt::interpretAndReturn(r1);
 	REQUIRE(v[0] == test1[0]);
 	REQUIRE(v[1] == test1[1]);
 	delete r1;
-	delete[]test1;
 
 	// Object(Main,
 	//	Object(PrintArg,
@@ -132,7 +131,7 @@ TEST_CASE("Params", "[interpreter]")
 	//	PrintArg(1,2),
 	//	)
 	// Expected output: "1\n0\n1\n2"
-	std::string* test2 = new std::string[]{ "1.000000", "0.000000", "1.000000", "2.000000"};
+	std::string test2[]{ "1.000000", "0.000000", "1.000000", "2.000000"};
 	ast::Expression* r2 = rt::parse(rt::tokenize("Object(PrintArg,Print(argone),Print(argtwo))\nPrintArg(1)\nPrintArg(1,2)"));
 	auto v2 = rt::interpretAndReturn(r2);
 	REQUIRE(v2[0] == test2[0]);
@@ -140,7 +139,6 @@ TEST_CASE("Params", "[interpreter]")
 	REQUIRE(v2[2] == test2[2]);
 	REQUIRE(v2[3] == test2[3]);
 	delete r2;
-	delete[]test2;
 
 	// Hierachical
 
@@ -155,12 +153,31 @@ TEST_CASE("Params", "[interpreter]")
 	//	PrintArg(1),
 	//	)
 	// Expected output: "0\n1"
-	std::string* test3 = new std::string[]{ "0.000000", "1.000000" };
+	std::string test3[]{ "0.000000", "1.000000" };
 	ast::Expression* r3 = rt::parse(rt::tokenize("Object(Display,Print(arg))\nObject(PrintArg,Display(arg))\nPrintArg()\nPrintArg(1)"));
 	// TODO: yeah
 	auto v3 = rt::interpretAndReturn(r3);
 	REQUIRE(v3[0] == test3[0]);
 	REQUIRE(v3[1] == test3[1]);
 	delete r3;
-	delete[]test3;
+}
+
+TEST_CASE("Exceptions", "[interpreter]")
+{
+	// Object(Main,
+	//	Object(r, Print(r))
+	//	r()
+	// )
+	// Expected output: Exception
+	ast::Expression* r1 = rt::parse(rt::tokenize("Object(r,Print(r)) r()"));
+	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r1), "Object evaluation got stuck in an infinite loop");
+	delete r1;
+
+	// Object(Main,
+	// 	Print(Print)
+	// )
+	// Expected output: Exception
+	ast::Expression* r2 = rt::parse(rt::tokenize("Print(Print)"));
+	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r2), "Attempt to evaluate built-in function");
+	delete r2;
 }
