@@ -1,17 +1,14 @@
 #include <stdio.h>
 #include <string.h>
-
 // This is the source code for lib.so
 // This is used in the shared library tests
 // Use the command:
 // 	gcc a.c --shared -fPIC -o lib.so
 // to compile lib.so
-
 typedef struct {
 	int in;
 	float fl;
 } structure;
-
 int test(int i)
 {
 	return i * 2;
@@ -41,4 +38,8 @@ void testStruct(structure val)
 int compareStruct(structure val)
 {
 	return val.in > val.fl;
+}
+void triplePtr(int* ptr)
+{
+	*ptr *= 3;
 }

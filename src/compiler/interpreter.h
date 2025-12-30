@@ -41,7 +41,27 @@ namespace rt
 	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for
 	/// </summary>
 	inline ffi_type ffi_type_cstring = ffi_type_pointer;
-
+	// Custom pointer types
+	inline ffi_type ffi_type_puint8 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint8 = ffi_type_pointer;
+	inline ffi_type ffi_type_puint16 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint16 = ffi_type_pointer;
+	inline ffi_type ffi_type_puint32 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint32 = ffi_type_pointer;
+	inline ffi_type ffi_type_puint64 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint64 = ffi_type_pointer;
+	inline ffi_type ffi_type_pfloat = ffi_type_pointer;
+	inline ffi_type ffi_type_pdouble = ffi_type_pointer;
+	inline ffi_type ffi_type_puchar = ffi_type_pointer;
+	inline ffi_type ffi_type_pschar = ffi_type_pointer;
+	inline ffi_type ffi_type_pushort = ffi_type_pointer;
+	inline ffi_type ffi_type_psshort = ffi_type_pointer;
+	inline ffi_type ffi_type_puint = ffi_type_pointer;
+	inline ffi_type ffi_type_psint = ffi_type_pointer;
+	inline ffi_type ffi_type_pulong = ffi_type_pointer;
+	inline ffi_type ffi_type_pslong = ffi_type_pointer;
+	inline ffi_type ffi_type_plongdouble = ffi_type_pointer;
+	// TODO: Complex I guess?
 
 	// Retrieves the value held by an object, or value
 #define VALUEHELD(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \

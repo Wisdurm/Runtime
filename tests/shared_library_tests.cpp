@@ -97,3 +97,30 @@ TEST_CASE("Struct argument", "[shared_libraries]")
 	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 	delete r1;
 }
+
+TEST_CASE("Pointer argument", "[shared_libraries]")
+{
+	// Object(Main,
+	//	Include("../tests/lib.so")
+	//	Bind("triplePtr", "void", "int*")
+	//	Object(i, 7)
+	//	Print(i)
+	//	triplePtr(i)
+	//	Print(i)
+	// )
+	// Excepted output: "7\n21"
+
+	const std::string test1[]{"7.000000", "21.000000"};
+	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+				"Bind(\"triplePtr\", \"void\", \"pointer\")"
+				"Object(i, 7)"
+				"Print(i)"
+				"triplePtr(i)"
+				"Print(i)"));
+	auto v1 = rt::interpretAndReturn(r1); 
+	REQUIRE(v1[0] == test1[0]);
+	REQUIRE(v1[1] == test1[1]);
+	delete r1;
+}
+
+
