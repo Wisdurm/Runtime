@@ -441,6 +441,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 			// TODO: Probably not particularly hard to fix, at least anymore
 			if (std::holds_alternative<double>(key)) // Number
 			{
+				// DOES NOT REMOVE STRING KEY MAP TODO TODO TODO
 				int memberKey = static_cast<int>(std::get<double>(key));
 				if (members.contains(memberKey))
 					members.erase(memberKey);
@@ -456,6 +457,23 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 				}
 				addMember(value, memberKey);
 			}
+		}
+		/// <summary>
+		/// Sets the value of the last member (the one which would be evaluated) to a value
+		/// </summary>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		void setLast(objectOrValue value)
+		{
+			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
+			// TODO
+			if (members.size() > 0)
+			{
+				// TODO DOES NOT REMOVE STRING KEY, ADD METHOD I GUESS?
+				int key = members.back().first;
+				members.erase(members.end() - 1); // Remove last one
+				addMember(value, key);
+			} else throw; // Bored
 		}
 		/// <summary>
 		/// Deletes the expression of this object

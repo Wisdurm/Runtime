@@ -112,7 +112,7 @@ TEST_CASE("Pointer argument", "[shared_libraries]")
 
 	const std::string test1[]{"7.000000", "21.000000"};
 	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Bind(\"triplePtr\", \"void\", \"pointer\")"
+				"Bind(\"triplePtr\", \"void\", \"int*\")"
 				"Object(i, 7)"
 				"Print(i)"
 				"triplePtr(i)"
@@ -122,5 +122,4 @@ TEST_CASE("Pointer argument", "[shared_libraries]")
 	REQUIRE(v1[1] == test1[1]);
 	delete r1;
 }
-
 

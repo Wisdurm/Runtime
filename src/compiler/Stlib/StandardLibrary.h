@@ -59,32 +59,32 @@ namespace rt
 		{"longdouble", &ffi_type_longdouble},
 		// Pointers
 		{"cstring", &ffi_type_cstring}, // Char pointer, special logic in interpreter
-		{"*uint8",&ffi_type_puint8  },
-		{"*sint8",&ffi_type_psint8  },
-		{"*int8",&ffi_type_psint8  }, // D
-		{"*uint16",&ffi_type_puint16 },
-		{"*sint16",&ffi_type_psint16 },
-		{"*int16",&ffi_type_psint16 }, // D
-		{"*uint32",&ffi_type_puint32 },
-		{"*sint32",&ffi_type_psint32 },
-		{"*int32",&ffi_type_psint32 }, // D
-		{"*uint64",&ffi_type_puint64 },
-		{"*sint64",&ffi_type_psint64 },
-		{"*int64",&ffi_type_psint64 }, // D
-		{"*float",&ffi_type_pfloat  },
-		{"*double",&ffi_type_pdouble },
-		{"*uchar",&ffi_type_puchar  },
-		{"*schar",&ffi_type_pschar  },
-		{"*ushort",&ffi_type_pushort },
-		{"*sshort",&ffi_type_psshort },
-		{"*short",&ffi_type_psshort }, // D
-		{"*uint",&ffi_type_puint   },
-		{"*sint",&ffi_type_psint   },
-		{"*int",&ffi_type_psint   }, // D
-		{"*ulong",&ffi_type_pulong  },
-		{"*slong",&ffi_type_pslong  },
-		{"*long",&ffi_type_pslong  }, // D
-		{"*longdouble",&ffi_type_plongdouble},
+		{"uint8*",&ffi_type_puint8  },
+		{"sint8*",&ffi_type_psint8  },
+		{"int8*",&ffi_type_psint8  }, // D
+		{"uint16*",&ffi_type_puint16 },
+		{"sint16*",&ffi_type_psint16 },
+		{"int16*",&ffi_type_psint16 }, // D
+		{"uint32*",&ffi_type_puint32 },
+		{"sint32*",&ffi_type_psint32 },
+		{"int32*",&ffi_type_psint32 }, // D
+		{"uint64*",&ffi_type_puint64 },
+		{"sint64*",&ffi_type_psint64 },
+		{"int64*",&ffi_type_psint64 }, // D
+		{"float*",&ffi_type_pfloat  },
+		{"double*",&ffi_type_pdouble },
+		{"uchar*",&ffi_type_puchar  },
+		{"schar*",&ffi_type_pschar  },
+		{"ushort*",&ffi_type_pushort },
+		{"sshort*",&ffi_type_psshort },
+		{"short*",&ffi_type_psshort }, // D
+		{"uint*",&ffi_type_puint   },
+		{"sint*",&ffi_type_psint   },
+		{"int*",&ffi_type_psint   }, // D
+		{"ulong*",&ffi_type_pulong  },
+		{"slong*",&ffi_type_pslong  },
+		{"long*",&ffi_type_pslong  }, // D
+		{"longdouble*",&ffi_type_plongdouble},
 		// Complex
 		{"complex_float", &ffi_type_complex_float},
 		{"complex_double", &ffi_type_complex_double},

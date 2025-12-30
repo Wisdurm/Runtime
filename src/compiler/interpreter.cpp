@@ -281,6 +281,31 @@ namespace rt
 	/// </summary>
 	static std::vector<void*> libraries;
 	/// <summary>
+	/// ffi_types
+	/// </summary>
+	static const std::array<ffi_type*,20> ffiTypes = {
+		&ffi_type_uint8,
+		&ffi_type_sint8,
+		&ffi_type_uint16,
+		&ffi_type_sint16,
+		&ffi_type_uint32,
+		&ffi_type_sint32,
+		&ffi_type_uint64,
+		&ffi_type_sint64,
+		&ffi_type_float,
+		&ffi_type_double,
+		&ffi_type_uchar,
+		&ffi_type_schar,
+		&ffi_type_ushort,
+		&ffi_type_sshort,
+		&ffi_type_uint,
+		&ffi_type_sint,
+		&ffi_type_ulong,
+		&ffi_type_slong,
+		&ffi_type_longdouble,
+		&ffi_type_pointer,
+	};
+	/// <summary>
 	/// The alignment of all ffi_types
 	/// </summary>
 	static const std::unordered_map<ffi_type*, size_t> typeAlignments = {
@@ -768,10 +793,10 @@ namespace rt
 			arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
 		else if (type == &ffi_type_cstring)
 			arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data()));
-		// TODO: Allow passing pointers, then update the objects with the values of
-		// the pointers after the function has been called
-		/* else if (type == &ffi_type_pointer) */
-		/* 	arguments.push_back(std::make_shared<void *>(getNumericalValue(value))); */
+		// Pointer types
+		else if (type == &ffi_type_psint)
+			arguments.push_back(std::make_shared<int*>(new int (getNumericalValue(value)))); // TODO :MEMOR LEAK LOOOL
+ 		// TODO: The rest
 		else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 		// TODO: Other types
 		/*}}}*/
@@ -794,6 +819,9 @@ namespace rt
 			else
 				params[i] = std::get<std::experimental::observer_ptr<ffi_type>>(func.argTypes.at(i)).get();
 		}
+		// Remember which params are pointers
+		ffi_type** paramsCopy = new ffi_type*[narms];
+		std::copy(params, params + narms, paramsCopy);
 		// Create CIF
 		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
 					std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get(), // TODO
@@ -801,7 +829,7 @@ namespace rt
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Return value
 		// TODO: Allocate actual amount of memory needed
-		const auto rT = std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get();
+		ffi_type* rT = std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get();
 		void* ret;
 		if (rT != &ffi_type_void) // Void doesnt need memory allocated
 			ret = new char[typeSizes.at(rT)];
@@ -848,9 +876,9 @@ namespace rt
 				addSharedType(arguments, type, value);
 			}
 		}
-		// Turn custom ffi_types into real ones
+		// Turn custom ffi_types into pointers
 		for (int i = 0; i < narms; ++i) {
-			if (params[i] == &ffi_type_cstring)
+			if (std::find(ffiTypes.begin(), ffiTypes.end(), params[i]) == ffiTypes.end())
 				params[i] = &ffi_type_pointer;
 		}
 		// Void pointer array of length narms
@@ -902,6 +930,10 @@ namespace rt
 				call_args[i] = std::any_cast<std::shared_ptr<char*>>(arguments.at(i)).get(); 
 			else if (arguments.at(i).type() == typeid(void*)) // Struct
 				call_args[i] = std::any_cast<void*>(arguments.at(i));
+			// Pointers
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<int*>))
+				call_args[i] = std::any_cast<std::shared_ptr<int*>>(arguments.at(i)).get();
+			// TODO: The rest
 			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
 			/*}}}*/
 			}
@@ -909,6 +941,18 @@ namespace rt
 		// Call
 		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
 		delete[] params;
+		// Write pointer values back to their Runtime counterparts
+		for (int i = 0; i < narms; ++i) {
+			if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization
+				double val;
+				if (paramsCopy[i] == &ffi_type_psint)
+					val = **reinterpret_cast<int**>(call_args[i]);
+ 				// TODO: The rest
+				pObj->get()->setLast(val);
+			}
+		}
+		// Finished with params
+		delete[] paramsCopy;
 		// Return value
 		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType)) {
 			double retVal;
