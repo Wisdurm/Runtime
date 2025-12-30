@@ -181,6 +181,7 @@ namespace rt
 			{"While", While},
 			{"Format", Format},
 			{"Bind", Bind},
+			{"System", System},
 			/* {"GetKeys", GetKeys}, */
 			{"Size", Size},
 			// Math

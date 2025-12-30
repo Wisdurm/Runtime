@@ -445,4 +445,29 @@ namespace rt
 		func->initialized = true;
 		return True;
 	}
+
+	/// <summary>
+	///	Runs a shell command
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue System(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		static bool works = false;
+		if (not works and system(NULL)) // Check whether shell exists
+			works = true;
+
+		if (args.size() > 0)
+		{
+			auto valueHeld = VALUEHELD(args.at(0));
+			if (const std::string* cmd = std::get_if<std::string>(&valueHeld)) {
+				system(cmd->c_str());
+				return True;
+			}
+			return giveException("Argument was of wrong type");
+		}
+		return giveException("Wrong amount of arguments");
+	}
 }
