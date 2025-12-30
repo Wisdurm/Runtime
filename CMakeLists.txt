@@ -29,8 +29,8 @@ endif()
 
 # Global vars
 configure_file(
-	${CMAKE_SOURCE_DIR}/src/Runtime.h.in
-	${PROJECT_BINARY_DIR}/Runtime.h @ONLY
+	${CMAKE_SOURCE_DIR}/src/Runtime.hpp.in
+	${PROJECT_BINARY_DIR}/Runtime.hpp @ONLY
 )
 	
 # Libraries 

@@ -1,5 +1,5 @@
 ﻿// Runtime
-#include "Runtime.h"
+#include "Runtime.hpp"
 #include "compiler/tokenizer.h"
 #include "compiler/parser.h"
 #include "compiler/interpreter.h"
