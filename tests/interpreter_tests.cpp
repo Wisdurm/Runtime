@@ -163,3 +163,23 @@ TEST_CASE("Params", "[interpreter]")
 	delete r2;
 	delete[]test2;*/
 }
+
+/* TEST_CASE("Member functions", "[interpreter]") */
+/* { */
+/* 	// Object(Main, */
+/* 	//	Object(prt, Print("Hi")) */
+/* 	//	Object(obj, Print("Hello"), prt) */
+/* 	//	obj-1() */
+/* 	//	obj-0() */
+/* 	// ) */
+/* 	// Expected output: "Hi\nHello" */
+/* 	std::string test1[]{ "Hi", "Hello" }; */
+/* 	ast::Expression* r1 = rt::parse(rt::tokenize("Object(prt, Print(\"Hi\"))" */
+/* 				"Object(obj, Print(\"Hello\"), prt)" */
+/* 				"obj-1()" */
+/* 				"obj-0()")); */
+/* 	auto v = rt::interpretAndReturn(r1); */
+/* 	REQUIRE(v[0] == test1[0]); */
+/* 	REQUIRE(v[1] == test1[1]); */
+/* 	delete r1; */
+/* } */
