@@ -229,7 +229,7 @@ namespace rt
 					file.read(&fileText[0], size);
 					file.close();
 
-					rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true), symtab, argState);
+					rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true).get(), symtab, argState);
 					return True;
 				}
 				else if (fileName.ends_with(".so") or fileName.ends_with(".dll")) {

@@ -335,7 +335,6 @@ namespace rt
 			mainCounter++;
 		}
 		node->args[0] = new ast::Identifier(SourceLocation(), mainName);
-
 		//
 		interpret_internal(expr, symtab, true, argState);
 		std::shared_ptr<Object> mainObject = std::get<std::shared_ptr<Object>>((*symtab).lookUp(mainName, argState));
@@ -440,9 +439,10 @@ namespace rt
 			}
 			else
 			{
-				// This needs to return a reference to a member that probably doesnt
-				// exist yet,,...,,-,.-, TODOOOOOOOOOOOOOOO I HATE THISSSS
-				return interpret_internal(node->left, symtab, false, argState);
+				// This needs to return a reference to a member that doesn't exist yet
+				// As a result, we give it the uninterpreted, raw ast tree, so it can be parsed
+				// later, when actually possible.
+				return std::make_shared<Object>(node);
 			}
 		}
 		else

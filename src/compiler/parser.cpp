@@ -193,19 +193,19 @@ namespace rt
 		return new ast::Call(peek(tokens).getSrc(), new ast::Identifier(SourceLocation(), "Object"), args);
 	}
 
-	ast::Expression* parse(const std::vector<Token>& tokens, bool requireMain)
+	std::unique_ptr<ast::Expression> parse(const std::vector<Token>& tokens, bool requireMain)
 	{
 		pos = 0;
 		if (requireMain) // True by default
 		{
 			if (*tokens[2].getText() == "Main") // Check for main function
-				return parseExpression(tokens);
+				return std::unique_ptr<ast::Expression>(parseExpression(tokens));
 			else
-				return parseMain(tokens);
+				return std::unique_ptr<ast::Expression>(parseMain(tokens));
 		}
 		else // Don't use main function. This will only accept a single statement. Used for live interpret
 		{
-			return parseExpression(tokens);
+			return std::unique_ptr<ast::Expression>(parseExpression(tokens));
 		}
 	}
 }
