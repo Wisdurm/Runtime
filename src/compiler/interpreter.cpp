@@ -753,13 +753,13 @@ namespace rt
 	/// Allocates a value on the altHeap, and then returns the pointer
 	/// </summary>
 	template <typename T>
-	static T* altAlloc(T value, std::vector<std::any>& altheap)
+	[[nodiscard]] static T* altAlloc(T value, std::vector<std::any>& altheap)
 	{
 		altheap.push_back(std::make_shared<T>(value));
 		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
 	}
 
-	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
+	[[nodiscard]] static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: Windows
 		if (not func.initialized)
@@ -779,17 +779,25 @@ namespace rt
 		// Remember which params are pointers
 		ffi_type** paramsCopy = new ffi_type*[narms];
 		std::copy(params, params + narms, paramsCopy);
+		// Return type
+		ffi_type* returnType;
+		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType))
+			returnType = rType->get();
+		else
+			returnType = std::get<std::shared_ptr<ffi_type>>(func.retType).get();
 		// Create CIF
 		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
-					std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get(), // TODO
+					returnType,
 					params) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
-		// Return value
-		// TODO: Allocate actual amount of memory needed
-		ffi_type* rT = std::get<std::experimental::observer_ptr<ffi_type>>(func.retType).get();
+		// Return value data
 		void* ret;
-		if (rT != &ffi_type_void) // Void doesnt need memory allocated
-			ret = new char[typeSizes.at(rT)];
+		if (returnType != &ffi_type_void) { // Void doesnt need memory allocated
+			if (returnType->type == FFI_TYPE_STRUCT)
+				ret = new char[returnType->size]; // TODO: alligned alloc?? idk...
+			else // POD
+				ret = new char[typeSizes.at(returnType)]; // TODO, pointers :/
+		}
 		// Arguments
 		std::vector<std::any> arguments;
 		// Stores smart pointers which will be deallocated at the end
@@ -819,9 +827,8 @@ namespace rt
 					// Loop through member types
 					const auto value = VALUEHELD(members.at(j));
 					const auto t = type->elements[j];
-					// DEBUG TODO
 					// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
-					double val = std::get<double>(value); // HARDCODED DEBUG TODO
+					double val = std::get<double>(value); // STRING? TODO!
 					// Depending on type :( once again...
 					const size_t size = typeSizes.at(t);
 					const size_t alignment = typeAlignments.at(t);
@@ -968,15 +975,15 @@ namespace rt
 		// Finished with params
 		delete[] paramsCopy;
 		// Return value
-		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType)) {
+		if (returnType->type != FFI_TYPE_STRUCT) {
 			double retVal;
-			if (rType->get() == &ffi_type_void)
+			if (returnType == &ffi_type_void)
 				return True; // Return True directly, since the return buffer has not had memory allocated here
-			else if (rType->get() == &ffi_type_sint) // TODO: The rest... :/
+			else if (returnType == &ffi_type_sint) // TODO: The rest... :/
 				retVal = static_cast<double>(*static_cast<int*>(ret));
-			else if (rType->get() == &ffi_type_float) 
+			else if (returnType == &ffi_type_float) 
 				retVal = static_cast<double>(*static_cast<float*>(ret));
-			else if (rType->get() == &ffi_type_double) 
+			else if (returnType == &ffi_type_double) 
 				retVal = *static_cast<double*>(ret);
 			else {
 				delete[] reinterpret_cast<char*>(ret);
@@ -985,6 +992,20 @@ namespace rt
 			// Return value, and free memory
 			delete[] reinterpret_cast<char*>(ret);
 			return retVal;
-		} else throw; // TODO return structs :(
+		} else { // Struct return value
+			auto returnValue = std::make_shared<Object>();
+			// Construct Runtime object based on struct in memory
+			uint8_t* p = static_cast<uint8_t*>(ret); // Move a byte at a time
+			// TODO HARDCODED YET AGAIN FOR TESTING :DDDDD
+			std::variant<double, std::string> value = static_cast<double>(*reinterpret_cast<int*>(p));
+			returnValue->addMember(value);
+			std::variant<double, std::string> value2 = static_cast<double>(*reinterpret_cast<float*>(p+sizeof(int)));
+			returnValue->addMember(value2);
+			/* for (int i = 0; returnType->elements[i] != NULL; ++i) { */
+			/* 	const auto t = returnType->elements[i]; */
+				
+			/* } */
+			return returnValue;
+		}
 	}
 }

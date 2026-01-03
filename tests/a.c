@@ -43,3 +43,8 @@ void triplePtr(int* ptr)
 {
 	*ptr *= 3;
 }
+structure retStruct(int in, float fl)
+{
+	structure r = { .in = in, .fl = fl };
+	return r;
+}

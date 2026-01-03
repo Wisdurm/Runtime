@@ -116,3 +116,21 @@ TEST_CASE("Pointer argument", "[shared_libraries]")
 	REQUIRE(v1[1] == test1[1]);
 }
 
+TEST_CASE("Struct return value", "[shared_libraries]")
+{
+	// Object(Main,
+	//	Include("../tests/lib.so")
+	//	Object(structure, "int", "float")
+	//	Bind("retStruct", structure, "int", "float")
+	//	Print(retStruct(2, 5))
+	// )
+	// Excepted output: "5"
+
+	const std::string test1 = "5.000000";
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+				"Object(structure, \"int\", \"float\")"
+				"Bind(\"retStruct\", structure, \"int\", \"float\")"
+				"Print(retStruct(2, 5))"));
+	auto v1 = rt::interpretAndReturn(r1.get()); 
+	REQUIRE(v1[0] == test1);
+}

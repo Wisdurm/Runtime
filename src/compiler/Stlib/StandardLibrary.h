@@ -454,6 +454,35 @@ namespace rt
 	}
 
 	/// <summary>
+	/// Creates custom struct ffi_type from Object
+	/// </summary>
+	[[nodiscard]] static std::shared_ptr<ffi_type> makeFfiType(std::shared_ptr<Object> obj, SymbolTable* symtab, ArgState& argState)
+	{
+		auto members = obj->getMembers();
+		const int size = members.size();
+		// Struct
+		ffi_type** e = new ffi_type*[size + 1]; // THIS IS NOT FREED BECAUSE IT IS USED UNTIL PROGRAM EXIT
+										 // might code free for this later, but as of now it would
+										 // only give me more unnecessary work. TODO
+		// Member types
+		// TODO: Recursion
+		for (int i = 0; i < size; ++i) {
+			auto value = VALUEHELD(members.at(i));
+			if (const std::string* pType = std::get_if<std::string>(&value)){ 
+				e[i] = typeNames.at(*pType);
+			}
+			else return nullptr;
+		}
+		e[size] = NULL; // Last one (NULL terminated array)
+		return std::make_shared<ffi_type>(
+							0, // size (init 0)
+							0, // align (init 0)
+							FFI_TYPE_STRUCT,// type
+							e// elements
+							);
+	}
+
+	/// <summary>
 	///	Creates a binding for a shared function, by specifying it's parameters and return value.
 	///	Arg0 is the name of the function, arg1 is the return type and the rest of the args are 
 	///	parameter types.
@@ -464,7 +493,7 @@ namespace rt
 	/// <returns></returns>
 	objectOrValue Bind(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
-		// TODO: If fails midway through, undefined behaviour
+		// TODO: If fails midway through, undefined behaviour // ??
 		if (args.size() < 2)
 			return giveException("Wrong amount of arguments");
 		LibFunc* func = nullptr; // Function to bind
@@ -485,7 +514,13 @@ namespace rt
 		func->initialized = false;
 		func->retType = std::experimental::make_observer<ffi_type>(nullptr); // Unbelievable
 		// Get return value
-		{
+		if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&args.at(1))) {
+			// Struct
+			if (auto sT = makeFfiType(*obj, symtab, argState)) {
+				func->retType = sT;
+			} else giveException("Return type was of wrong type");
+		}
+		else { // Not struct
 			ffi_type* ret;
 			auto rV = VALUEHELD(args.at(1));
 			if (const std::string* rType = std::get_if<std::string>(&rV)){
@@ -496,32 +531,13 @@ namespace rt
 			func->retType = std::experimental::make_observer<ffi_type>(ret);
 		}
 		// Get parameters
-		func->argTypes.reserve(args.size() - 2);; // Prepare for args
+		func->argTypes.reserve(args.size() - 2);; // Prepare for params
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
 			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&(*it))) {
-				auto members = (*obj)->getMembers();
-				const int size = members.size();
-				// Struct
-				ffi_type** e = new ffi_type*[size + 1]; // THIS IS NOT FREED BECAUSE IT IS USED UNTIL PROGRAM EXIT
-												 // might code free for this later, but as of now it would
-												 // only give me more unnecessary work. TODO
-				// Member types
-				// TODO: Recursion
-				for (int i = 0; i < size; ++i) {
-					auto value = VALUEHELD(members.at(i));
-					if (const std::string* pType = std::get_if<std::string>(&value)){ 
-						e[i] = typeNames.at(*pType);
-					}
-					else return giveException("Struct member type was of wrong type"); 
-				}
-				e[size] = NULL; // Last one (NULL terminated array)
-				func->argTypes.push_back(std::make_shared<ffi_type>(
-							0, // size (init 0)
-							0, // align (init 0)
-							FFI_TYPE_STRUCT,// type
-							e// elements
-							));
-				continue;
+				if (auto sT = makeFfiType(*obj, symtab, argState)) {
+					func->argTypes.push_back(sT); // Struct parameter
+					continue;
+				} else giveException("Return type was of wrong type");
 			}
 			// Not struct
 			auto rP = VALUEHELD(*it);
