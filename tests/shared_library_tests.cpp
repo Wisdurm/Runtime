@@ -14,19 +14,17 @@ TEST_CASE("Exceptions", "[shared_libraries]")
 	// )
 	// Excepted output: Exception
 
-	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"test(5)"));
-	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r1), "Shared function is not yet bound");
-	delete r1;
+	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r1.get()), "Shared function is not yet bound");
 
 	// Object(Main,
 	//	Bind("bruh","void")
 	// )
 	// Excepted output: Exception
 
-	ast::Expression* r2 = rt::parse(rt::tokenize("Bind(\"bruh\",\"void\")"));
-	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r2), "Unable to find symbol");
-	delete r2;
+	auto r2 = rt::parse(rt::tokenize("Bind(\"bruh\",\"void\")"));
+	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r2.get()), "Unable to find symbol");
 }
 
 TEST_CASE("Basic function calling", "[shared_libraries]")
@@ -39,11 +37,10 @@ TEST_CASE("Basic function calling", "[shared_libraries]")
 	// Excepted output: "10"
 
 	const std::string test1 = "10.000000";
-	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Bind(\"test\",\"int\",\"int\")"
 				"Print(test(5))"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
-	delete r1;
+	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
 
 	// Object(Main,
 	//	Include("../tests/lib.so")
@@ -53,11 +50,10 @@ TEST_CASE("Basic function calling", "[shared_libraries]")
 	// Excepted output: Program doesn't crash :)
 
 	const std::string test2 = "10.000000";
-	ast::Expression* r2 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+	auto r2 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Bind(\"testVoid\",\"void\")"
 				"Print(testVoid())"));
-	REQUIRE_NOTHROW(rt::interpretAndReturn(r2));
-	delete r2;
+	REQUIRE_NOTHROW(rt::interpretAndReturn(r2.get()));
 }
 
 TEST_CASE("Multiple string arguments", "[shared_libraries]")
@@ -70,11 +66,10 @@ TEST_CASE("Multiple string arguments", "[shared_libraries]")
 	// Excepted output: "1" (True)
 
 	const std::string test1 = "1.000000";
-	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Bind(\"compareStr\",\"void\",\"cstring\", \"cstring\")"
 				"Print(compareStr(\"Hello\", \"Hello\"))"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
-	delete r1;
+	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
 }
 
 TEST_CASE("Struct argument", "[shared_libraries]")
@@ -89,13 +84,12 @@ TEST_CASE("Struct argument", "[shared_libraries]")
 	// Excepted output: "0" (False) (2 is not larger than 2.1)
 
 	const std::string test1 = "0.000000";
-	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Object(structure, \"int\", \"float\")"
 				"Bind(\"compareStruct\",\"int\",structure)"
 				"Object(sr, 2.9, 2.1)"
 				"Print(compareStruct(sr))"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
-	delete r1;
+	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
 }
 
 TEST_CASE("Pointer argument", "[shared_libraries]")
@@ -111,15 +105,14 @@ TEST_CASE("Pointer argument", "[shared_libraries]")
 	// Excepted output: "7\n21"
 
 	const std::string test1[]{"7.000000", "21.000000"};
-	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Bind(\"triplePtr\", \"void\", \"int*\")"
 				"Object(i, 7)"
 				"Print(i)"
 				"triplePtr(i)"
 				"Print(i)"));
-	auto v1 = rt::interpretAndReturn(r1); 
+	auto v1 = rt::interpretAndReturn(r1.get()); 
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
-	delete r1;
 }
 

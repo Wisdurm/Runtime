@@ -20,9 +20,8 @@ TEST_CASE("Basic conditionals and loops", "[libraries]")
 	// Excepted output: "True"
 
 	const std::string test1 = "True";
-	ast::Expression* r1 = rt::parse(rt::tokenize("If(Not(False) Print(\"True\") Print(\"False\"))"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
-	delete r1;
+	auto r1 = rt::parse(rt::tokenize("If(Not(False) Print(\"True\") Print(\"False\"))"));
+	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
 
 	// Object(Main,
 	//	While(SmallerThan(i, 10)
@@ -33,12 +32,11 @@ TEST_CASE("Basic conditionals and loops", "[libraries]")
 	// Excepted output: "9"
 
 	const std::string test2 = "10.000000";
-	ast::Expression* r2 = rt::parse(rt::tokenize("While(SmallerThan(i,10)"
+	auto r2 = rt::parse(rt::tokenize("While(SmallerThan(i,10)"
 				"Assign(i,0,Add(i,1))"
 				")"
 				"Print(i)"));
-	REQUIRE(rt::interpretAndReturn(r2)[0] == test2);
-	delete r2;
+	REQUIRE(rt::interpretAndReturn(r2.get())[0] == test2);
 }
 
 TEST_CASE("Runtime libraries", "[libraries]")
@@ -51,13 +49,12 @@ TEST_CASE("Runtime libraries", "[libraries]")
 	// Excepted output: "2\n3"
 
 	const std::string test1[]{"2.000000", "4.000000"};
-	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/test.rnt\")"
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/test.rnt\")"
 				"Print(testObj-1)"
 				"Print(Size(testObj))"));
-	auto v1 = rt::interpretAndReturn(r1);
+	auto v1 = rt::interpretAndReturn(r1.get());
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
-	delete r1;
 }
 
 TEST_CASE("Format", "[libraries]")
@@ -68,7 +65,6 @@ TEST_CASE("Format", "[libraries]")
 	// Excepted output: "0 == 0.00\n"
 
 	const std::string test1 = "0 == 0.00\n";
-	ast::Expression* r1 = rt::parse(rt::tokenize("Print(Format(\"0 == $2\\n\", False))"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
-	delete r1;
+	auto r1 = rt::parse(rt::tokenize("Print(Format(\"0 == $2\\n\", False))"));
+	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
 }
