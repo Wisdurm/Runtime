@@ -407,34 +407,6 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		/// </summary>
 		/// <param name="key"></param>
 		/// <param name="value"></param>
-		void setMember(std::variant<double, std::string> key, objectOrValue& value)
-		{
-			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
-			// This probably isn't very efficient, but it does put the new value at the top, which is maybe kind off
-			// what it should do? I mean, I made the language, but I'm not really sure how stupid I want this to be
-			if (std::holds_alternative<double>(key)) // Number
-			{
-				int memberKey = static_cast<int>(std::get<double>(key));
-				if (members.contains(memberKey))
-					members.erase(memberKey);
-				addMember(value, memberKey);
-			}
-			else
-			{
-				std::string memberKey = std::get<std::string>(key); // String
-				if (memberStringMap.contains(memberKey))
-				{
-					members.erase(memberStringMap.at(memberKey));
-					memberStringMap.erase(memberKey);
-				}
-				addMember(value, memberKey);
-			}
-		}
-		/// <summary>
-		/// Sets the value of "key" to "value"
-		/// </summary>
-		/// <param name="key"></param>
-		/// <param name="value"></param>
 		void setMember(std::variant<double, std::string> key, objectOrValue value)
 		{
 			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/

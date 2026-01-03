@@ -158,6 +158,25 @@ namespace rt
 	}
 
 	/// <summary>
+	/// Identical to Object but evaluates
+	/// </summary>
+	/// <param name="args"></param>
+	/// <returns></returns>
+	objectOrValue Append(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
+		{
+			std::shared_ptr<Object> init = std::get<std::shared_ptr<Object>>(args.at(0)); // Main object to initialize
+			for (std::vector<objectOrValue>::iterator it = ++args.begin(); it != args.end(); ++it)
+			{
+				init.get()->addMember(evaluate(*it, symtab, argState, true));
+			}
+			return True;
+		}
+		return giveException("Incorrect arguments");
+	}
+
+	/// <summary>
 	/// Assigns a value to an object/member
 	/// </summary>
 	/// <param name="args">First arg is object/member to assign to, second one is the key of the member and the third one is the value to assign</param>
@@ -168,7 +187,24 @@ namespace rt
 		{
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
 			std::variant<double, std::string> key = evaluate(args.at(1),symtab, argState, true);
-			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false)  );
+			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false));
+			return True;
+		}
+		return giveException("Incorrect arguments");
+	}
+
+	/// <summary>
+	/// Identical to Assign, but does not evaluate
+	/// </summary>
+	/// <param name="args">First arg is object/member to assign to, second one is the key of the member and the third one is the value to assign</param>
+	/// <returns></returns>
+	objectOrValue Update(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
+		{
+			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
+			std::variant<double, std::string> key = evaluate(args.at(1),symtab, argState, true);
+			assignee.get()->setMember(key, args.at(2));
 			return True;
 		}
 		return giveException("Incorrect arguments");
@@ -221,7 +257,7 @@ namespace rt
 					file.read(&fileText[0], size);
 					file.close();
 
-					rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true), symtab, argState);
+					rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true).get(), symtab, argState);
 					return True;
 				}
 				else if (fileName.ends_with(".so") or fileName.ends_with(".dll")) {
@@ -499,5 +535,30 @@ namespace rt
 		// Finished
 		func->initialized = true;
 		return True;
+	}
+
+	/// <summary>
+	///	Runs a shell command
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue System(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		static bool works = false;
+		if (not works and system(NULL)) // Check whether shell exists
+			works = true;
+
+		if (args.size() > 0)
+		{
+			auto valueHeld = VALUEHELD(args.at(0));
+			if (const std::string* cmd = std::get_if<std::string>(&valueHeld)) {
+				system(cmd->c_str());
+				return True;
+			}
+			return giveException("Argument was of wrong type");
+		}
+		return giveException("Wrong amount of arguments");
 	}
 }

@@ -174,7 +174,9 @@ namespace rt
 			{"Print", Print },
 			{"Input", Input },
 			{"Object", ObjectF },
+			{"Append", Append },
 			{"Assign", Assign},
+			{"Update", Update },
 			{"Exit", Exit},
 			{"Include", Include},
 			{"Not", Not},
@@ -182,6 +184,7 @@ namespace rt
 			{"While", While},
 			{"Format", Format},
 			{"Bind", Bind},
+			{"System", System},
 			/* {"GetKeys", GetKeys}, */
 			{"Size", Size},
 			// Math
@@ -435,7 +438,6 @@ namespace rt
 			mainCounter++;
 		}
 		node->args[0] = new ast::Identifier(SourceLocation(), mainName);
-
 		//
 		interpret_internal(expr, symtab, true, argState);
 		std::shared_ptr<Object> mainObject = std::get<std::shared_ptr<Object>>((*symtab).lookUp(mainName, argState));
@@ -447,38 +449,30 @@ namespace rt
 
 	objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& argState)
 	{
-		if (dynamic_cast<ast::Identifier*>(expr) != nullptr)
+		if (auto node = dynamic_cast<ast::Identifier*>(expr))
 		{
-			auto node = dynamic_cast<ast::Identifier*>(expr);
 			const Symbol& v = symtab->lookUp(node->name, argState);
 			if (std::holds_alternative<std::shared_ptr<Object>>(v)) // Object
 				return std::get<std::shared_ptr<Object>>(v);
 			else
-			{
 				throw InterpreterException("Attempt to evaluate built-in function", node->src.getLine(), *node->src.getFile());
-			}
 		}
-		else if (dynamic_cast<ast::Literal*>(expr) != nullptr)
+		else if (auto node = dynamic_cast<ast::Literal*>(expr))
 		{
-			auto node = dynamic_cast<ast::Literal*>(expr);
 			return node->litValue;
 		}
-		else if (dynamic_cast<ast::Call*>(expr) != nullptr)
+		else if (auto node = dynamic_cast<ast::Call*>(expr))
 		{
-			auto node = dynamic_cast<ast::Call*>(expr);
-
 			//TODO: The next 20 or so lines of code suck REALLY bad and I HATE THEM VERY MUCH
 			// THIS FUNCTION IS SOOOOO BAD BUT I REALLY DONT WANT TO REWRITE IT
 
 			Symbol calledObject;
-			objectOrValue callee;
+			std::shared_ptr<Object> callee;
 
 			// If node->object is identifier,
 			// check for builtin since interpret_internal can't handle that.
-			// 
-			if (dynamic_cast<ast::Identifier*>(node->object) != nullptr)
+			if (auto bn = dynamic_cast<ast::Identifier*>(node->object))
 			{
-				auto bn = dynamic_cast<ast::Identifier*>(node->object);
 				const auto& v = symtab->lookUp(bn->name, argState); // Look up object in symtab
 				if (std::holds_alternative<BuiltIn>(v)) // Builtin
 				{
@@ -496,21 +490,17 @@ namespace rt
 			}
 			else // Not builtin function
 			{	
-				// TODO:
-				// I don't actually know if this code ever gets called.
-				// This is the most complicated part of the project, and it's been months
-				// since I wrote this so I genuinely don't remember why execution would ever
-				// reach here
-				std::cerr << "Hello, you've found something interesting."
-					"Please report this message to me, as well as the code that caused this to appear.";
-
-				callee = interpret_internal(node->object, symtab, false, argState);
-				if (std::holds_alternative<std::shared_ptr<Object>>(callee)) // If object, call object
+				// This gets called when calling member functions
+				// I genuinely don't understand how I wrote this code, but I'm so glad
+				// I managed.
+				auto tmp = interpret_internal(node->object, symtab, false, argState);
+				if (std::holds_alternative<std::shared_ptr<Object>>(tmp)) // If object, call object
 				{
-					calledObject = std::get<std::shared_ptr<Object>>(callee);
+					callee = std::get<std::shared_ptr<Object>>(tmp);
+					calledObject = callee;
 				}
 				else
-					return std::get<std::variant<double, std::string>>(callee); // If value, return the value
+					return std::get<std::variant<double, std::string>>(tmp); // If value, return the value
 			}
 
 			if (call)
@@ -542,9 +532,8 @@ namespace rt
 				return callee;
 			}
 		}
-		else if (dynamic_cast<ast::BinaryOperator*>(expr) != nullptr)
+		else if (auto node = dynamic_cast<ast::BinaryOperator*>(expr))
 		{
-			auto node = dynamic_cast<ast::BinaryOperator*>(expr);
 			if (memberInitialization)
 			{
 				std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true, argState));
@@ -553,11 +542,14 @@ namespace rt
 			}
 			else
 			{
-				return interpret_internal(node->left, symtab, false, argState);
+				// This needs to return a reference to a member that doesn't exist yet
+				// As a result, we give it the uninterpreted, raw ast tree, so it can be parsed
+				// later, when actually possible.
+				return std::make_shared<Object>(node);
 			}
 		}
 		else
-			throw InterpreterException("Unimplemented ast node encountered", 0, "Unknown"); // Too lazy to get proper src loc for this
+			throw InterpreterException("Unimplemented ast node encountered", expr->src.getLine(), *expr->src.getFile());
 	}
 
 	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
@@ -643,6 +635,17 @@ namespace rt
 			}
 			else
 			{
+				// This allows the calling of pure functions
+				// that is, functions with no members.
+				// For example see the member function test in interpreter_tests
+				// Without this, methods would not work.
+				//
+				// HOWEVER THIS ONLY WORKS IN THE LIVE INTERPRETER
+				// SINCE OBJECTS NEVER GET CALLED THEY ONLY GET EVALUATED
+				// OTHERWISE  HAHAHAHAHAHAAAAAAAAAAa
+				if (auto expr = object->getExpression())
+					return evaluate(object, symtab, newArgState, false);
+				// Add zero
 #if RUNTIME_DEBUG==1
 				std::cout << "Empty value initialized" << std::endl;
 #endif // RUNTIME_DEBUG
