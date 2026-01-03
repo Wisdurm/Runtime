@@ -83,16 +83,16 @@ TEST_CASE("Struct argument", "[shared_libraries]")
 	//	Include("../tests/lib.so")
 	//	Object(structure, "int", "float")
 	//	Bind("compareStruct", "int", structure)
-	//	Object(sr, 2.4, 2.2) # 2.4 gets truncated to 2
+	//	Object(sr, 2.9, 2.1) # 2.9 gets truncated to 2
 	//	Print(compareStruct(sr))
 	// )
-	// Excepted output: "0" (False)
+	// Excepted output: "0" (False) (2 is not larger than 2.1)
 
 	const std::string test1 = "0.000000";
 	ast::Expression* r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Object(structure, \"int\", \"float\")"
 				"Bind(\"compareStruct\",\"int\",structure)"
-				"Object(sr, 2.4, 2.2)"
+				"Object(sr, 2.9, 2.1)"
 				"Print(compareStruct(sr))"));
 	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 	delete r1;
