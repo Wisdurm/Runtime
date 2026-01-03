@@ -1,5 +1,6 @@
 // Catch 2
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
 // Runtime
 #include "../src/compiler/tokenizer.h"
 // C++
@@ -15,4 +16,11 @@ TEST_CASE("String tokenizing", "[token]")
 		rt::Token("Zero", rt::TokenType::IDENTIFIER), rt::Token("-", rt::TokenType::PUNCTUATION), rt::Token("0", rt::TokenType::LITERAL), rt::Token(")", rt::TokenType::PUNCTUATION)
 	};
 	REQUIRE(rt::tokenize(test1) == r1);
+}
+
+
+TEST_CASE("Exceptions", "[token]")
+{
+	const char* test1 = "\"";
+	REQUIRE_THROWS_WITH(rt::tokenize(test1), "Unmatched string literal");
 }

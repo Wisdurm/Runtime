@@ -37,6 +37,8 @@ from your distribution's package manager.
 That is, for Debian 13 you would do:  
 ```sudo apt install libreadline-dev```  
 
+gcovr is required for building tests
+
 ### Instructions for building
 
 You can choose not to build tests by setting RUNTIME_BUILD_TESTS to false.

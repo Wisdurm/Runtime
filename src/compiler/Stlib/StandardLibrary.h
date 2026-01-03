@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 #include <variant>
+#include <experimental/memory>
 // Gnu
 #include <readline/readline.h>
 // C
@@ -56,8 +57,35 @@ namespace rt
 		{"slong", &ffi_type_ulong}, // s long
 		{"long", &ffi_type_ulong}, // Default
 		{"longdouble", &ffi_type_longdouble},
-		{"pointer", &ffi_type_pointer}, // Generic pointer
-		{"cstring", &ffi_type_cstring}, // Char pointer, TODO: interpreter should make this a string
+		// Pointers
+		{"cstring", &ffi_type_cstring}, // Char pointer, special logic in interpreter
+		{"uint8*",&ffi_type_puint8  },
+		{"sint8*",&ffi_type_psint8  },
+		{"int8*",&ffi_type_psint8  }, // D
+		{"uint16*",&ffi_type_puint16 },
+		{"sint16*",&ffi_type_psint16 },
+		{"int16*",&ffi_type_psint16 }, // D
+		{"uint32*",&ffi_type_puint32 },
+		{"sint32*",&ffi_type_psint32 },
+		{"int32*",&ffi_type_psint32 }, // D
+		{"uint64*",&ffi_type_puint64 },
+		{"sint64*",&ffi_type_psint64 },
+		{"int64*",&ffi_type_psint64 }, // D
+		{"float*",&ffi_type_pfloat  },
+		{"double*",&ffi_type_pdouble },
+		{"uchar*",&ffi_type_puchar  },
+		{"schar*",&ffi_type_pschar  },
+		{"ushort*",&ffi_type_pushort },
+		{"sshort*",&ffi_type_psshort },
+		{"short*",&ffi_type_psshort }, // D
+		{"uint*",&ffi_type_puint   },
+		{"sint*",&ffi_type_psint   },
+		{"int*",&ffi_type_psint   }, // D
+		{"ulong*",&ffi_type_pulong  },
+		{"slong*",&ffi_type_pslong  },
+		{"long*",&ffi_type_pslong  }, // D
+		{"longdouble*",&ffi_type_plongdouble},
+		// Complex
 		{"complex_float", &ffi_type_complex_float},
 		{"complex_double", &ffi_type_complex_double},
 		{"complex_longdouble", &ffi_type_complex_longdouble},
@@ -455,7 +483,7 @@ namespace rt
 		// Reset function
 		func->argTypes.clear();
 		func->initialized = false;
-		func->retType = nullptr;
+		func->retType = std::experimental::make_observer<ffi_type>(nullptr); // Unbelievable
 		// Get return value
 		{
 			ffi_type* ret;
@@ -465,17 +493,44 @@ namespace rt
 			}
 			else
 				return giveException("Return name was of wrong type");
-			func->retType = ret;
+			func->retType = std::experimental::make_observer<ffi_type>(ret);
 		}
 		// Get parameters
+		func->argTypes.reserve(args.size() - 2);; // Prepare for args
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
+			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&(*it))) {
+				auto members = (*obj)->getMembers();
+				const int size = members.size();
+				// Struct
+				ffi_type** e = new ffi_type*[size + 1]; // THIS IS NOT FREED BECAUSE IT IS USED UNTIL PROGRAM EXIT
+												 // might code free for this later, but as of now it would
+												 // only give me more unnecessary work. TODO
+				// Member types
+				// TODO: Recursion
+				for (int i = 0; i < size; ++i) {
+					auto value = VALUEHELD(members.at(i));
+					if (const std::string* pType = std::get_if<std::string>(&value)){ 
+						e[i] = typeNames.at(*pType);
+					}
+					else return giveException("Struct member type was of wrong type"); 
+				}
+				e[size] = NULL; // Last one (NULL terminated array)
+				func->argTypes.push_back(std::make_shared<ffi_type>(
+							0, // size (init 0)
+							0, // align (init 0)
+							FFI_TYPE_STRUCT,// type
+							e// elements
+							));
+				continue;
+			}
+			// Not struct
 			auto rP = VALUEHELD(*it);
 			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
-				func->argTypes.push_back(typeNames.at(*pType));
 				if (*pType == "void") { // TODO: Faster comparison
 					return giveException("Shared function cannot have parameters of type void");
 				}
-			}
+				func->argTypes.push_back(std::experimental::make_observer<ffi_type>(typeNames.at(*pType))); // TODO: Error handling
+			} else return giveException("Argument type was of wrong type");
 		}
 		// Finished
 		func->initialized = true;

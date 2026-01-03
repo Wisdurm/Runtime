@@ -1,5 +1,6 @@
 // Catch 2
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
 // Runtime
 #include "../src/compiler/tokenizer.h"
 #include "../src/compiler/parser.h"
@@ -90,4 +91,16 @@ TEST_CASE("Numeric values", "[parser]")
 	ast::Expression* r1 = new ast::Call(L, new ast::Identifier(L, "Object"), { new ast::Identifier(L,"Main"), new ast::Call(L, new ast::Identifier(L,"Add"),{new ast::Literal(L,1.0) , new ast::Literal(L,-1.0)}) });
 	REQUIRE(*parse(tokenize(test1)) == *r1);
 	delete r1;
+}
+
+TEST_CASE("Exceptions", "[parser]")
+{
+	const char* test1 = "-\"1\"";
+	REQUIRE_THROWS_WITH(parse(tokenize(test1)),"You're mentally ill");
+
+	const char* test2 = "Print(";
+	REQUIRE_THROWS_WITH(parse(tokenize(test2)),"Unmatched parentheses, starting at");
+
+	const char* test3 = "a-(";
+	REQUIRE_THROWS_WITH(parse(tokenize(test3)),"Unexpected token encountered");
 }

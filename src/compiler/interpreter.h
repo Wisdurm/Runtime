@@ -10,6 +10,7 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#include <experimental/memory>
 // C
 #include <ffi.h>
 
@@ -37,10 +38,30 @@ typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn, rt::LibFunc> Symbol;
 namespace rt
 {
 	/// <summary>
-	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for TODO
+	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for
 	/// </summary>
 	inline ffi_type ffi_type_cstring = ffi_type_pointer;
-
+	// Custom pointer types
+	inline ffi_type ffi_type_puint8 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint8 = ffi_type_pointer;
+	inline ffi_type ffi_type_puint16 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint16 = ffi_type_pointer;
+	inline ffi_type ffi_type_puint32 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint32 = ffi_type_pointer;
+	inline ffi_type ffi_type_puint64 = ffi_type_pointer;
+	inline ffi_type ffi_type_psint64 = ffi_type_pointer;
+	inline ffi_type ffi_type_pfloat = ffi_type_pointer;
+	inline ffi_type ffi_type_pdouble = ffi_type_pointer;
+	inline ffi_type ffi_type_puchar = ffi_type_pointer;
+	inline ffi_type ffi_type_pschar = ffi_type_pointer;
+	inline ffi_type ffi_type_pushort = ffi_type_pointer;
+	inline ffi_type ffi_type_psshort = ffi_type_pointer;
+	inline ffi_type ffi_type_puint = ffi_type_pointer;
+	inline ffi_type ffi_type_psint = ffi_type_pointer;
+	inline ffi_type ffi_type_pulong = ffi_type_pointer;
+	inline ffi_type ffi_type_pslong = ffi_type_pointer;
+	inline ffi_type ffi_type_plongdouble = ffi_type_pointer;
+	// TODO: Complex I guess?
 
 	// Retrieves the value held by an object, or value
 #define VALUEHELD(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
@@ -122,11 +143,11 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		/// <summary>
 		/// Return type of the function
 		/// </summary>
-		ffi_type* retType;
+		std::variant<std::experimental::observer_ptr<ffi_type>, std::shared_ptr<ffi_type>> retType;
 		/// <summary>
 		/// Argument types
 		/// </summary>
-		std::vector<ffi_type*> argTypes;
+		std::vector<std::variant<std::experimental::observer_ptr<ffi_type>, std::shared_ptr<ffi_type>>> argTypes;
 	};
 
 	/// <summary>
@@ -392,6 +413,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 			// TODO: Probably not particularly hard to fix, at least anymore
 			if (std::holds_alternative<double>(key)) // Number
 			{
+				// DOES NOT REMOVE STRING KEY MAP TODO TODO TODO
 				int memberKey = static_cast<int>(std::get<double>(key));
 				if (members.contains(memberKey))
 					members.erase(memberKey);
@@ -407,6 +429,23 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 				}
 				addMember(value, memberKey);
 			}
+		}
+		/// <summary>
+		/// Sets the value of the last member (the one which would be evaluated) to a value
+		/// </summary>
+		/// <param name="key"></param>
+		/// <param name="value"></param>
+		void setLast(objectOrValue value)
+		{
+			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
+			// TODO
+			if (members.size() > 0)
+			{
+				// TODO DOES NOT REMOVE STRING KEY, ADD METHOD I GUESS?
+				int key = members.back().first;
+				members.erase(members.end() - 1); // Remove last one
+				addMember(value, key);
+			} else throw; // Bored
 		}
 		/// <summary>
 		/// Deletes the expression of this object

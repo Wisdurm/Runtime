@@ -9,8 +9,6 @@ ${CMAKE_SOURCE_DIR}/src/compiler/tokenizer.cpp
 ${CMAKE_SOURCE_DIR}/src/compiler/parser.cpp
 # Interpreter
 ${CMAKE_SOURCE_DIR}/src/compiler/interpreter.cpp
-# Flowgraph
-${CMAKE_SOURCE_DIR}/src/flowgraph.cpp
 )
 
 # Enforce C++ 20 (again)
