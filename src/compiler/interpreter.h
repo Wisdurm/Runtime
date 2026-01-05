@@ -157,17 +157,17 @@ namespace rt
 	/// <summary>
 	/// Interprets in live cli session
 	/// </summary>
-	void liveIntrepret(ast::Expression* expr);
+	void liveIntrepret(std::shared_ptr<ast::Expression> expr);
 	/// <summary>
 	/// Interprets ast tree
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
-	void interpret(ast::Expression* expr, int argc, char** argv);
+	void interpret(std::shared_ptr<ast::Expression> expr, int argc, char** argv);
 	/// <summary>
 	/// Evaluates ast tree and adds all of an it's symbols to another symbol table
 	/// </summary>
 	/// <param name="expr"></param>
-	void include(ast::Expression* expr, SymbolTable* symtab, ArgState& argState);
+	void include(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, ArgState& argState);
 	/// <summary>
 	/// Returns the value held by an object or value. Evaluates (of course)
 	/// <param name="write">Whether to write value to memory, almost always should be true ( and is so by default ) </param>
@@ -190,7 +190,7 @@ namespace rt
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
 	/// <returns>String list containing everything printed to cout</returns>
-	std::string* interpretAndReturn(ast::Expression* expr);
+	std::string* interpretAndReturn(std::shared_ptr<ast::Expression> expr);
 	/// <summary>
 	/// Adds a string to the captured cout vector
 	/// </summary>
@@ -220,7 +220,7 @@ namespace rt
 		/// Creates object with expression
 		/// </summary>
 		/// <param name="expr"></param>
-		Object(ast::Expression* expr)
+		Object(std::shared_ptr<ast::Expression> expr)
 		{
 			name = "";
 			this->expr = expr;
@@ -228,7 +228,7 @@ namespace rt
 		/// <summary>
 		/// Creates empty object with specified name and expression
 		/// </summary>
-		Object(std::string name, ast::Expression* expr)
+		Object(std::string name, std::shared_ptr<ast::Expression> expr)
 		{
 			this->name = name;
 			this->expr = expr;
@@ -262,7 +262,7 @@ namespace rt
 		/// Return expr member
 		/// </summary>
 		/// <returns></returns>
-		ast::Expression* getExpression() const { return expr; };
+		std::shared_ptr<ast::Expression> getExpression() const { return expr; };
 		/// <summary>
 		/// Returns member by index
 		/// </summary>
@@ -449,8 +449,7 @@ namespace rt
 		/// </summary>
 		void deleteExpression()
 		{
-			//delete expr; // NOT SURE IF THIS SHOULD BE DELETED?
-			expr = nullptr;
+			expr.reset();
 		}
 		/// <summary>
 		/// Creates an object from an std::variant<double, std::string>
@@ -471,7 +470,7 @@ namespace rt
 		/// <summary>
 		/// (Optional) expression value. Can be evaluated
 		/// </summary>
-		ast::Expression* expr;
+		std::shared_ptr<ast::Expression> expr;
 		/// <summary>
 		/// Members of the object. Can either be objects, or values
 		/// </summary>

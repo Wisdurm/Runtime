@@ -16,7 +16,7 @@ TEST_CASE("Exceptions", "[shared_libraries]")
 
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"test(5)"));
-	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r1.get()), "Shared function is not yet bound");
+	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r1), "Shared function is not yet bound");
 
 	// Object(Main,
 	//	Bind("bruh","void")
@@ -24,7 +24,7 @@ TEST_CASE("Exceptions", "[shared_libraries]")
 	// Excepted output: Exception
 
 	auto r2 = rt::parse(rt::tokenize("Bind(\"bruh\",\"void\")"));
-	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r2.get()), "Unable to find symbol");
+	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r2), "Unable to find symbol");
 }
 
 TEST_CASE("Basic function calling", "[shared_libraries]")
@@ -40,7 +40,7 @@ TEST_CASE("Basic function calling", "[shared_libraries]")
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Bind(\"test\",\"int\",\"int\")"
 				"Print(test(5))"));
-	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 
 	// Object(Main,
 	//	Include("../tests/lib.so")
@@ -53,7 +53,7 @@ TEST_CASE("Basic function calling", "[shared_libraries]")
 	auto r2 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Bind(\"testVoid\",\"void\")"
 				"Print(testVoid())"));
-	REQUIRE_NOTHROW(rt::interpretAndReturn(r2.get()));
+	REQUIRE_NOTHROW(rt::interpretAndReturn(r2));
 }
 
 TEST_CASE("Multiple string arguments", "[shared_libraries]")
@@ -69,7 +69,7 @@ TEST_CASE("Multiple string arguments", "[shared_libraries]")
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Bind(\"compareStr\",\"void\",\"cstring\", \"cstring\")"
 				"Print(compareStr(\"Hello\", \"Hello\"))"));
-	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 }
 
 TEST_CASE("Struct argument", "[shared_libraries]")
@@ -89,7 +89,7 @@ TEST_CASE("Struct argument", "[shared_libraries]")
 				"Bind(\"compareStruct\",\"int\",structure)"
 				"Object(sr, 2.9, 2.1)"
 				"Print(compareStruct(sr))"));
-	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 }
 
 TEST_CASE("Pointer argument", "[shared_libraries]")
@@ -111,7 +111,7 @@ TEST_CASE("Pointer argument", "[shared_libraries]")
 				"Print(i)"
 				"triplePtr(i)"
 				"Print(i)"));
-	auto v1 = rt::interpretAndReturn(r1.get()); 
+	auto v1 = rt::interpretAndReturn(r1); 
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
 }
@@ -131,6 +131,6 @@ TEST_CASE("Struct return value", "[shared_libraries]")
 				"Object(structure, \"int\", \"float\")"
 				"Bind(\"retStruct\", structure, \"int\", \"float\")"
 				"Print(retStruct(2, 5))"));
-	auto v1 = rt::interpretAndReturn(r1.get()); 
+	auto v1 = rt::interpretAndReturn(r1); 
 	REQUIRE(v1[0] == test1);
 }

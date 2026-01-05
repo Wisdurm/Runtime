@@ -34,11 +34,11 @@ namespace rt
 		return token;
 	};
 
-	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens);
-	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens);
-	static ast::Expression* parseLiteral(const std::vector<Token>& tokens);
-	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function);
-	static ast::Expression* parseBinaryLeft(const std::vector<Token>& tokens, ast::Expression* left = nullptr);
+	static std::shared_ptr<ast::Expression> parseIdentifier(const std::vector<Token>& tokens);
+	static std::shared_ptr<ast::Expression> parsePunctuation(const std::vector<Token>& tokens);
+	static std::shared_ptr<ast::Expression> parseLiteral(const std::vector<Token>& tokens);
+	static std::shared_ptr<ast::Expression> parseFunction(const std::vector<Token>& tokens, std::shared_ptr<ast::Expression> function);
+	static std::shared_ptr<ast::Expression> parseBinaryLeft(const std::vector<Token>& tokens, std::shared_ptr<ast::Expression> left = nullptr);
 
 	/// <summary>
 	/// Main function for parsing an expression, will branch off to more specific functions
@@ -46,9 +46,9 @@ namespace rt
 	/// <param name="parseSingle">Whether or not to parse - tokens</param>
 	/// <param name="parsePure">If only pure expressions should be parsed (eq. no functions or binary operations). False by default</param>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseExpression(const std::vector<Token>& tokens, bool parsePure = false)
+	static std::shared_ptr<ast::Expression> parseExpression(const std::vector<Token>& tokens, bool parsePure = false)
 	{
-		ast::Expression* expr;
+		std::shared_ptr<ast::Expression> expr;
 		switch (peek(tokens).getType())
 		{
 		case TokenType::IDENTIFIER:
@@ -76,7 +76,7 @@ namespace rt
 
 		if (*peek(tokens).getText() == "-" and !parsePure)
 		{
-			if (dynamic_cast<ast::Identifier*>(expr) != nullptr) // Member being accessed
+			if (std::dynamic_pointer_cast<ast::Identifier>(expr) != nullptr) // Member being accessed
 				expr = parseBinaryLeft(tokens, expr);
 			else return expr;
 			// If last one is not identifier, then this one is surely a negative value
@@ -93,20 +93,20 @@ namespace rt
 	/// Parse identifier token
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseIdentifier(const std::vector<Token>& tokens)
+	static std::shared_ptr<ast::Expression> parseIdentifier(const std::vector<Token>& tokens)
 	{
 		Token token = consume(tokens);
-		return new ast::Identifier(token.getSrc(), *token.getText());
+		return make_shared<ast::Identifier>(token.getSrc(), *token.getText());
 	}
 	
 	/// <summary>
 	/// Parse punctuation token
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parsePunctuation(const std::vector<Token>& tokens)
+	static std::shared_ptr<ast::Expression> parsePunctuation(const std::vector<Token>& tokens)
 	{
 		consume(tokens, "-");
-		ast::Literal* expr = dynamic_cast<ast::Literal*>(parseExpression(tokens, true));
+		std::shared_ptr<ast::Literal> expr = std::dynamic_pointer_cast<ast::Literal>(parseExpression(tokens, true));
 		if (expr == nullptr)
 			throw ParserException("Expected literal after '-' token", expr->src.getLine(), expr->src.getFile()->c_str());
 		
@@ -124,7 +124,7 @@ namespace rt
 	/// Parse literal token
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseLiteral(const std::vector<Token>& tokens)
+	static std::shared_ptr<ast::Expression> parseLiteral(const std::vector<Token>& tokens)
 	{
 		Token token = consume(tokens);
 		if ((*token.getText())[0] == '\"')
@@ -133,11 +133,11 @@ namespace rt
 			// Remove quatation marks
 			stringValue.erase(0,1);
 			stringValue.pop_back();
-			return new ast::Literal(token.getSrc(), std::variant<double, std::string>(stringValue)); // Using value constructor for clarity
+			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(stringValue)); // Using value constructor for clarity
 		}
 		else 
 		{	// Number literal
-			return new ast::Literal(token.getSrc(), std::variant<double, std::string>(std::stod(*token.getText()) ));
+			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(std::stod(*token.getText()) ));
 		}
 	}
 
@@ -145,13 +145,13 @@ namespace rt
 	/// Parses binary operator with left assosiatety
 	/// </summary>
 	/// <returns></returns>
-	static ast::Expression* parseBinaryLeft(const std::vector<Token>& tokens, ast::Expression* left)
+	static std::shared_ptr<ast::Expression> parseBinaryLeft(const std::vector<Token>& tokens, std::shared_ptr<ast::Expression> left)
 	{
 		while (*peek(tokens).getText() == "-")
 		{
 			consume(tokens, "-");
 			auto right = parseExpression(tokens, true);
-			left = new ast::BinaryOperator(peek(tokens).getSrc(),
+			left = std::make_shared<ast::BinaryOperator>(peek(tokens).getSrc(),
 				left,
 				right
 			);
@@ -163,11 +163,11 @@ namespace rt
 	/// Parse function
 	/// </summary>
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseFunction(const std::vector<Token>& tokens, ast::Expression* function)
+	static std::shared_ptr<ast::Expression> parseFunction(const std::vector<Token>& tokens, std::shared_ptr<ast::Expression> function)
 	{
 		auto beg = consume(tokens, "(");
 		
-		std::vector<ast::Expression*> args;
+		std::vector<std::shared_ptr<ast::Expression>> args;
 		while (*peek(tokens).getText() != ")")
 		{
 			if (pos == tokens.size())
@@ -175,37 +175,37 @@ namespace rt
 			args.push_back(parseExpression(tokens));
 		}
 		consume(tokens, ")");
-		return new ast::Call(peek(tokens).getSrc(), function, args);
+		return std::make_shared<ast::Call>(peek(tokens).getSrc(), function, args);
 	}
 
 	/// <summary>
 	/// Parses top level statements as arguments to a main function
 	/// </summary
 	/// <returns>Ast tree</returns>
-	static ast::Expression* parseMain(const std::vector<Token>& tokens)
+	static std::shared_ptr<ast::Expression> parseMain(const std::vector<Token>& tokens)
 	{
-		std::vector<ast::Expression*> args;
-		args.push_back(new ast::Identifier(peek(tokens).getSrc(), "Main"));
+		std::vector<std::shared_ptr<ast::Expression>> args;
+		args.push_back(std::make_shared<ast::Identifier>(peek(tokens).getSrc(), "Main"));
 		while (peek(tokens).getType() != TokenType::END)
 		{
 			args.push_back(parseExpression(tokens));
 		}
-		return new ast::Call(peek(tokens).getSrc(), new ast::Identifier(SourceLocation(), "Object"), args);
+		return std::make_shared<ast::Call>(peek(tokens).getSrc(), std::make_shared<ast::Identifier>(SourceLocation(), "Object"), args);
 	}
 
-	std::unique_ptr<ast::Expression> parse(const std::vector<Token>& tokens, bool requireMain)
+	std::shared_ptr<ast::Expression> parse(const std::vector<Token>& tokens, bool requireMain)
 	{
 		pos = 0;
 		if (requireMain) // True by default
 		{
 			if (*tokens[2].getText() == "Main") // Check for main function
-				return std::unique_ptr<ast::Expression>(parseExpression(tokens));
+				return parseExpression(tokens);
 			else
-				return std::unique_ptr<ast::Expression>(parseMain(tokens));
+				return parseMain(tokens);
 		}
 		else // Don't use main function. This will only accept a single statement. Used for live interpret
 		{
-			return std::unique_ptr<ast::Expression>(parseExpression(tokens));
+			return parseExpression(tokens);
 		}
 	}
 }

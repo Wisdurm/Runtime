@@ -21,7 +21,7 @@ TEST_CASE("Basic conditionals and loops", "[libraries]")
 
 	const std::string test1 = "True";
 	auto r1 = rt::parse(rt::tokenize("If(Not(False) Print(\"True\") Print(\"False\"))"));
-	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 
 	// Object(Main,
 	//	While(SmallerThan(i, 10)
@@ -36,7 +36,7 @@ TEST_CASE("Basic conditionals and loops", "[libraries]")
 				"Assign(i,0,Add(i,1))"
 				")"
 				"Print(i)"));
-	REQUIRE(rt::interpretAndReturn(r2.get())[0] == test2);
+	REQUIRE(rt::interpretAndReturn(r2)[0] == test2);
 }
 
 TEST_CASE("Runtime libraries", "[libraries]")
@@ -52,7 +52,7 @@ TEST_CASE("Runtime libraries", "[libraries]")
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/test.rnt\")"
 				"Print(testObj-1)"
 				"Print(Size(testObj))"));
-	auto v1 = rt::interpretAndReturn(r1.get());
+	auto v1 = rt::interpretAndReturn(r1);
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
 }
@@ -66,5 +66,5 @@ TEST_CASE("Format", "[libraries]")
 
 	const std::string test1 = "0 == 0.00\n";
 	auto r1 = rt::parse(rt::tokenize("Print(Format(\"0 == $2\\n\", False))"));
-	REQUIRE(rt::interpretAndReturn(r1.get())[0] == test1);
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 }

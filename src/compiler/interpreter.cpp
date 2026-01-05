@@ -239,7 +239,7 @@ namespace rt
 	/// <param name="expr">Ast node to interpret</param>
 	/// <param name="call">Whether or not to evaluate call values</param>
 	/// <returns>The value of the node</returns>
-	static objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& args);
+	static objectOrValue interpret_internal(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, bool call, ArgState& args);
 	/// <summary>
 	/// Calls a shared library function
 	/// </summary>
@@ -300,7 +300,7 @@ namespace rt
 		clearSymtab(globalSymtab);
 	}
 
-	void liveIntrepret(ast::Expression* expr)
+	void liveIntrepret(std::shared_ptr<ast::Expression> expr)
 	{
 		interpret_internal(expr, &globalSymtab, true, mainArgState);
 	}
@@ -310,7 +310,7 @@ namespace rt
 		capturedCout.push_back(str);
 	}
 
-	std::string* interpretAndReturn(ast::Expression* expr)
+	std::string* interpretAndReturn(std::shared_ptr<ast::Expression> expr)
 	{
 		// Clear
 		mainArgs.clear();
@@ -329,7 +329,7 @@ namespace rt
 		return capturedCout.data();
 	}
 
-	void interpret(ast::Expression* expr, int argc, char** argv)
+	void interpret(std::shared_ptr<ast::Expression> expr, int argc, char** argv)
 	{
 		memberInitialization = false;
 		// Load stdlib
@@ -350,15 +350,14 @@ namespace rt
 		callObject(main, &globalSymtab, mainArgState);
 	}
 
-	void include(ast::Expression* expr, SymbolTable* symtab, ArgState& argState)
+	void include(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, ArgState& argState)
 	{
 		// Don't forget "global" values before this was called
 		bool prev = memberInitialization;
 		memberInitialization = false;
 		// Rename main to avoid conflict (I know this is a hacky workaround, but every way of doing this is hacky)
 		// This could also be done in the parser step, which would probably be a lot smarter :thinking:
-		auto node = dynamic_cast<ast::Call*>(expr);
-		delete (node->args[0]);
+		auto node = std::dynamic_pointer_cast<ast::Call>(expr);
 		int mainCounter = 2;
 		std::string mainName;
 		while (true)
@@ -369,7 +368,8 @@ namespace rt
 				break;
 			mainCounter++;
 		}
-		node->args[0] = new ast::Identifier(SourceLocation(), mainName);
+		// TODO: Is this safe?
+		node->args[0] = std::make_shared<ast::Identifier>(SourceLocation(), mainName);
 		//
 		interpret_internal(expr, symtab, true, argState);
 		std::shared_ptr<Object> mainObject = std::get<std::shared_ptr<Object>>((*symtab).lookUp(mainName, argState));
@@ -379,9 +379,9 @@ namespace rt
 		memberInitialization = prev;
 	}
 
-	objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& argState)
+	objectOrValue interpret_internal(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, bool call, ArgState& argState)
 	{
-		if (auto node = dynamic_cast<ast::Identifier*>(expr))
+		if (auto node = std::dynamic_pointer_cast<ast::Identifier>(expr))
 		{
 			const Symbol& v = symtab->lookUp(node->name, argState);
 			if (std::holds_alternative<std::shared_ptr<Object>>(v)) // Object
@@ -389,11 +389,11 @@ namespace rt
 			else
 				throw InterpreterException("Attempt to evaluate built-in function", node->src.getLine(), *node->src.getFile());
 		}
-		else if (auto node = dynamic_cast<ast::Literal*>(expr))
+		else if (auto node = std::dynamic_pointer_cast<ast::Literal>(expr))
 		{
 			return node->litValue;
 		}
-		else if (auto node = dynamic_cast<ast::Call*>(expr))
+		else if (auto node = std::dynamic_pointer_cast<ast::Call>(expr))
 		{
 			//TODO: The next 20 or so lines of code suck REALLY bad and I HATE THEM VERY MUCH
 			// THIS FUNCTION IS SOOOOO BAD BUT I REALLY DONT WANT TO REWRITE IT
@@ -403,7 +403,7 @@ namespace rt
 
 			// If node->object is identifier,
 			// check for builtin since interpret_internal can't handle that.
-			if (auto bn = dynamic_cast<ast::Identifier*>(node->object))
+			if (auto bn = std::dynamic_pointer_cast<ast::Identifier>(node->object))
 			{
 				const auto& v = symtab->lookUp(bn->name, argState); // Look up object in symtab
 				if (std::holds_alternative<BuiltIn>(v)) // Builtin
@@ -464,7 +464,7 @@ namespace rt
 				return callee;
 			}
 		}
-		else if (auto node = dynamic_cast<ast::BinaryOperator*>(expr))
+		else if (auto node = std::dynamic_pointer_cast<ast::BinaryOperator>(expr))
 		{
 			if (memberInitialization)
 			{
