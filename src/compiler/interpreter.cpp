@@ -263,22 +263,6 @@ namespace rt
 
 	// TODO: ORGANIZE CODE OH MY DAYS
 
-	// Source - https://stackoverflow.com/a
-	// Posted by Andrew Top
-	// Retrieved 2025-12-20, License - CC BY-SA 2.5
-
-	template <class T>
-	class Traits
-	{
-	public:
-		struct AlignmentFinder
-		{
-			char a; 
-			T b;
-		};
-
-		enum {AlignmentOf = sizeof(AlignmentFinder) - sizeof(T)};
-	};
 	/// <summary>
 	/// Stores all currently loaded shared libraries
 	/// </summary>
@@ -307,58 +291,6 @@ namespace rt
 		&ffi_type_slong,
 		&ffi_type_longdouble,
 		&ffi_type_pointer,
-	};
-	/// <summary>
-	/// The alignment of all ffi_types
-	/// </summary>
-	static const std::unordered_map<ffi_type*, size_t> typeAlignments = {
-		{&ffi_type_uint8, Traits<uint8_t>::AlignmentOf},
-		{&ffi_type_sint8, Traits<int8_t>::AlignmentOf},
-		{&ffi_type_uint16, Traits<uint16_t>::AlignmentOf},
-		{&ffi_type_sint16, Traits<int16_t>::AlignmentOf},
-		{&ffi_type_uint32, Traits<uint32_t>::AlignmentOf},
-		{&ffi_type_sint32, Traits<int32_t>::AlignmentOf},
-		{&ffi_type_uint64, Traits<uint64_t>::AlignmentOf},
-		{&ffi_type_sint64, Traits<int64_t>::AlignmentOf},
-		{&ffi_type_float, Traits<float>::AlignmentOf},
-		{&ffi_type_double, Traits<double>::AlignmentOf},
-		{&ffi_type_uchar, Traits<unsigned char>::AlignmentOf},
-		{&ffi_type_schar, Traits<signed char>::AlignmentOf},
-		{&ffi_type_ushort, Traits<unsigned short>::AlignmentOf},
-		{&ffi_type_sshort, Traits<signed short>::AlignmentOf},
-		{&ffi_type_uint, Traits<unsigned int>::AlignmentOf},
-		{&ffi_type_sint, Traits<signed int>::AlignmentOf},
-		{&ffi_type_ulong, Traits<unsigned long>::AlignmentOf},
-		{&ffi_type_slong, Traits<signed long>::AlignmentOf},
-		{&ffi_type_longdouble, Traits<long double>::AlignmentOf},
-		{&ffi_type_pointer, Traits<void*>::AlignmentOf},
-		// TODO: Complex
-	};
-	/// <summary>
-	/// The size of all ffi_types
-	/// </summary>
-	static const std::unordered_map<ffi_type*, size_t> typeSizes = {
-		{&ffi_type_uint8, sizeof(uint8_t)},
-		{&ffi_type_sint8, sizeof(int8_t)},
-		{&ffi_type_uint16, sizeof(uint16_t)},
-		{&ffi_type_sint16, sizeof(int16_t)},
-		{&ffi_type_uint32, sizeof(uint32_t)},
-		{&ffi_type_sint32, sizeof(int32_t)},
-		{&ffi_type_uint64, sizeof(uint64_t)},
-		{&ffi_type_sint64, sizeof(int64_t)},
-		{&ffi_type_float, sizeof(float)},
-		{&ffi_type_double, sizeof(double)},
-		{&ffi_type_uchar, sizeof(unsigned char)},
-		{&ffi_type_schar, sizeof(signed char)},
-		{&ffi_type_ushort, sizeof(unsigned short)},
-		{&ffi_type_sshort, sizeof(signed short)},
-		{&ffi_type_uint, sizeof(unsigned int)},
-		{&ffi_type_sint, sizeof(signed int)},
-		{&ffi_type_ulong, sizeof(unsigned long)},
-		{&ffi_type_slong, sizeof(signed long)},
-		{&ffi_type_longdouble, sizeof(long double)},
-		{&ffi_type_pointer, sizeof(void*)},
-		// TODO: Complex
 	};
 
 	void liveIntrepretSetup()
@@ -796,7 +728,7 @@ namespace rt
 			if (returnType->type == FFI_TYPE_STRUCT)
 				ret = new char[returnType->size]; // TODO: alligned alloc?? idk...
 			else // POD
-				ret = new char[typeSizes.at(returnType)]; // TODO, pointers :/
+				ret = new char[returnType->size]; // TODO, pointers :/
 		}
 		// Arguments
 		std::vector<std::any> arguments;
@@ -830,16 +762,14 @@ namespace rt
 					// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
 					double val = std::get<double>(value); // STRING? TODO!
 					// Depending on type :( once again...
-					const size_t size = typeSizes.at(t);
-					const size_t alignment = typeAlignments.at(t);
-					const int pos = totSize + (totSize%alignment); // Align position to next block of preferred alignment
+					const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
 					if (t == &ffi_type_sint)  // TODO TE RES
 						*reinterpret_cast<int*>(p+pos) = static_cast<int>(val);
 					else if (t == &ffi_type_uchar) 
 						*reinterpret_cast<unsigned char*>(p+pos) = static_cast<unsigned char>(val);
 					else if (t == &ffi_type_float) 
 						*reinterpret_cast<float*>(p+pos) = static_cast<float>(val);
-					totSize += size + (totSize%alignment);
+					totSize += t->size + (totSize%t->alignment);
 				}
 				arguments.push_back(structMem); // HEEELPP
 			}
@@ -980,11 +910,11 @@ namespace rt
 			if (returnType == &ffi_type_void)
 				return True; // Return True directly, since the return buffer has not had memory allocated here
 			else if (returnType == &ffi_type_sint) // TODO: The rest... :/
-				retVal = static_cast<double>(*static_cast<int*>(ret));
+				retVal = static_cast<double>(*reinterpret_cast<int*>(ret));
 			else if (returnType == &ffi_type_float) 
-				retVal = static_cast<double>(*static_cast<float*>(ret));
+				retVal = static_cast<double>(*reinterpret_cast<float*>(ret));
 			else if (returnType == &ffi_type_double) 
-				retVal = *static_cast<double*>(ret);
+				retVal = *reinterpret_cast<double*>(ret);
 			else {
 				delete[] reinterpret_cast<char*>(ret);
 				throw InterpreterException("Unimplemented return type", 0, "Unknown");
@@ -996,15 +926,23 @@ namespace rt
 			auto returnValue = std::make_shared<Object>();
 			// Construct Runtime object based on struct in memory
 			uint8_t* p = static_cast<uint8_t*>(ret); // Move a byte at a time
-			// TODO HARDCODED YET AGAIN FOR TESTING :DDDDD
-			std::variant<double, std::string> value = static_cast<double>(*reinterpret_cast<int*>(p));
-			returnValue->addMember(value);
-			std::variant<double, std::string> value2 = static_cast<double>(*reinterpret_cast<float*>(p+sizeof(int)));
-			returnValue->addMember(value2);
-			/* for (int i = 0; returnType->elements[i] != NULL; ++i) { */
-			/* 	const auto t = returnType->elements[i]; */
-				
-			/* } */
+			for (int i = 0, totSize = 0; returnType->elements[i] != NULL; ++i) {
+				// Loop through member types
+				const auto t = returnType->elements[i];
+				// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
+				const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
+				// Get value
+				std::variant<double, std::string> value;
+				if (t == &ffi_type_sint)  // TODO TE RES
+					value = static_cast<double>(*reinterpret_cast<int*>(p+pos));
+				else if (t == &ffi_type_float)
+					value = static_cast<double>(*reinterpret_cast<float*>(p+pos));
+				// Add value
+				returnValue->addMember(value);
+				// For alignment
+				totSize += t->size + (totSize%t->alignment);
+			}
+
 			return returnValue;
 		}
 	}
