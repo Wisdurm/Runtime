@@ -484,7 +484,7 @@ namespace rt
 			throw InterpreterException("Unimplemented ast node encountered", expr->src.getLine(), *expr->src.getFile());
 	}
 
-	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
+	objectOrValue evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
@@ -543,7 +543,17 @@ namespace rt
 		}
 	}
 
-	std::variant<double, std::string> callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args)
+	std::variant<double, std::string> getValue(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
+	{
+		if (auto obj = std::get_if<std::shared_ptr<Object>>(&member)) { // Object
+			return getValue(evaluate(member, symtab, argState, write), symtab, argState, write);
+		}
+		else { // Value
+			return std::get<std::variant<double, std::string>>(member);
+		}
+	}
+
+	objectOrValue callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
@@ -575,7 +585,7 @@ namespace rt
 				// HOWEVER THIS ONLY WORKS IN THE LIVE INTERPRETER
 				// SINCE OBJECTS NEVER GET CALLED THEY ONLY GET EVALUATED
 				// OTHERWISE  HAHAHAHAHAHAAAAAAAAAAa
-				if (auto expr = object->getExpression())
+				if (object->getExpression())
 					return evaluate(object, symtab, newArgState, false);
 				// Add zero
 #if RUNTIME_DEBUG==1
@@ -757,7 +767,7 @@ namespace rt
 				uint8_t* p = static_cast<uint8_t*>(structMem); // Move a byte at a time
 				for (int j = 0, totSize = 0; type->elements[j] != NULL; ++j) {
 					// Loop through member types
-					const auto value = VALUEHELD(members.at(j));
+					const auto value = getValue(members.at(j), symtab, argState);
 					const auto t = type->elements[j];
 					// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
 					double val = std::get<double>(value); // STRING? TODO!
@@ -775,7 +785,7 @@ namespace rt
 			}
 			else { // Not struct, feel free to evaluate
 				// Get value of arg
-				auto value = VALUEHELD(args.at(i));
+				auto value = getValue(args.at(i), symtab, argState);
 				/*{{{*/
 				if (type == &ffi_type_uint8)
 					// Shared because vector requires copyable types

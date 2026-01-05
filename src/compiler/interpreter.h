@@ -63,19 +63,8 @@ namespace rt
 	inline ffi_type ffi_type_plongdouble = ffi_type_pointer;
 	// TODO: Complex I guess?
 
-	// Retrieves the value held by an object, or value
-#define VALUEHELD(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
-evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, true) : /* Get value of object */ \
-	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
-	)
-	// Variant of VALUEHELD which does not write evaluated values to memory
-#define VALUEHELD_E(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
-evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get value of object */ \
-	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
-	)
-
 	/// <summary>
-	/// Returns the numerical value of std::variant<double, std::string>.valueHeld
+	/// Returns the numerical value of a value
 	/// </summary>
 	/// <returns></returns>
 	inline double getNumericalValue(std::variant<double, std::string> val)
@@ -101,7 +90,10 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		return std::ranges::equal(lhs, rhs, ichar_equals);
 	}
 
-	// Evaluates a valueHeld as a bool
+	
+	/// <summary>
+	/// Evaluates a value as a bool
+	/// </summary>
 	inline bool toBoolean(std::variant<double, std::string> val)
 	{
 		if (std::holds_alternative<std::string>(val))
@@ -116,7 +108,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 				for (char c : str)
 				{
 					if (not isalnum(c) or c == '.') // If string is not "true", "false" or a number, then it can't be evaluated as a boolean
-						return 0;
+						throw;
 				}
 				return std::stod(str) >= 1;
 			}
@@ -177,17 +169,22 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 	/// <param name="expr"></param>
 	void include(ast::Expression* expr, SymbolTable* symtab, ArgState& argState);
 	/// <summary>
+	/// Returns the value held by an object or value. Evaluates (of course)
+	/// <param name="write">Whether to write value to memory, almost always should be true ( and is so by default ) </param>
+	/// </summary>
+	std::variant<double, std::string> getValue(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write = true);
+	/// <summary>
 	/// Returns the value of a member, derived from it's contained expression and other values.
 	/// </summary>
 	/// <param name="member">Member to evaluate</param>
 	/// <param name="write">Whether or not to write the evaluated value down. Function calls need to be able to repeatedly evaluate</param>
 	/// <returns>An std::variant<double, std::string> representing the ultimate value of the object</returns>
-	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write);
+	objectOrValue evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write);
 	/// <summary>
 	/// Calls object
 	/// </summary>
 	/// <param name="object"></param>
-	std::variant<double, std::string> callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
+	objectOrValue callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
 	/// <summary>
 	/// Interprets ast tree, and returns everything printed to cout
 	/// </summary>

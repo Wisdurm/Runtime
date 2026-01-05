@@ -12,13 +12,13 @@
 // Automatically make single argument functions from C++ functions
 #define SINGLE_ARG_FUNCTION(func, name) objectOrValue name(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) \
 	{ if (args.size() > 0) \
-		return func(getNumericalValue(VALUEHELD(args.at(0))));	\
+		return func(getNumericalValue(getValue(args.at(0), symtab, argState)));	\
 		else return False; }
 
 // Same thing but two args
 #define DOUBLE_ARG_FUNCTION(func, name) objectOrValue name(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) \
 	{ if (args.size() > 1) \
-		return func(getNumericalValue(VALUEHELD(args.at(0))), getNumericalValue(VALUEHELD(args.at(1))));	\
+		return func(getNumericalValue(getValue(args.at(0), symtab, argState)), getNumericalValue(getValue(args.at(1), symtab, argState)));	\
 		else return False; }
 
 namespace rt
@@ -31,7 +31,7 @@ namespace rt
 		double sum = 0;
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld VALUEHELD(arg);
+			auto valueHeld = getValue(arg, symtab, argState);
 			sum += getNumericalValue(valueHeld);
 		}
 		return std::variant<double, std::string>(sum);
@@ -46,7 +46,7 @@ namespace rt
 		bool defined = false;
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld VALUEHELD(arg);
+			auto valueHeld = getValue(arg, symtab, argState);
 			if (!defined)
 			{
 				result = getNumericalValue(valueHeld);
@@ -69,7 +69,7 @@ namespace rt
 		bool defined = false;
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld VALUEHELD(arg);
+			auto valueHeld = getValue(arg, symtab, argState);
 			if (!defined)
 			{
 				result = getNumericalValue(valueHeld);
@@ -92,7 +92,7 @@ namespace rt
 		bool defined = false;
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld VALUEHELD(arg);
+			auto valueHeld = getValue(arg, symtab, argState);
 			if (!defined)
 			{
 				result = getNumericalValue(valueHeld);
@@ -116,7 +116,7 @@ namespace rt
 		bool defined = false;
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld VALUEHELD(arg);
+			auto valueHeld = getValue(arg, symtab, argState);
 			if (!defined)
 			{
 				result = static_cast<int>(getNumericalValue(valueHeld));
@@ -145,13 +145,14 @@ namespace rt
 			if (std::holds_alternative<std::shared_ptr<Object>>(args.at(0)) and std::holds_alternative<std::shared_ptr<Object>>(args.at(1))
 				and std::get<std::shared_ptr<Object>>(args.at(0)).get() == std::get<std::shared_ptr<Object>>(args.at(1)).get()) 
 				return 1.0;
-			auto val1 = VALUEHELD(args.at(0));
-			auto val2 = VALUEHELD(args.at(1));
+			auto val1 = getValue(args.at(0), symtab, argState);
+			auto val2 = getValue(args.at(1), symtab, argState);
 			if (std::holds_alternative<std::string>(val1) and std::holds_alternative<std::string>(val2))
 				return static_cast<double>(val1 == val2);
 			// Only really needed for stoi
 			try {
-				return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) == getNumericalValue(VALUEHELD(args.at(1))));
+				return static_cast<double>(getNumericalValue(getValue(args.at(0), symtab, argState))
+						== getNumericalValue(getValue(args.at(1), symtab, argState)));
 			}catch(std::invalid_argument) {
 				return giveException("Uncomparable arguments");
 			}
@@ -170,7 +171,8 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) > getNumericalValue(VALUEHELD(args.at(1))));
+			return static_cast<double>(getNumericalValue(getValue(args.at(0), symtab, argState))
+					> getNumericalValue(getValue(args.at(1), symtab, argState)));
 		}
 		return giveException("Wrong amount of arguments");
 	}
@@ -186,7 +188,8 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			return static_cast<double>(getNumericalValue(VALUEHELD(args.at(0))) < getNumericalValue(VALUEHELD(args.at(1))));
+			return static_cast<double>(getNumericalValue(getValue(args.at(0), symtab, argState))
+					< getNumericalValue(getValue(args.at(1), symtab, argState)));
 		}
 		return giveException("Wrong amount of arguments");
 	}
