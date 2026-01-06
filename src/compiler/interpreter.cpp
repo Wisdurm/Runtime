@@ -175,6 +175,7 @@ namespace rt
 			{"Input", Input },
 			{"Object", ObjectF },
 			{"Append", Append },
+			{"Copy", Copy },
 			{"Assign", Assign},
 			{"Update", Update },
 			{"Exit", Exit},
@@ -185,7 +186,7 @@ namespace rt
 			{"Format", Format},
 			{"Bind", Bind},
 			{"System", System},
-			/* {"GetKeys", GetKeys}, */
+			{"GetKeys", GetKeys},
 			{"Size", Size},
 			// Math
 			{"Add", Add},
@@ -484,7 +485,7 @@ namespace rt
 			throw InterpreterException("Unimplemented ast node encountered", expr->src.getLine(), *expr->src.getFile());
 	}
 
-	objectOrValue evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
+	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
@@ -502,7 +503,7 @@ namespace rt
 				}
 			}
 			inEvaluation.insert(object); // This is currently being evaluated
-			if (object->getExpression() != nullptr) // Parse expression
+			if (object->getExpression()) // Parse expression
 			{
 				auto r = evaluate(interpret_internal(object->getExpression(), symtab, true, argState), symtab, argState, write);
 				if (write)
@@ -543,17 +544,47 @@ namespace rt
 		}
 	}
 
-	std::variant<double, std::string> getValue(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
+	objectOrValue softEvaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
 	{
-		if (auto obj = std::get_if<std::shared_ptr<Object>>(&member)) { // Object
-			return getValue(evaluate(member, symtab, argState, write), symtab, argState, write);
+		if (std::holds_alternative<std::shared_ptr<Object>>(member))
+		{
+			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
+			if (inEvaluation.contains(object)) { // TODO: Should maybe allow multiple ones
+				inEvaluation.erase(object);
+				// Get source location
+				if (object->getExpression() != nullptr) {
+					SourceLocation loc = object->getExpression()->src;
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", loc.getLine(), *loc.getFile());
+				}
+				else {
+					// TODO: expand search
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", 0, "Unknown");
+				}
+			}
+			inEvaluation.insert(object); // This is currently being evaluated
+			if (object->getExpression()) // Parse expression
+			{
+				auto r = interpret_internal(object->getExpression(), symtab, true, argState);
+				if (write)
+				{
+#if RUNTIME_DEBUG==1
+				std::cout << "Value evaluated to memory";
+#endif // RUNTIME_DEBUG
+					object->addMember(r);
+					object->deleteExpression();
+				}
+				inEvaluation.erase(object);
+				return r;
+			} else throw InterpreterException("Strict evaluation not passed", 0, "Unknown");
 		}
-		else { // Value
+		else // Value
+		{
 			return std::get<std::variant<double, std::string>>(member);
 		}
 	}
 
-	objectOrValue callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args)
+
+	std::variant<double, std::string> callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
@@ -767,7 +798,7 @@ namespace rt
 				uint8_t* p = static_cast<uint8_t*>(structMem); // Move a byte at a time
 				for (int j = 0, totSize = 0; type->elements[j] != NULL; ++j) {
 					// Loop through member types
-					const auto value = getValue(members.at(j), symtab, argState);
+					const auto value = evaluate(members.at(j), symtab, argState);
 					const auto t = type->elements[j];
 					// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
 					double val = std::get<double>(value); // STRING? TODO!
@@ -785,7 +816,7 @@ namespace rt
 			}
 			else { // Not struct, feel free to evaluate
 				// Get value of arg
-				auto value = getValue(args.at(i), symtab, argState);
+				auto value = evaluate(args.at(i), symtab, argState);
 				/*{{{*/
 				if (type == &ffi_type_uint8)
 					// Shared because vector requires copyable types

@@ -109,7 +109,7 @@ namespace rt
 	{
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld = getValue(arg, symtab, argState);
+			auto valueHeld = evaluate(arg, symtab, argState);
 			std::string output;
 			// Convert type to string
 			if (std::holds_alternative<std::string>(valueHeld))
@@ -176,6 +176,25 @@ namespace rt
 	}
 
 	/// <summary>
+	/// Identical to Append but uses soft evaluate
+	/// </summary>
+	/// <param name="args"></param>
+	/// <returns></returns>
+	objectOrValue Copy(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
+		{
+			std::shared_ptr<Object> init = std::get<std::shared_ptr<Object>>(args.at(0)); // Main object to initialize
+			for (std::vector<objectOrValue>::iterator it = ++args.begin(); it != args.end(); ++it)
+			{
+				init.get()->addMember(softEvaluate(*it, symtab, argState, true));
+			}
+			return True;
+		}
+		return giveException("Incorrect arguments");
+	}
+
+	/// <summary>
 	/// Assigns a value to an object/member
 	/// </summary>
 	/// <param name="args">First arg is object/member to assign to, second one is the key of the member and the third one is the value to assign</param>
@@ -185,7 +204,7 @@ namespace rt
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
-			auto key = getValue(args.at(1), symtab, argState);
+			auto key = evaluate(args.at(1), symtab, argState);
 			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false));
 			return True;
 		}
@@ -202,7 +221,7 @@ namespace rt
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
-			auto key = getValue(args.at(1),symtab, argState, true);
+			auto key = evaluate(args.at(1),symtab, argState, true);
 			assignee.get()->setMember(key, args.at(2));
 			return True;
 		}
@@ -219,7 +238,7 @@ namespace rt
 	{
 		if (args.size() > 0)
 		{
-			auto r = getValue(args.at(0), symtab, argState);
+			auto r = evaluate(args.at(0), symtab, argState);
 			if (std::holds_alternative<double>(r))
 				exit(std::get<double>(r));
 		}
@@ -236,7 +255,7 @@ namespace rt
 	{
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld = getValue(arg, symtab, argState);
+			auto valueHeld = evaluate(arg, symtab, argState);
 			if (std::holds_alternative<std::string>(valueHeld)) // If string
 			{
 				std::string fileName = std::get<std::string>(valueHeld);
@@ -285,7 +304,7 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			auto valueHeld = getValue(args.at(0), symtab, argState);
+			auto valueHeld = evaluate(args.at(0), symtab, argState);
 			// Evaluate cond
 			bool cond = toBoolean(valueHeld);
 			
@@ -314,7 +333,7 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			while (toBoolean(getValue(args.at(0), symtab, argState, false)))
+			while (toBoolean(evaluate(args.at(0), symtab, argState, false)))
 			{ 
 				std::vector<objectOrValue>::iterator it = args.begin() + 1;
 				while (it != args.end())
@@ -339,7 +358,7 @@ namespace rt
 	{
 		if (args.size() > 0)
 		{
-			auto valueHeld = getValue(args.at(0), symtab, argState);
+			auto valueHeld = evaluate(args.at(0), symtab, argState);
 			return static_cast<double>(not toBoolean(valueHeld));
 		}
 		return giveException("Wrong amount of arguments");
@@ -357,7 +376,7 @@ namespace rt
 		std::string format;
 		if (args.size() > 0)
 		{
-			auto val = getValue(args.at(0), symtab, argState);
+			auto val = evaluate(args.at(0), symtab, argState);
 			if (std::holds_alternative<std::string>(val))
 				format = std::get<std::string>(val);
 			else
@@ -366,7 +385,7 @@ namespace rt
 		std::vector<std::variant<double, std::string>> values;
 		for(std::vector<objectOrValue>::iterator it = args.begin()+1; it != args.end(); ++it )
 		{
-			values.push_back(getValue(*it, symtab, argState));
+			values.push_back(evaluate(*it, symtab, argState));
 		}
 		// snprintf and std::format require args... soooo have to do this myself
 		std::string result = "";
@@ -414,23 +433,22 @@ namespace rt
 		return result;
 	}
 
-	// On hold while I figure out what I want to do with my life
-	/* /// <summary> */
-	/* ///	Returns all keys from the symbol table of the current scope */
-	/* /// </summary> */
-	/* /// <param name="args"></param> */
-	/* /// <param name="symtab"></param> */
-	/* /// <param name="argState"></param> */
-	/* /// <returns></returns> */
-	/* objectOrValue GetKeys(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) */
-	/* { */
-	/* 	auto smt = std::make_shared<Object>("symbols"); */
-	/* 	for (auto i : symtab->getKeys()) { */
-	/* 		std::variant<double, std::string> v = i; // ast::value :( */
-	/* 		smt->addMember(v); */
-	/* 	} */
-	/* 	return smt; */
-	/* } */
+	/// <summary>
+	///	Returns all keys from the symbol table of the current scope
+	/// </summary>
+	/// <param name="args"></param>
+	/// <param name="symtab"></param>
+	/// <param name="argState"></param>
+	/// <returns></returns>
+	objectOrValue GetKeys(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		auto smt = std::make_shared<Object>("symbols");
+		for (auto i : symtab->getKeys()) {
+			std::variant<double, std::string> v = i; // ast::value :(
+			smt->addMember(v);
+		}
+		return smt;
+	}
 
 	/// <summary>
 	///	Returns the size of an object; that is, how many members it has
@@ -466,7 +484,7 @@ namespace rt
 		// Member types
 		// TODO: Recursion
 		for (int i = 0; i < size; ++i) {
-			auto value = getValue(members.at(i), symtab, argState);
+			auto value = evaluate(members.at(i), symtab, argState);
 			if (const std::string* pType = std::get_if<std::string>(&value)){ 
 				e[i] = typeNames.at(*pType);
 			}
@@ -498,7 +516,7 @@ namespace rt
 		LibFunc* func = nullptr; // Function to bind
 		 // Get function by name
 		{
-			auto v = getValue(args.at(0), symtab, argState);
+			auto v = evaluate(args.at(0), symtab, argState);
 			if (const std::string* name = std::get_if<std::string>(&v)){
 				if ((func = std::get_if<LibFunc>(&globalSymtab.lookUpHard(*name)))) {}
 				else {
@@ -521,7 +539,7 @@ namespace rt
 		}
 		else { // Not struct
 			ffi_type* ret;
-			auto rV = getValue(args.at(1), symtab, argState);
+			auto rV = evaluate(args.at(1), symtab, argState);
 			if (const std::string* rType = std::get_if<std::string>(&rV)){
 				ret = typeNames.at(*rType);
 			}
@@ -539,7 +557,7 @@ namespace rt
 				} else giveException("Return type was of wrong type");
 			}
 			// Not struct
-			auto rP = getValue(*it, symtab, argState);
+			auto rP = evaluate(*it, symtab, argState);
 			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
 				if (*pType == "void") { // TODO: Faster comparison
 					return giveException("Shared function cannot have parameters of type void");
@@ -567,7 +585,7 @@ namespace rt
 
 		if (args.size() > 0)
 		{
-			auto valueHeld = getValue(args.at(0), symtab, argState);
+			auto valueHeld = evaluate(args.at(0), symtab, argState);
 			if (const std::string* cmd = std::get_if<std::string>(&valueHeld)) {
 				system(cmd->c_str());
 				return True;

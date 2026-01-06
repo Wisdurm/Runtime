@@ -122,15 +122,20 @@ TEST_CASE("Struct return value", "[shared_libraries]")
 	//	Include("../tests/lib.so")
 	//	Object(structure, "int", "float")
 	//	Bind("retStruct", structure, "int", "float")
-	//	Print(retStruct(2, 5))
+	//	Copy(obj, retStruct(2,5))
+	//	Print(obj-0-0)
+	//	Print(obj-0-1)
 	// )
-	// Excepted output: "5"
+	// Excepted output: "2\n5"
 
-	const std::string test1 = "5.000000";
+	const std::string test1[]{"2.000000", "5.000000"};
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Object(structure, \"int\", \"float\")"
 				"Bind(\"retStruct\", structure, \"int\", \"float\")"
-				"Print(retStruct(2, 5))"));
+				"Copy(obj, retStruct(2,5))"
+				"Print(obj-0-0)"
+				"Print(obj-0-1)"));
 	auto v1 = rt::interpretAndReturn(r1); 
-	REQUIRE(v1[0] == test1);
+	REQUIRE(v1[0] == test1[0]);
+	REQUIRE(v1[1] == test1[1]);
 }

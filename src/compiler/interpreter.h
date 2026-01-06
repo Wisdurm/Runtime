@@ -169,22 +169,25 @@ namespace rt
 	/// <param name="expr"></param>
 	void include(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, ArgState& argState);
 	/// <summary>
-	/// Returns the value held by an object or value. Evaluates (of course)
-	/// <param name="write">Whether to write value to memory, almost always should be true ( and is so by default ) </param>
-	/// </summary>
-	std::variant<double, std::string> getValue(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write = true);
-	/// <summary>
 	/// Returns the value of a member, derived from it's contained expression and other values.
 	/// </summary>
 	/// <param name="member">Member to evaluate</param>
 	/// <param name="write">Whether or not to write the evaluated value down. Function calls need to be able to repeatedly evaluate</param>
 	/// <returns>An std::variant<double, std::string> representing the ultimate value of the object</returns>
-	objectOrValue evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write);
+	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write = true);
+	/// <summary>
+	/// Returns the value of a member, derived from it's contained expression and other values. 
+	/// Does not double evaluate, making it not suitable for member functions. Otherwise identical to evaluate
+	/// </summary>
+	/// <param name="member">Member to evaluate</param>
+	/// <param name="write">Whether or not to write the evaluated value down. Function calls need to be able to repeatedly evaluate</param>
+	/// <returns>An std::variant<double, std::string> representing the ultimate value of the object</returns>
+	objectOrValue softEvaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write = true); // TODO: Better name
 	/// <summary>
 	/// Calls object
 	/// </summary>
 	/// <param name="object"></param>
-	objectOrValue callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
+	std::variant<double, std::string> callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args = {});
 	/// <summary>
 	/// Interprets ast tree, and returns everything printed to cout
 	/// </summary>

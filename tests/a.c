@@ -9,6 +9,12 @@ typedef struct {
 	int in;
 	float fl;
 } structure;
+typedef struct { // Complex struct
+	int in;
+	float* fl;
+	structure st;
+} cmx;
+
 int test(int i)
 {
 	return i * 2;
