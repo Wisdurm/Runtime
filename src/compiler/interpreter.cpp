@@ -469,8 +469,18 @@ namespace rt
 		{
 			if (memberInitialization)
 			{
-				std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true, argState));
-				std::variant<double, std::string> member = std::get<std::variant<double, std::string>>(interpret_internal(node->right, symtab, true, argState));
+				std::shared_ptr<Object> object;
+				std::variant<double, std::string> member;
+				try {
+					object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true, argState));
+				} catch (std::bad_variant_access) {
+					throw InterpreterException("Left-hand operand of accession was not object", node->src.getLine(), *node->src.getFile());
+				}
+				try {
+					member = std::get<std::variant<double, std::string>>(interpret_internal(node->right, symtab, true, argState));
+				} catch (std::bad_variant_access) {
+					throw InterpreterException("Right-hand operand of accession was not a value", node->src.getLine(), *node->src.getFile());
+				}
 				return *(object->getMember(member));
 			}
 			else
@@ -702,7 +712,13 @@ namespace rt
 		// Create objects
 		for (auto sym : symbols) {
 			void* fptr = dlsym(handle, sym.c_str());
-			globalSymtab.updateSymbol(sym, LibFunc(fptr, false, std::experimental::make_observer<ffi_type>(nullptr), {}));
+			globalSymtab.updateSymbol(sym, LibFunc{
+					.function = fptr,
+					.initialized = false, 
+					.retType = std::experimental::make_observer<ffi_type>(nullptr),
+					.argTypes = {},
+					.altHeap = {},
+					});
 			// These are not yet able to be called, as they do not have
 			// their necessary argument and return types set
 			// The signature must be specified by calling Sign()
@@ -720,16 +736,6 @@ namespace rt
 			dlclose(lib);
 		}
 		libraries.clear();
-	}
-
-	/// <summary>
-	/// Allocates a value on the altHeap, and then returns the pointer
-	/// </summary>
-	template <typename T>
-	[[nodiscard]] static T* altAlloc(T value, std::vector<std::any>& altheap)
-	{
-		altheap.push_back(std::make_shared<T>(value));
-		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
 	}
 
 	[[nodiscard]] static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)

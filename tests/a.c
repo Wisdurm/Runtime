@@ -9,12 +9,10 @@ typedef struct {
 	int in;
 	float fl;
 } structure;
-typedef struct { // Complex struct
+typedef struct { // Nested struct
 	int in;
-	float* fl;
 	structure st;
 } cmx;
-
 int test(int i)
 {
 	return i * 2;
@@ -52,5 +50,11 @@ void triplePtr(int* ptr)
 structure retStruct(int in, float fl)
 {
 	structure r = { .in = in, .fl = fl };
+	return r;
+}
+cmx complex(int num)
+{
+	structure s = { .in = num +1 , .fl = (float)(num + 2) };
+	cmx r = { .in = num, .st = s };
 	return r;
 }

@@ -139,3 +139,31 @@ TEST_CASE("Struct return value", "[shared_libraries]")
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
 }
+
+TEST_CASE("Nested struct", "[shared_libraries]")
+{
+	// Object(Main,
+	//	Include("../tests/lib.so")
+	//	Object(structure, "int", "float")
+	//	Object(nested, "int", structure)
+	//	Bind("complex", nested, "int")
+	//	Copy(obj, complex(5))
+	//	Print(obj-0-0)
+	//	Print(obj-0-1-0)
+	//	Print(obj-0-1-1)
+	// )
+	// Excepted output: "5\n6\n7"
+
+	const std::string test1[]{"2.000000", "5.000000"};
+	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+				"Object(structure, \"int\", \"float\")"
+				"Object(nested, \"int\", structure)"
+				"Bind(\"complex\", nested, \"int\")"
+				"Copy(obj, complex(5))"
+				"Print(obj-0-0)"
+				"Print(obj-0-1-0)"
+				"Print(obj-0-1-1)"));
+	auto v1 = rt::interpretAndReturn(r1); 
+	REQUIRE(v1[0] == test1[0]);
+	REQUIRE(v1[1] == test1[1]);
+}

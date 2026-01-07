@@ -473,25 +473,29 @@ namespace rt
 	/// <summary>
 	/// Creates custom struct ffi_type from Object
 	/// </summary>
-	[[nodiscard]] static std::shared_ptr<ffi_type> makeFfiType(std::shared_ptr<Object> obj, SymbolTable* symtab, ArgState& argState)
+	[[nodiscard]] static ffi_type* makeFfiType(std::shared_ptr<Object> obj, SymbolTable* symtab, ArgState& argState, std::vector<std::any>& altHeap)
 	{
+		// Very non-portable function
+		// TOO BAD!
 		auto members = obj->getMembers();
 		const int size = members.size();
 		// Struct
-		ffi_type** e = new ffi_type*[size + 1]; // THIS IS NOT FREED BECAUSE IT IS USED UNTIL PROGRAM EXIT
-										 // might code free for this later, but as of now it would
-										 // only give me more unnecessary work. TODO
+		ffi_type** e = altStore<ffi_type*>(new ffi_type*[size + 1], altHeap); // TODO: Probably works?
 		// Member types
-		// TODO: Recursion
 		for (int i = 0; i < size; ++i) {
-			auto value = evaluate(members.at(i), symtab, argState);
-			if (const std::string* pType = std::get_if<std::string>(&value)){ 
-				e[i] = typeNames.at(*pType);
+			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&members.at(i))) {
+				// Nested struct
+				e[i] = altStore<ffi_type>(makeFfiType(*obj, symtab, argState, altHeap), altHeap);
+			} else {
+				auto value = evaluate(members.at(i), symtab, argState);
+				if (const std::string* pType = std::get_if<std::string>(&value)){ 
+					e[i] = typeNames.at(*pType);
+				}
+				else return nullptr;
 			}
-			else return nullptr;
 		}
 		e[size] = NULL; // Last one (NULL terminated array)
-		return std::make_shared<ffi_type>(
+		return new ffi_type(
 							0, // size (init 0)
 							0, // align (init 0)
 							FFI_TYPE_STRUCT,// type
@@ -533,8 +537,8 @@ namespace rt
 		// Get return value
 		if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&args.at(1))) {
 			// Struct
-			if (auto sT = makeFfiType(*obj, symtab, argState)) {
-				func->retType = sT;
+			if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
+				func->retType = std::shared_ptr<ffi_type>(sT);
 			} else giveException("Return type was of wrong type");
 		}
 		else { // Not struct
@@ -551,10 +555,10 @@ namespace rt
 		func->argTypes.reserve(args.size() - 2);; // Prepare for params
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
 			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&(*it))) {
-				if (auto sT = makeFfiType(*obj, symtab, argState)) {
-					func->argTypes.push_back(sT); // Struct parameter
+				if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
+					func->argTypes.push_back(std::shared_ptr<ffi_type>(sT)); // Struct parameter
 					continue;
-				} else giveException("Return type was of wrong type");
+				} else giveException("Arg type was of wrong type");
 			}
 			// Not struct
 			auto rP = evaluate(*it, symtab, argState);

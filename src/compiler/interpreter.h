@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 #include <experimental/memory>
+#include <any>
 // C
 #include <ffi.h>
 
@@ -63,6 +64,8 @@ namespace rt
 	inline ffi_type ffi_type_plongdouble = ffi_type_pointer;
 	// TODO: Complex I guess?
 
+	// TODO: Inline is scary but I must confront it someday
+
 	/// <summary>
 	/// Returns the numerical value of a value
 	/// </summary>
@@ -90,7 +93,25 @@ namespace rt
 		return std::ranges::equal(lhs, rhs, ichar_equals);
 	}
 
+	/// <summary>
+	/// Allocates a value on an altHeap, and then returns the pointer
+	/// </summary>
+	template <typename T>
+	[[nodiscard]] inline static T* altAlloc(T value, std::vector<std::any>& altheap)
+	{
+		altheap.push_back(std::make_shared<T>(value));
+		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
+	}
 	
+	/// <summary>
+	/// Gives a pointer to a smart pointer within an alt heap
+	/// </summary>
+	template <typename T>
+	[[nodiscard]] inline static T* altStore(T* ptr, std::vector<std::any>& altheap)
+	{
+		altheap.push_back(std::shared_ptr<T>(ptr));
+		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
+	}
 	/// <summary>
 	/// Evaluates a value as a bool
 	/// </summary>
@@ -140,6 +161,10 @@ namespace rt
 		/// Argument types
 		/// </summary>
 		std::vector<std::variant<std::experimental::observer_ptr<ffi_type>, std::shared_ptr<ffi_type>>> argTypes;
+		/// <summary>
+		/// Smart pointer array; stores values that need to exist for this objects lifetime
+		/// </summary>
+		std::vector<std::any> altHeap;
 	};
 
 	/// <summary>
