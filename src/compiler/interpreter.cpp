@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <any>
+#include <cstring>
 // C
 #include <cstdlib>
 #include <dlfcn.h> // TODO: Windows?
@@ -738,6 +739,75 @@ namespace rt
 		libraries.clear();
 	}
 
+	/// <summary>
+	/// Creates a struct in a specified area of memory based on a Runtime object
+	/// </summary>
+	static void structFromObject(void* structMem, std::shared_ptr<Object> obj, ffi_type type,
+			std::vector<std::any>& altHeap, SymbolTable* symtab, ArgState& argState)
+	{
+		// Here we assume we already have all the memory we need allocated;
+		// this function does not allocate any memory, we are passed the structMem
+		// argument, and we are to believe that thanks to libffi's genius, everything
+		// difficult is already dealt with
+
+		// TODO: Packed support, as well as look into the libffi way of doing this
+		// Get members of arg
+		auto members = obj->getMembers(); // TODO: error handling
+		// Assign members
+		uint8_t* p = static_cast<uint8_t*>(structMem); // Move a byte at a time
+		for (int j = 0, totSize = 0; type.elements[j] != NULL; ++j) {
+			// Loop through member types
+			const auto t = type.elements[j];
+			const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
+			if (t->type == FFI_TYPE_STRUCT) { // Struct
+				auto member = std::get<std::shared_ptr<Object>>(members.at(j)); // TODO: Error handling
+				structFromObject(p + pos, member, *t, altHeap, symtab, argState);
+			} else {
+				const auto value = evaluate(members.at(j), symtab, argState);
+				double val = std::get<double>(value); // STRING? TODO!
+				if (t == &ffi_type_sint)  // TODO TE RES
+					*reinterpret_cast<int*>(p+pos) = static_cast<int>(val);
+				else if (t == &ffi_type_uchar) 
+					*reinterpret_cast<unsigned char*>(p+pos) = static_cast<unsigned char>(val);
+				else if (t == &ffi_type_float) 
+					*reinterpret_cast<float*>(p+pos) = static_cast<float>(val);
+				else throw InterpreterException("Unimplemented element type", 0, "Unknown");
+			}
+			totSize += t->size + (totSize%t->alignment);
+		}
+	}
+
+	/// <summary>
+	/// Creates a Runtime object from a struct in memory
+	/// </summary>
+	static std::shared_ptr<Object> objectFromStruct(void* strc, ffi_type structType)
+	{
+		// TODO: Packed support, as well as look into the libffi way of doing this
+		auto obj = std::make_shared<Object>();
+		uint8_t* p = static_cast<uint8_t*>(strc); // Move a byte at a time
+		for (int i = 0, totSize = 0; structType.elements[i] != NULL; ++i) {
+			// Loop through member types
+			const auto t = structType.elements[i];
+			// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
+			const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
+			// Get value
+			std::variant<double, std::string> value;
+			if (t == &ffi_type_sint)  // TODO TE RES
+				value = static_cast<double>(*reinterpret_cast<int*>(p+pos));
+			else if (t == &ffi_type_float)
+				value = static_cast<double>(*reinterpret_cast<float*>(p+pos));
+			else if (t->type == FFI_TYPE_STRUCT) {
+				obj->addMember(objectFromStruct(p+pos, *t)); // TODO: Does this actually work as intended?
+			}
+			else throw InterpreterException("Unimplemented element type", 0, "Unknown");
+			// Add value
+			obj->addMember(value);
+			// For alignment
+			totSize += t->size + (totSize%t->alignment);
+		}
+		return obj;
+	}
+
 	[[nodiscard]] static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: Windows
@@ -789,36 +859,17 @@ namespace rt
 		for (int i = 0; i < narms; ++i) {
 			// Cast arg to type wanted by lib
 			ffi_type* type = params[i];
-			// First check for struct type, since then we cant
-			// immediately evaluate the argument
-			if (type->type == FFI_TYPE_STRUCT) {
-				// Get members of arg
-				// THIS IS ALL ASSUMING THERES NO packed ATTRIBUTE
-				auto members = std::get<std::shared_ptr<Object>>(args.at(i))->getMembers(); // TODO: error handling
+			
+			if (type->type == FFI_TYPE_STRUCT) { // Struct
+				auto obj = std::get<std::shared_ptr<Object>>(args.at(i)); // TODO: Error handling
 				// Create struct
 				void* structMem = std::aligned_alloc(type->alignment, type->size);
 				// Store on alt heap, so it gets deallocated at the end of the function call
 				// This SHOULD work, but not 100% confident, TODO if bored
 				altHeap.push_back(std::shared_ptr<void>(structMem, [](void* ptr){free(ptr);} ));
-				// Assign members
-				uint8_t* p = static_cast<uint8_t*>(structMem); // Move a byte at a time
-				for (int j = 0, totSize = 0; type->elements[j] != NULL; ++j) {
-					// Loop through member types
-					const auto value = evaluate(members.at(j), symtab, argState);
-					const auto t = type->elements[j];
-					// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
-					double val = std::get<double>(value); // STRING? TODO!
-					// Depending on type :( once again...
-					const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
-					if (t == &ffi_type_sint)  // TODO TE RES
-						*reinterpret_cast<int*>(p+pos) = static_cast<int>(val);
-					else if (t == &ffi_type_uchar) 
-						*reinterpret_cast<unsigned char*>(p+pos) = static_cast<unsigned char>(val);
-					else if (t == &ffi_type_float) 
-						*reinterpret_cast<float*>(p+pos) = static_cast<float>(val);
-					totSize += t->size + (totSize%t->alignment);
-				}
-				arguments.push_back(structMem); // HEEELPP
+				// This function actually pushes all the the necessary data to the memory buffer
+				structFromObject(structMem, obj, *type, altHeap, symtab, argState);
+				arguments.push_back(structMem);
 			}
 			else { // Not struct, feel free to evaluate
 				// Get value of arg
@@ -876,7 +927,7 @@ namespace rt
 		}
 		// Turn custom ffi_types into pointers
 		for (int i = 0; i < narms; ++i) {
-			if (std::find(ffiTypes.begin(), ffiTypes.end(), params[i]) == ffiTypes.end())
+			if (std::find(ffiTypes.begin(), ffiTypes.end(), params[i]) == ffiTypes.end() and params[i]->type != FFI_TYPE_STRUCT)
 				params[i] = &ffi_type_pointer;
 		}
 		// Void pointer array of length narms
@@ -970,27 +1021,8 @@ namespace rt
 			delete[] reinterpret_cast<char*>(ret);
 			return retVal;
 		} else { // Struct return value
-			auto returnValue = std::make_shared<Object>();
 			// Construct Runtime object based on struct in memory
-			uint8_t* p = static_cast<uint8_t*>(ret); // Move a byte at a time
-			for (int i = 0, totSize = 0; returnType->elements[i] != NULL; ++i) {
-				// Loop through member types
-				const auto t = returnType->elements[i];
-				// TODO RECURSION LOL HJAHAHAHAHAHHHAHHHH :sob:
-				const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
-				// Get value
-				std::variant<double, std::string> value;
-				if (t == &ffi_type_sint)  // TODO TE RES
-					value = static_cast<double>(*reinterpret_cast<int*>(p+pos));
-				else if (t == &ffi_type_float)
-					value = static_cast<double>(*reinterpret_cast<float*>(p+pos));
-				// Add value
-				returnValue->addMember(value);
-				// For alignment
-				totSize += t->size + (totSize%t->alignment);
-			}
-
-			return returnValue;
+			return objectFromStruct(ret, *returnType);
 		}
 	}
 }

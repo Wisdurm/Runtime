@@ -55,7 +55,7 @@ And finally:
 ## Examples
 
 The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) written in Runtime
-```
+```bash (obviously not actually bash but lying for the sake of syntax highlighting)
 #!/usr/bin/Runtime
 
 Object(n Input())
@@ -68,6 +68,28 @@ While( LargerThan(n 1)
 	)
 	Print(n)
 )
+```
+
+Simple script to print all symbols from a shared library
+
+```bash
+#!/usr/bin/Runtime
+# First cache the amount of symbols by default
+Copy(tmp, GetKeys())
+Object(oldCount, Size(tmp-0))
+# Then load the library
+Include(carg2) # Include the library in the first command line argument
+# (carg0 is program path, and carg1 is the script name)
+# Now get keys again
+Copy(symbols, GetKeys())
+Object(symCount, Size(symbols-0))
+# Then iterate and print all the ones in the included library
+Append(i, oldCount)
+While(SmallerThan(i, Minus(symCount,1))
+	Assign(i,0,Add(i,1)) # Iterate i
+	Print(symbols-0-i())
+)
+# TODO: The symbol table is not currently ordered...
 ```
 
 ## Documentation

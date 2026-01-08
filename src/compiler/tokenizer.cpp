@@ -41,6 +41,7 @@ namespace rt
 				} while (src[srcI] != '\n');
 			}
 			// Check for identifier
+			// TODO: Variable names should be able to include _ !!!
 			if (isalnum(src[srcI]) and not isdigit(src[srcI])) // Identifier can't begin with a number
 			{
 				match = true;

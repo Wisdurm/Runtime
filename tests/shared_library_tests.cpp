@@ -154,7 +154,7 @@ TEST_CASE("Nested struct", "[shared_libraries]")
 	// )
 	// Excepted output: "5\n6\n7"
 
-	const std::string test1[]{"2.000000", "5.000000"};
+	const std::string test1[]{"5.000000", "6.000000", "7.000000"};
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
 				"Object(structure, \"int\", \"float\")"
 				"Object(nested, \"int\", structure)"
@@ -166,4 +166,27 @@ TEST_CASE("Nested struct", "[shared_libraries]")
 	auto v1 = rt::interpretAndReturn(r1); 
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
+
+	// Object(Main,
+	//	Include("../tests/lib.so")
+	//	# Bindings
+	//	Object(structure, "int", "float")
+	//	Object(nested, "int", structure)
+	//	Bind("cmxParam", "int", nested)
+	//	# Create object
+	//	Object(buried, 26, 5) # Structure
+	//	Object(obj, 36, buried) # Nested
+	//	Print(cmxParam(obj))
+	// )
+	// Excepted output: "67"
+
+	const std::string test2 = "67.000000";
+	auto r2 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+				"Object(structure, \"int\", \"float\")"
+				"Object(nested, \"int\", structure)"
+				"Bind(\"cmxParam\", \"int\", nested)"
+				"Object(buried, 26, 5)"
+				"Object(obj, 36, buried)"
+				"Print(cmxParam(obj))"));
+	REQUIRE(rt::interpretAndReturn(r2)[0] == test2);
 }

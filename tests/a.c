@@ -58,3 +58,7 @@ cmx complex(int num)
 	cmx r = { .in = num, .st = s };
 	return r;
 }
+int cmxParam(cmx c)
+{
+	return c.in + c.st.fl + c.st.in;
+}
