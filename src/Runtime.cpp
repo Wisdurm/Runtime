@@ -5,10 +5,14 @@
 #include "compiler/interpreter.h"
 #include "compiler/exceptions.h"
 // C++
+#include <bits/getopt_core.h>
+#include <cstdlib>
 #include <iostream> 
 #include <fstream>
+#include <optional>
 // C
 #include <stdlib.h>
+#include <getopt.h>
 // Gnu
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -28,9 +32,46 @@
 
 #endif // _WIN32
 
+static void usage()
+{
+	std::cout <<
+		"usage: Runtime [options] file...\n" // TODO: Don't harcode file name
+		"Options:\n"
+		"-v\t\tdisplays version information\n"
+		"Arguments:\n"
+		"file\t\tpath to a Runtime script to be run" << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
-	if (argc > 1) // File input
+	std::optional<std::string> filePath = std::nullopt;
+	int opt;
+
+	// Parse arguments
+	while ((opt = getopt(argc, argv, "-:vh")) != -1)
+	{
+		switch (opt)
+		{
+		case 'v':
+			std::cout << "Runtime " << RUNTIME_VERSION << std::endl;
+			exit(EXIT_SUCCESS);
+		case 'h':
+			usage();
+			exit(EXIT_SUCCESS);
+		case '?':
+			std::cout << "Unknown option: " << static_cast<char>(optopt) << std::endl;
+			usage();
+			exit(EXIT_FAILURE);
+		case ':':
+			std::cout << "Mssing argument for " << static_cast<char>(optopt) << std::endl;
+			usage();
+			exit(EXIT_FAILURE);
+		case 1:
+			filePath = optarg;
+		}
+	}
+	
+	if (filePath) // File input
 	{
 #ifdef _WIN32
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -38,10 +79,10 @@ int main(int argc, char* argv[])
 
 		std::ifstream file;
 		// Open file
-		file.open(argv[1], std::fstream::in);
+		file.open(filePath.value(), std::fstream::in);
 		if (file.fail())
 		{
-			std::cout << "Unable to open file " << argv[1];
+			std::cout << "Unable to open file " << argv[1] << std::endl;
 			return EXIT_FAILURE;
 		}
 		file.seekg(0, std::ios::end);
