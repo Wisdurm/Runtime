@@ -1,6 +1,7 @@
 ﻿// Runtime
 #include "Runtime.hpp"
 #include "compiler/tokenizer.h"
+#include "compiler/shared_libs.h"
 #include "compiler/parser.h"
 #include "compiler/interpreter.h"
 #include "compiler/exceptions.h"

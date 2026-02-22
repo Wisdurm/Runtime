@@ -1,8 +1,10 @@
 #pragma once
 // This file contains all the functions for the StandardLibrary in Runtime
 #include "StandardFiles.h"
+#include "../symbol_table.h"
 #include "../interpreter.h"
 #include "../parser.h"
+#include "../shared_libs.h"
 // C++
 #include <iostream>
 #include <fstream>
@@ -14,7 +16,7 @@
 #include <readline/readline.h>
 // C
 #include <stdlib.h>
-
+#include <ffi.h>
 #include <cctype>      // std::tolower
 #include <algorithm>   // std::equal
 #include <string_view> // std::string_view
@@ -279,7 +281,7 @@ namespace rt
 					return True;
 				}
 				else if (fileName.ends_with(".so") or fileName.ends_with(".dll")) {
-					loadSharedLibrary(fileName.c_str()); // Call function
+					loadSharedLibrary(fileName.c_str(), symtab); // Call function
 					return True;
 				}
 				else {
@@ -522,7 +524,7 @@ namespace rt
 		{
 			auto v = evaluate(args.at(0), symtab, argState);
 			if (const std::string* name = std::get_if<std::string>(&v)){
-				if ((func = std::get_if<LibFunc>(&globalSymtab.lookUpHard(*name)))) {}
+				if ((func = std::get_if<LibFunc>(&symtab->lookUpHard(*name)))) {}
 				else {
 					return giveException("Func name was not of a shared function");
 				}
@@ -575,7 +577,7 @@ namespace rt
 	}
 
 	/// <summary>
-	///	Runs a shell command
+	/// Runs a shell command
 	/// </summary>
 	/// <param name="args"></param>
 	/// <param name="symtab"></param>
