@@ -340,7 +340,7 @@ namespace rt
 				std::vector<objectOrValue>::iterator it = args.begin() + 1;
 				while (it != args.end())
 				{
-					evaluate(*it, symtab, argState);
+					evaluate(*it, symtab, argState, false);
 					it++;
 				}
 			}
