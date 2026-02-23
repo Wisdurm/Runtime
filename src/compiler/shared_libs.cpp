@@ -57,7 +57,7 @@ namespace rt
 		char* strtab = nullptr;
 		int symentries;
 		// ???? straight from stack overflow
-	    for (auto section = map->l_ld; section->d_tag != DT_NULL; ++section)
+		for (auto section = map->l_ld; section->d_tag != DT_NULL; ++section)
 		{
 			if (section->d_tag == DT_SYMTAB)
 			{
@@ -313,9 +313,9 @@ namespace rt
 					arguments.push_back(std::make_shared<long>(getNumericalValue(value)));
 				else if (type == &ffi_type_longdouble)
 					arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
-				else if (type == &ffi_type_cstring)
-					arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data()));
 				// Pointer types
+				else if (type == &ffi_type_cstring)
+					arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data())); // Accesses data directly!
 				else if (type == &ffi_type_psint)
 					arguments.push_back(std::make_shared<int*>( altAlloc<int>(getNumericalValue(value), altHeap)));
 				// TODO: The rest
@@ -372,13 +372,13 @@ namespace rt
 				call_args[i] = std::any_cast<std::shared_ptr<long>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<long double>))
 				call_args[i] = std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<void*>))
-				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<char*>)) // C string
-				call_args[i] = std::any_cast<std::shared_ptr<char*>>(arguments.at(i)).get(); 
 			else if (arguments.at(i).type() == typeid(void*)) // Struct
 				call_args[i] = std::any_cast<void*>(arguments.at(i));
 			// Pointers
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<void*>)) // Not sure what this is?
+				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<char*>)) // C string
+				call_args[i] = std::any_cast<std::shared_ptr<char*>>(arguments.at(i)).get(); 
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<int*>))
 				call_args[i] = std::any_cast<std::shared_ptr<int*>>(arguments.at(i)).get();
 			// TODO: The rest

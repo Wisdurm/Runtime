@@ -142,6 +142,8 @@ TEST_CASE("Struct return value", "[shared_libraries]")
 
 TEST_CASE("Nested struct", "[shared_libraries]")
 {
+	// Nested return
+	
 	// Object(Main,
 	//	Include("../tests/lib.so")
 	//	Object(structure, "int", "float")
@@ -167,6 +169,8 @@ TEST_CASE("Nested struct", "[shared_libraries]")
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
 
+	// Nested argument
+	
 	// Object(Main,
 	//	Include("../tests/lib.so")
 	//	# Bindings

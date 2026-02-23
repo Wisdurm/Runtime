@@ -260,7 +260,7 @@ namespace rt
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
 			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
-			if (inEvaluation.contains(object)) { // TODO: Should maybe allow multiple ones
+			if (inEvaluation.contains(object)) {
 				inEvaluation.erase(object);
 				// Get source location
 				if (object->getExpression() != nullptr) {
@@ -319,7 +319,7 @@ namespace rt
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
 			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
-			if (inEvaluation.contains(object)) { // TODO: Should maybe allow multiple ones
+			if (inEvaluation.contains(object)) {
 				inEvaluation.erase(object);
 				// Get source location
 				if (object->getExpression() != nullptr) {

@@ -130,7 +130,6 @@ namespace rt
 
 	void SymbolTable::updateSymbol(const std::string& key, LibFunc object)
 	{
-		// TODO: Maybe use variant
 		// Check if key exists
 		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
 		if (it != locals.end()) // Exists
