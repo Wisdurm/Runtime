@@ -340,7 +340,7 @@ namespace rt
 				std::vector<objectOrValue>::iterator it = args.begin() + 1;
 				while (it != args.end())
 				{
-					evaluate(*it, symtab, argState, false);
+					evaluate(*it, symtab, argState);
 					it++;
 				}
 			}
@@ -366,13 +366,13 @@ namespace rt
 		return giveException("Wrong amount of arguments");
 	}
 	
-	/// <summary>
-	///	Formats together all args into a string
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Formats together all args into a string
+	 * Added=v0.9.8
+	 * Returns=A formatted string or an exception.
+	 * Param0[True]Format=A string representing the structure.
+	 * Params[True]Values=Values to be formatted into the string.
+	 */
 	objectOrValue Format(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		std::string format;
@@ -435,13 +435,11 @@ namespace rt
 		return result;
 	}
 
-	/// <summary>
-	///	Returns all keys from the symbol table of the current scope
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Returns all keys from the symbol table of the current scope.
+	 * Added=v0.11.0
+	 * Returns=An object with key names as it's members.
+	 */
 	objectOrValue GetKeys(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		auto smt = std::make_shared<Object>("symbols");
@@ -452,13 +450,12 @@ namespace rt
 		return smt;
 	}
 
-	/// <summary>
-	///	Returns the size of an object; that is, how many members it has
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Desc=Returns how many members and object has.
+	 * Added=v0.11.0
+	 * Returns=Number of members or exception
+	 * Param0[False]Object=An object to inspect.
+	 */
 	objectOrValue Size(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		if (args.size() > 0)
@@ -505,15 +502,14 @@ namespace rt
 							);
 	}
 
-	/// <summary>
-	///	Creates a binding for a shared function, by specifying it's parameters and return value.
-	///	Arg0 is the name of the function, arg1 is the return type and the rest of the args are 
-	///	parameter types.
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Desc=Creates a binding for a shared function, by specifying it's parameters and return value.
+	 * Added=v0.11.0
+	 * Returns=1 or exception
+	 * Param0[True]Name=The name of the function.
+	 * Param1[True?]Return=The return type, either a string or an object representing a struct.
+	 * Params[True?]Name=The argument types in order, either strings or objects representing structs.
+	 */
 	objectOrValue Bind(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: If fails midway through, undefined behaviour // ??
@@ -576,18 +572,19 @@ namespace rt
 		return True;
 	}
 
-	/// <summary>
-	/// Runs a shell command
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Desc=Runs a shell command.
+	 * Added=v0.11.0
+	 * Returns=1 or exception.
+	 * Param0[True]Command=String to run in the shell.
+	 */
 	objectOrValue System(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		static bool works = false;
 		if (not works and system(NULL)) // Check whether shell exists
 			works = true;
+		else
+			return giveException("Shell enviroment does not exist"); // Not sure if this is true, TODO...
 
 		if (args.size() > 0)
 		{
@@ -599,5 +596,22 @@ namespace rt
 			return giveException("Argument was of wrong type");
 		}
 		return giveException("Wrong amount of arguments");
+	}
+
+	/*
+	 * Desc=Evaluates all arguments and returns the last one.
+	 * Added=v0.11.0
+	 * Returns=The value of the last object
+	 * Params[True]Objects=A list of objects, which will be evaluated in order.	 
+	 * The last one will be returned.
+	 */
+	objectOrValue Series(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		std::vector<objectOrValue>::iterator it = args.begin();
+		for (; it != args.end() - 1; ++it) {
+			evaluate(*it, symtab, argState);
+		}
+		// Return last one
+		return evaluate(args.back(), symtab, argState);
 	}
 }

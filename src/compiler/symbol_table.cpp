@@ -184,6 +184,7 @@ namespace rt
 			{"System", System},
 			{"GetKeys", GetKeys},
 			{"Size", Size},
+			{"Series", Series},
 			// Math
 			{"Add", Add},
 			{"Minus", Minus},
