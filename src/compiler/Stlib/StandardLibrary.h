@@ -1,19 +1,22 @@
 #pragma once
 // This file contains all the functions for the StandardLibrary in Runtime
 #include "StandardFiles.h"
+#include "../symbol_table.h"
 #include "../interpreter.h"
 #include "../parser.h"
+#include "../shared_libs.h"
 // C++
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
 #include <vector>
 #include <variant>
+#include <experimental/memory>
 // Gnu
 #include <readline/readline.h>
 // C
 #include <stdlib.h>
-
+#include <ffi.h>
 #include <cctype>      // std::tolower
 #include <algorithm>   // std::equal
 #include <string_view> // std::string_view
@@ -56,8 +59,35 @@ namespace rt
 		{"slong", &ffi_type_ulong}, // s long
 		{"long", &ffi_type_ulong}, // Default
 		{"longdouble", &ffi_type_longdouble},
-		{"pointer", &ffi_type_pointer}, // Generic pointer
-		{"cstring", &ffi_type_cstring}, // Char pointer, TODO: interpreter should make this a string
+		// Pointers
+		{"cstring", &ffi_type_cstring}, // Char pointer, special logic in interpreter
+		{"uint8*",&ffi_type_puint8  },
+		{"sint8*",&ffi_type_psint8  },
+		{"int8*",&ffi_type_psint8  }, // D
+		{"uint16*",&ffi_type_puint16 },
+		{"sint16*",&ffi_type_psint16 },
+		{"int16*",&ffi_type_psint16 }, // D
+		{"uint32*",&ffi_type_puint32 },
+		{"sint32*",&ffi_type_psint32 },
+		{"int32*",&ffi_type_psint32 }, // D
+		{"uint64*",&ffi_type_puint64 },
+		{"sint64*",&ffi_type_psint64 },
+		{"int64*",&ffi_type_psint64 }, // D
+		{"float*",&ffi_type_pfloat  },
+		{"double*",&ffi_type_pdouble },
+		{"uchar*",&ffi_type_puchar  },
+		{"schar*",&ffi_type_pschar  },
+		{"ushort*",&ffi_type_pushort },
+		{"sshort*",&ffi_type_psshort },
+		{"short*",&ffi_type_psshort }, // D
+		{"uint*",&ffi_type_puint   },
+		{"sint*",&ffi_type_psint   },
+		{"int*",&ffi_type_psint   }, // D
+		{"ulong*",&ffi_type_pulong  },
+		{"slong*",&ffi_type_pslong  },
+		{"long*",&ffi_type_pslong  }, // D
+		{"longdouble*",&ffi_type_plongdouble},
+		// Complex
 		{"complex_float", &ffi_type_complex_float},
 		{"complex_double", &ffi_type_complex_double},
 		{"complex_longdouble", &ffi_type_complex_longdouble},
@@ -81,8 +111,7 @@ namespace rt
 	{
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld VALUEHELD(arg);
-
+			auto valueHeld = evaluate(arg, symtab, argState);
 			std::string output;
 			// Convert type to string
 			if (std::holds_alternative<std::string>(valueHeld))
@@ -149,6 +178,25 @@ namespace rt
 	}
 
 	/// <summary>
+	/// Identical to Append but uses soft evaluate
+	/// </summary>
+	/// <param name="args"></param>
+	/// <returns></returns>
+	objectOrValue Copy(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
+		{
+			std::shared_ptr<Object> init = std::get<std::shared_ptr<Object>>(args.at(0)); // Main object to initialize
+			for (std::vector<objectOrValue>::iterator it = ++args.begin(); it != args.end(); ++it)
+			{
+				init.get()->addMember(softEvaluate(*it, symtab, argState, true));
+			}
+			return True;
+		}
+		return giveException("Incorrect arguments");
+	}
+
+	/// <summary>
 	/// Assigns a value to an object/member
 	/// </summary>
 	/// <param name="args">First arg is object/member to assign to, second one is the key of the member and the third one is the value to assign</param>
@@ -158,7 +206,7 @@ namespace rt
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
-			std::variant<double, std::string> key = evaluate(args.at(1),symtab, argState, true);
+			auto key = evaluate(args.at(1), symtab, argState);
 			assignee.get()->setMember(key, evaluate(args.at(2),symtab,argState,false));
 			return True;
 		}
@@ -175,7 +223,7 @@ namespace rt
 		if (args.size() > 0 and std::holds_alternative<std::shared_ptr<Object>>(args.at(0)))
 		{
 			std::shared_ptr<Object> assignee = std::get<std::shared_ptr<Object>>(args.at(0)); // Object to assign value to
-			std::variant<double, std::string> key = evaluate(args.at(1),symtab, argState, true);
+			auto key = evaluate(args.at(1),symtab, argState, true);
 			assignee.get()->setMember(key, args.at(2));
 			return True;
 		}
@@ -192,7 +240,7 @@ namespace rt
 	{
 		if (args.size() > 0)
 		{
-			auto r = rt::evaluate(args.at(0), symtab, argState, true);
+			auto r = evaluate(args.at(0), symtab, argState);
 			if (std::holds_alternative<double>(r))
 				exit(std::get<double>(r));
 		}
@@ -209,7 +257,7 @@ namespace rt
 	{
 		for (objectOrValue arg : args)
 		{
-			auto valueHeld VALUEHELD(arg);
+			auto valueHeld = evaluate(arg, symtab, argState);
 			if (std::holds_alternative<std::string>(valueHeld)) // If string
 			{
 				std::string fileName = std::get<std::string>(valueHeld);
@@ -229,11 +277,11 @@ namespace rt
 					file.read(&fileText[0], size);
 					file.close();
 
-					rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true).get(), symtab, argState);
+					rt::include(rt::parse((rt::tokenize(fileText.c_str(), fileName.c_str())), true), symtab, argState);
 					return True;
 				}
 				else if (fileName.ends_with(".so") or fileName.ends_with(".dll")) {
-					loadSharedLibrary(fileName.c_str()); // Call function
+					loadSharedLibrary(fileName.c_str(), symtab); // Call function
 					return True;
 				}
 				else {
@@ -258,7 +306,7 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			auto valueHeld VALUEHELD(args.at(0));
+			auto valueHeld = evaluate(args.at(0), symtab, argState);
 			// Evaluate cond
 			bool cond = toBoolean(valueHeld);
 			
@@ -287,7 +335,7 @@ namespace rt
 	{
 		if (args.size() > 1)
 		{
-			while (toBoolean(VALUEHELD_E(args.at(0))))// If value, just use value
+			while (toBoolean(evaluate(args.at(0), symtab, argState, false)))
 			{ 
 				std::vector<objectOrValue>::iterator it = args.begin() + 1;
 				while (it != args.end())
@@ -312,25 +360,25 @@ namespace rt
 	{
 		if (args.size() > 0)
 		{
-			auto valueHeld = VALUEHELD(args.at(0));
+			auto valueHeld = evaluate(args.at(0), symtab, argState);
 			return static_cast<double>(not toBoolean(valueHeld));
 		}
 		return giveException("Wrong amount of arguments");
 	}
 	
-	/// <summary>
-	///	Formats together all args into a string
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Formats together all args into a string
+	 * Added=v0.9.8
+	 * Returns=A formatted string or an exception.
+	 * Param0[True]Format=A string representing the structure.
+	 * Params[True]Values=Values to be formatted into the string.
+	 */
 	objectOrValue Format(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		std::string format;
 		if (args.size() > 0)
 		{
-			auto val = VALUEHELD(args.at(0));
+			auto val = evaluate(args.at(0), symtab, argState);
 			if (std::holds_alternative<std::string>(val))
 				format = std::get<std::string>(val);
 			else
@@ -339,7 +387,7 @@ namespace rt
 		std::vector<std::variant<double, std::string>> values;
 		for(std::vector<objectOrValue>::iterator it = args.begin()+1; it != args.end(); ++it )
 		{
-			values.push_back(VALUEHELD(*it));
+			values.push_back(evaluate(*it, symtab, argState));
 		}
 		// snprintf and std::format require args... soooo have to do this myself
 		std::string result = "";
@@ -387,31 +435,27 @@ namespace rt
 		return result;
 	}
 
-	// On hold while I figure out what I want to do with my life
-	/* /// <summary> */
-	/* ///	Returns all keys from the symbol table of the current scope */
-	/* /// </summary> */
-	/* /// <param name="args"></param> */
-	/* /// <param name="symtab"></param> */
-	/* /// <param name="argState"></param> */
-	/* /// <returns></returns> */
-	/* objectOrValue GetKeys(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState) */
-	/* { */
-	/* 	auto smt = std::make_shared<Object>("symbols"); */
-	/* 	for (auto i : symtab->getKeys()) { */
-	/* 		std::variant<double, std::string> v = i; // ast::value :( */
-	/* 		smt->addMember(v); */
-	/* 	} */
-	/* 	return smt; */
-	/* } */
+	/*
+	 * Returns all keys from the symbol table of the current scope.
+	 * Added=v0.11.0
+	 * Returns=An object with key names as it's members.
+	 */
+	objectOrValue GetKeys(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		auto smt = std::make_shared<Object>("symbols");
+		for (auto i : symtab->getKeys()) {
+			std::variant<double, std::string> v = i; // ast::value :(
+			smt->addMember(v);
+		}
+		return smt;
+	}
 
-	/// <summary>
-	///	Returns the size of an object; that is, how many members it has
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Desc=Returns how many members and object has.
+	 * Added=v0.11.0
+	 * Returns=Number of members or exception
+	 * Param0[False]Object=An object to inspect.
+	 */
 	objectOrValue Size(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		if (args.size() > 0)
@@ -426,25 +470,57 @@ namespace rt
 	}
 
 	/// <summary>
-	///	Creates a binding for a shared function, by specifying it's parameters and return value.
-	///	Arg0 is the name of the function, arg1 is the return type and the rest of the args are 
-	///	parameter types.
+	/// Creates custom struct ffi_type from Object
 	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	[[nodiscard]] static ffi_type* makeFfiType(std::shared_ptr<Object> obj, SymbolTable* symtab, ArgState& argState, std::vector<std::any>& altHeap)
+	{
+		// Very non-portable function
+		// TOO BAD!
+		auto members = obj->getMembers();
+		const int size = members.size();
+		// Struct
+		ffi_type** e = altStore<ffi_type*>(new ffi_type*[size + 1], altHeap); // TODO: Probably works?
+		// Member types
+		for (int i = 0; i < size; ++i) {
+			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&members.at(i))) {
+				// Nested struct
+				e[i] = altStore<ffi_type>(makeFfiType(*obj, symtab, argState, altHeap), altHeap);
+			} else {
+				auto value = evaluate(members.at(i), symtab, argState);
+				if (const std::string* pType = std::get_if<std::string>(&value)){ 
+					e[i] = typeNames.at(*pType);
+				}
+				else return nullptr;
+			}
+		}
+		e[size] = NULL; // Last one (NULL terminated array)
+		return new ffi_type(
+							0, // size (init 0)
+							0, // align (init 0)
+							FFI_TYPE_STRUCT,// type
+							e// elements
+							);
+	}
+
+	/*
+	 * Desc=Creates a binding for a shared function, by specifying it's parameters and return value.
+	 * Added=v0.11.0
+	 * Returns=1 or exception
+	 * Param0[True]Name=The name of the function.
+	 * Param1[True?]Return=The return type, either a string or an object representing a struct.
+	 * Params[True?]Name=The argument types in order, either strings or objects representing structs.
+	 */
 	objectOrValue Bind(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
-		// TODO: If fails midway through, undefined behaviour
+		// TODO: If fails midway through, undefined behaviour // ??
 		if (args.size() < 2)
 			return giveException("Wrong amount of arguments");
 		LibFunc* func = nullptr; // Function to bind
 		 // Get function by name
 		{
-			auto v = VALUEHELD(args.at(0));
+			auto v = evaluate(args.at(0), symtab, argState);
 			if (const std::string* name = std::get_if<std::string>(&v)){
-				if ((func = std::get_if<LibFunc>(&globalSymtab.lookUpHard(*name)))) {}
+				if ((func = std::get_if<LibFunc>(&symtab->lookUpHard(*name)))) {}
 				else {
 					return giveException("Func name was not of a shared function");
 				}
@@ -455,49 +531,64 @@ namespace rt
 		// Reset function
 		func->argTypes.clear();
 		func->initialized = false;
-		func->retType = nullptr;
+		func->retType = std::experimental::make_observer<ffi_type>(nullptr); // Unbelievable
 		// Get return value
-		{
+		if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&args.at(1))) {
+			// Struct
+			if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
+				func->retType = std::shared_ptr<ffi_type>(sT);
+			} else giveException("Return type was of wrong type");
+		}
+		else { // Not struct
 			ffi_type* ret;
-			auto rV = VALUEHELD(args.at(1));
+			auto rV = evaluate(args.at(1), symtab, argState);
 			if (const std::string* rType = std::get_if<std::string>(&rV)){
 				ret = typeNames.at(*rType);
 			}
 			else
 				return giveException("Return name was of wrong type");
-			func->retType = ret;
+			func->retType = std::experimental::make_observer<ffi_type>(ret);
 		}
 		// Get parameters
+		func->argTypes.reserve(args.size() - 2);; // Prepare for params
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
-			auto rP = VALUEHELD(*it);
+			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&(*it))) {
+				if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
+					func->argTypes.push_back(std::shared_ptr<ffi_type>(sT)); // Struct parameter
+					continue;
+				} else giveException("Arg type was of wrong type");
+			}
+			// Not struct
+			auto rP = evaluate(*it, symtab, argState);
 			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
-				func->argTypes.push_back(typeNames.at(*pType));
 				if (*pType == "void") { // TODO: Faster comparison
 					return giveException("Shared function cannot have parameters of type void");
 				}
-			}
+				func->argTypes.push_back(std::experimental::make_observer<ffi_type>(typeNames.at(*pType))); // TODO: Error handling
+			} else return giveException("Argument type was of wrong type");
 		}
 		// Finished
 		func->initialized = true;
 		return True;
 	}
 
-	/// <summary>
-	///	Runs a shell command
-	/// </summary>
-	/// <param name="args"></param>
-	/// <param name="symtab"></param>
-	/// <param name="argState"></param>
-	/// <returns></returns>
+	/*
+	 * Desc=Runs a shell command.
+	 * Added=v0.11.0
+	 * Returns=1 or exception.
+	 * Param0[True]Command=String to run in the shell.
+	 */
 	objectOrValue System(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		static bool works = false;
 		if (not works and system(NULL)) // Check whether shell exists
 			works = true;
+		else
+			return giveException("Shell enviroment does not exist"); // Not sure if this is true, TODO...
 
 		if (args.size() > 0)
 		{
-			auto valueHeld = VALUEHELD(args.at(0));
+			auto valueHeld = evaluate(args.at(0), symtab, argState);
 			if (const std::string* cmd = std::get_if<std::string>(&valueHeld)) {
 				system(cmd->c_str());
 				return True;
@@ -505,5 +596,22 @@ namespace rt
 			return giveException("Argument was of wrong type");
 		}
 		return giveException("Wrong amount of arguments");
+	}
+
+	/*
+	 * Desc=Evaluates all arguments and returns the last one.
+	 * Added=v0.11.0
+	 * Returns=The value of the last object
+	 * Params[True]Objects=A list of objects, which will be evaluated in order.	 
+	 * The last one will be returned.
+	 */
+	objectOrValue Series(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		std::vector<objectOrValue>::iterator it = args.begin();
+		for (; it != args.end() - 1; ++it) {
+			evaluate(*it, symtab, argState);
+		}
+		// Return last one
+		return evaluate(args.back(), symtab, argState);
 	}
 }

@@ -1,226 +1,22 @@
-#include "Runtime.h"
+// Runtime
+#include "Runtime.hpp"
 #include "interpreter.h"
+#include "shared_libs.h"
+#include "symbol_table.h"
+#include "object.h"
 #include "exceptions.h"
-#include "Stlib/StandardLibrary.h"
-#include "Stlib/StandardMath.h"
-#include "Stlib/StandardIO.h"
 // C++
 #include <ffi.h>
 #include <memory>
-#include <stdexcept>
 #include <variant>
 #include <vector>
 #include <unordered_set>
-#include <algorithm>
-#include <any>
+#include <cstring>
 // C
-#include <dlfcn.h> // TODO: Windows?
-#include <elf.h> // WINDOWS!!
-#include <link.h>
-#include <cxxabi.h>  // needed for abi::__cxa_demangle
+#include <cstdlib>
 
 namespace rt
 {
-	// Arg state
-
-	objectOrValue* ArgState::getArg()
-	{
-		// If have args yet to be assigned
-		if (static_cast<size_t>(pos) < args.size())
-		{
-			pos++;
-			return &args.at(static_cast<size_t>(pos) - 1);
-		}
-		else if (parent != nullptr)
-		{
-			return parent->getArg();
-		}
-		else
-			return nullptr;
-	}
-
-	// Symbol table
-	Symbol& SymbolTable::lookUp(std::string key, ArgState& args)
-	{
-		// Check if key exists
-		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
-		if (it != locals.end()) // Exists
-			return it->second;
-
-		auto p = parent;
-		while (p != nullptr) // Look for key in parent symbol table
-		{
-			// Check if key exists
-			std::unordered_map<std::string, Symbol>::iterator it = p->locals.find(key);
-			if (it != p->locals.end()) // Exists
-				return it->second;
-			else
-				p = p->parent;
-		}
-
-		// Cannot find, create symbol
-#if RUNTIME_DEBUG==1
-		std::cout << "Empty object initialized" << std::endl;
-#endif // RUNTIME_DEBUG
-		auto v = args.getArg();
-		if (v != nullptr)
-		{
-			if (std::holds_alternative<std::shared_ptr<Object>>(*v)) // If argument is reference
-				updateSymbol(key, std::get<std::shared_ptr<Object>>(*v));
-			else // Argument is value
-			{
-				std::shared_ptr<Object> obj = std::make_shared<Object>(std::get<std::variant<double, std::string>>(*v));
-				updateSymbol(key, obj);
-			}
-		}
-		else
-		{
-			std::shared_ptr<Object> zero = std::make_shared<Object>(key);
-			updateSymbol(key, zero);
-		}
-		return lookUp(key, args);
-	}
-
-	Symbol& SymbolTable::lookUpHard(std::string key)
-	{
-		// Check if key exists
-		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
-		if (it != locals.end()) // Exists
-			return it->second;
-
-		auto p = parent;
-		while (p != nullptr) // Look for key in parent symbol table
-		{
-			// Check if key exists
-			std::unordered_map<std::string, Symbol>::iterator it = p->locals.find(key);
-			if (it != p->locals.end()) // Exists
-				return it->second;
-			else
-				p = p->parent;
-		}
-		// Cannot find, throw
-		throw InterpreterException("Unable to find symbol", 0, "Unknown");
-	}
-
-	bool SymbolTable::contains(std::string& key) const
-	{
-		// Check if key exists
-		if (locals.contains(key))
-			return true;
-
-		auto p = parent;
-		while (p != nullptr) // Look for key in parent symbol table
-		{
-			// Check if key exists
-			if (p->locals.contains(key)) // Exists
-				return true;
-			else
-				p = p->parent;
-		}
-		return false;
-	}
-
-	void SymbolTable::updateSymbol(const std::string& key, const std::shared_ptr<Object> object)
-	{
-		// Check if key exists
-		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
-		if (it != locals.end()) // Exists
-			it->second = object; // I don't think there's any chance this works but I'm a bit tired atm so I'll figure this out in the coming days/weeks
-		else
-			locals.insert({ key, object });
-	}
-
-	void SymbolTable::updateSymbol(const std::string& key, LibFunc object)
-	{
-		// TODO: Maybe use variant
-		// Check if key exists
-		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
-		if (it != locals.end()) // Exists
-			it->second = object; // I don't think there's any chance this works but I'm a bit tired atm so I'll figure this out in the coming days/weeks
-		else
-			locals.insert({ key, object });
-	}
-
-	void SymbolTable::clear()
-	{
-		locals.clear();
-		if (parent != nullptr)
-			parent->clear();
-	}
-		
-	std::vector<std::string> SymbolTable::getKeys()
-	{
-		std::vector<std::string> keys;
-		// Get from current
-		for (auto kv : this->locals) {
-			keys.push_back(kv.first);
-		}
-		// Get from parents
-		auto p = parent;
-		while (p != nullptr)
-		{
-			for (auto kv : p->locals) {
-				keys.push_back(kv.first);
-			}
-		}
-		return keys;
-	}
-
-	static void clearSymtab(SymbolTable& symtab)
-	{
-		symtab = SymbolTable({
-			{"Return", Return },
-			{"Print", Print },
-			{"Input", Input },
-			{"Object", ObjectF },
-			{"Append", Append },
-			{"Assign", Assign},
-			{"Update", Update },
-			{"Exit", Exit},
-			{"Include", Include},
-			{"Not", Not},
-			{"If", If},
-			{"While", While},
-			{"Format", Format},
-			{"Bind", Bind},
-			{"System", System},
-			/* {"GetKeys", GetKeys}, */
-			{"Size", Size},
-			// Math
-			{"Add", Add},
-			{"Minus", Minus},
-			{"Multiply", Multiply},
-			{"Divide", Divide},
-			{"Mod", Mod},
-			{"Equal", Equal},
-			{"LargerThan", LargerThan},
-			{"SmallerThan", SmallerThan},
-			{"Sine", Sine},
-			{"Cosine", Cosine},
-			{"Tangent", Tangent},
-			{"ArcSine", ArcSine},
-			{"ArcCosine", ArcCosine},
-			{"ArcTangent", ArcTangent},
-			{"ArcTangent2", ArcTangent2},
-			{"Power", Power},
-			{"SquareRoot", SquareRoot},
-			{"Floor", Floor},
-			{"Ceiling", Ceiling},
-			{"Round", Round},
-			{"NaturalLogarithm", NaturalLogarithm},
-			{"RandomDecimal", RandomDecimal},
-			{"RandomInteger", RandomInteger},
-			// I/O
-			{"FileCreate", FileCreate},
-			{"FileOpen", FileOpen},
-			{"FileClose", FileClose},
-			{"FileReadLine", FileReadLine},
-			{"FileWrite", FileWrite},
-			{"FileAppendLine", FileAppendLine},
-			{"FileRead", FileRead},
-		});
-	}
-
 	// Interpreter
 
 	/// <summary>
@@ -238,11 +34,7 @@ namespace rt
 	/// <param name="expr">Ast node to interpret</param>
 	/// <param name="call">Whether or not to evaluate call values</param>
 	/// <returns>The value of the node</returns>
-	static objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& args);
-	/// <summary>
-	/// Calls a shared library function
-	/// </summary>
-	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState);
+	static objectOrValue interpret_internal(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, bool call, ArgState& args);
 	/// <summary>
 	/// Whether or not members can be initialized by reference (ie. obj-0)
 	/// </summary>
@@ -259,10 +51,8 @@ namespace rt
 	/// Stores all objects currently being evaluated, in order to stop endless loops
 	/// </summary>
 	static std::unordered_set<std::shared_ptr<Object>> inEvaluation;
-	/// <summary>
-	/// Stores all currently loaded shared libraries
-	/// </summary>
-	static std::vector<void*> libraries;
+
+	// TODO: ORGANIZE CODE OH MY DAYS
 
 	void liveIntrepretSetup()
 	{
@@ -271,7 +61,7 @@ namespace rt
 		clearSymtab(globalSymtab);
 	}
 
-	void liveIntrepret(ast::Expression* expr)
+	void liveIntrepret(std::shared_ptr<ast::Expression> expr)
 	{
 		interpret_internal(expr, &globalSymtab, true, mainArgState);
 	}
@@ -281,20 +71,26 @@ namespace rt
 		capturedCout.push_back(str);
 	}
 
-	std::string* interpretAndReturn(ast::Expression* expr)
+	std::string* interpretAndReturn(std::shared_ptr<ast::Expression> expr)
 	{
+		// Clear
+		mainArgs.clear();
+		mainArgState = ArgState(mainArgs);
 		memberInitialization = false;
 		clearSymtab(globalSymtab);
 		capture = true;
 		capturedCout.clear();
+		// Begin
 		interpret_internal(expr, &globalSymtab, true, mainArgState);
 		std::shared_ptr<Object> main = std::get<std::shared_ptr<Object>>(globalSymtab.lookUp("Main", mainArgState));
 		memberInitialization = true;
 		callObject(main, &globalSymtab, mainArgState);
+		// Clear
+		cleanLibraries();
 		return capturedCout.data();
 	}
 
-	void interpret(ast::Expression* expr, int argc, char** argv)
+	void interpret(std::shared_ptr<ast::Expression> expr, int argc, char** argv)
 	{
 		memberInitialization = false;
 		// Load stdlib
@@ -315,15 +111,14 @@ namespace rt
 		callObject(main, &globalSymtab, mainArgState);
 	}
 
-	void include(ast::Expression* expr, SymbolTable* symtab, ArgState& argState)
+	void include(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, ArgState& argState)
 	{
 		// Don't forget "global" values before this was called
 		bool prev = memberInitialization;
 		memberInitialization = false;
 		// Rename main to avoid conflict (I know this is a hacky workaround, but every way of doing this is hacky)
 		// This could also be done in the parser step, which would probably be a lot smarter :thinking:
-		auto node = dynamic_cast<ast::Call*>(expr);
-		delete (node->args[0]);
+		auto node = std::dynamic_pointer_cast<ast::Call>(expr);
 		int mainCounter = 2;
 		std::string mainName;
 		while (true)
@@ -334,7 +129,8 @@ namespace rt
 				break;
 			mainCounter++;
 		}
-		node->args[0] = new ast::Identifier(SourceLocation(), mainName);
+		// TODO: Is this safe?
+		node->args[0] = std::make_shared<ast::Identifier>(SourceLocation(), mainName);
 		//
 		interpret_internal(expr, symtab, true, argState);
 		std::shared_ptr<Object> mainObject = std::get<std::shared_ptr<Object>>((*symtab).lookUp(mainName, argState));
@@ -344,9 +140,9 @@ namespace rt
 		memberInitialization = prev;
 	}
 
-	objectOrValue interpret_internal(ast::Expression* expr, SymbolTable* symtab, bool call, ArgState& argState)
+	objectOrValue interpret_internal(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, bool call, ArgState& argState)
 	{
-		if (auto node = dynamic_cast<ast::Identifier*>(expr))
+		if (auto node = std::dynamic_pointer_cast<ast::Identifier>(expr))
 		{
 			const Symbol& v = symtab->lookUp(node->name, argState);
 			if (std::holds_alternative<std::shared_ptr<Object>>(v)) // Object
@@ -354,11 +150,11 @@ namespace rt
 			else
 				throw InterpreterException("Attempt to evaluate built-in function", node->src.getLine(), *node->src.getFile());
 		}
-		else if (auto node = dynamic_cast<ast::Literal*>(expr))
+		else if (auto node = std::dynamic_pointer_cast<ast::Literal>(expr))
 		{
 			return node->litValue;
 		}
-		else if (auto node = dynamic_cast<ast::Call*>(expr))
+		else if (auto node = std::dynamic_pointer_cast<ast::Call>(expr))
 		{
 			//TODO: The next 20 or so lines of code suck REALLY bad and I HATE THEM VERY MUCH
 			// THIS FUNCTION IS SOOOOO BAD BUT I REALLY DONT WANT TO REWRITE IT
@@ -368,7 +164,7 @@ namespace rt
 
 			// If node->object is identifier,
 			// check for builtin since interpret_internal can't handle that.
-			if (auto bn = dynamic_cast<ast::Identifier*>(node->object))
+			if (auto bn = std::dynamic_pointer_cast<ast::Identifier>(node->object))
 			{
 				const auto& v = symtab->lookUp(bn->name, argState); // Look up object in symtab
 				if (std::holds_alternative<BuiltIn>(v)) // Builtin
@@ -429,12 +225,22 @@ namespace rt
 				return callee;
 			}
 		}
-		else if (auto node = dynamic_cast<ast::BinaryOperator*>(expr))
+		else if (auto node = std::dynamic_pointer_cast<ast::BinaryOperator>(expr))
 		{
 			if (memberInitialization)
 			{
-				std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true, argState));
-				std::variant<double, std::string> member = std::get<std::variant<double, std::string>>(interpret_internal(node->right, symtab, true, argState));
+				std::shared_ptr<Object> object;
+				std::variant<double, std::string> member;
+				try {
+					object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true, argState));
+				} catch (std::bad_variant_access) {
+					throw InterpreterException("Left-hand operand of accession was not object", node->src.getLine(), *node->src.getFile());
+				}
+				try {
+					member = std::get<std::variant<double, std::string>>(interpret_internal(node->right, symtab, true, argState));
+				} catch (std::bad_variant_access) {
+					throw InterpreterException("Right-hand operand of accession was not a value", node->src.getLine(), *node->src.getFile());
+				}
 				return *(object->getMember(member));
 			}
 			else
@@ -454,7 +260,7 @@ namespace rt
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
 		{
 			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
-			if (inEvaluation.contains(object)) { // TODO: Should maybe allow multiple ones
+			if (inEvaluation.contains(object)) {
 				inEvaluation.erase(object);
 				// Get source location
 				if (object->getExpression() != nullptr) {
@@ -467,7 +273,7 @@ namespace rt
 				}
 			}
 			inEvaluation.insert(object); // This is currently being evaluated
-			if (object->getExpression() != nullptr) // Parse expression
+			if (object->getExpression()) // Parse expression
 			{
 				auto r = evaluate(interpret_internal(object->getExpression(), symtab, true, argState), symtab, argState, write);
 				if (write)
@@ -508,6 +314,46 @@ namespace rt
 		}
 	}
 
+	objectOrValue softEvaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
+	{
+		if (std::holds_alternative<std::shared_ptr<Object>>(member))
+		{
+			std::shared_ptr<Object> object = std::get<std::shared_ptr<Object>>(member);
+			if (inEvaluation.contains(object)) {
+				inEvaluation.erase(object);
+				// Get source location
+				if (object->getExpression() != nullptr) {
+					SourceLocation loc = object->getExpression()->src;
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", loc.getLine(), *loc.getFile());
+				}
+				else {
+					// TODO: expand search
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", 0, "Unknown");
+				}
+			}
+			inEvaluation.insert(object); // This is currently being evaluated
+			if (object->getExpression()) // Parse expression
+			{
+				auto r = interpret_internal(object->getExpression(), symtab, true, argState);
+				if (write)
+				{
+#if RUNTIME_DEBUG==1
+				std::cout << "Value evaluated to memory";
+#endif // RUNTIME_DEBUG
+					object->addMember(r);
+					object->deleteExpression();
+				}
+				inEvaluation.erase(object);
+				return r;
+			} else throw InterpreterException("Strict evaluation not passed", 0, "Unknown");
+		}
+		else // Value
+		{
+			return std::get<std::variant<double, std::string>>(member);
+		}
+	}
+
+
 	std::variant<double, std::string> callObject(objectOrValue member, SymbolTable* symtab, ArgState& argState, std::vector<objectOrValue> args)
 	{
 		if (std::holds_alternative<std::shared_ptr<Object>>(member))
@@ -540,7 +386,7 @@ namespace rt
 				// HOWEVER THIS ONLY WORKS IN THE LIVE INTERPRETER
 				// SINCE OBJECTS NEVER GET CALLED THEY ONLY GET EVALUATED
 				// OTHERWISE  HAHAHAHAHAHAAAAAAAAAAa
-				if (auto expr = object->getExpression())
+				if (object->getExpression())
 					return evaluate(object, symtab, newArgState, false);
 				// Add zero
 #if RUNTIME_DEBUG==1
@@ -555,239 +401,5 @@ namespace rt
 		{
 			return std::get<std::variant<double, std::string>>(member);
 		}
-	}
-
-	static std::vector<std::string> getSymbols(void* library)
-	{
-		std::vector<std::string> symbols;
-		// Get symbols from library
-		struct link_map* map = nullptr;
-		dlinfo(library, RTLD_DI_LINKMAP, &map);
-		Elf64_Sym* symtab = nullptr;
-		char* strtab = nullptr;
-		int symentries;
-		// ???? straight from stack overflow
-	    for (auto section = map->l_ld; section->d_tag != DT_NULL; ++section)
-		{
-			if (section->d_tag == DT_SYMTAB)
-			{
-				symtab = (Elf64_Sym *)section->d_un.d_ptr;
-			}
-			if (section->d_tag == DT_STRTAB)
-			{
-				strtab = (char*)section->d_un.d_ptr;
-			}
-			if (section->d_tag == DT_SYMENT)
-			{
-				symentries = section->d_un.d_val;
-			}
-		}
-		int size = strtab - (char *)symtab;
-		for (int k = 0; k < size / symentries; ++k)
-		{
-			auto sym = &symtab[k];
-			// If sym is function
-			if (ELF64_ST_TYPE(symtab[k].st_info) == STT_FUNC)
-			{
-				//str is name of each symbol
-				auto str = &strtab[sym->st_name];
-				symbols.push_back(str);
-			}
-		}
-		return symbols;
-	}
-
-	[[nodiscard]] static const std::string cppDemangle(const char *abiName)
-	{
-		int status;    
-		char *ret = abi::__cxa_demangle(abiName, 0, 0, &status);  
-		const std::string r = std::string(ret);
-		free(ret);
-		return r;
-	}
-
-	void loadSharedLibrary(const char* fileName)
-	{
-		// Handle to the library
-		void* handle = nullptr;
-		handle = dlopen(fileName, RTLD_LAZY | RTLD_GLOBAL);
-		if (!handle) {
-			throw InterpreterException(dlerror(), 0, "Unknown");
-		}
-		std::vector<std::string> symbols = getSymbols(handle);
-		// Demangle names (if C++)
-		try {
-			for (int i = 0; i < symbols.size(); ++i) {
-				symbols[i] = cppDemangle(symbols[i].c_str());
-			}
-		} catch (std::logic_error _) {
-			// Not C++
-		}
-		// Create objects
-		for (auto sym : symbols) {
-			void* fptr = dlsym(handle, sym.c_str());
-			globalSymtab.updateSymbol(sym, LibFunc(fptr, false, nullptr, {}));
-			// These are not yet able to be called, as they do not have
-			// their necessary argument and return types set
-			// The signature must be specified by calling Sign()
-		}
-		// Function pointer DEBUG
-		// void (*fptr)() = (void (*)()) dlsym(handle, "test");
-		// (*fptr)(); // Call function
-		// 
-		libraries.push_back(handle);
-	}
-
-	void cleanLibraries() 
-	{
-		for (auto lib : libraries) {
-			dlclose(lib);
-		}
-		libraries.clear();
-	}
-
-	static objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
-	{
-		// TODO: Windows
-		if (not func.initialized)
-			throw InterpreterException("Shared function is not yet bound", 0, "Unknown");
-		ffi_cif cif; // Function signature
-		ffi_type** params = const_cast<ffi_type**>(func.argTypes.data()); // Doesn't modify? Maybe undefined behaviour... TODO
-		void* ret;
-		const int narms = func.argTypes.size(); // n params
-		// Arguments
-		std::vector<std::any> arguments;
-		// Get arguments
-		for (int i = 0; i < narms; ++i) {
-			// Get value of arg
-			auto value = VALUEHELD(args.at(i));
-			// Cast arg to type wanted by lib
-			ffi_type* type = func.argTypes.at(i);
-			// Please help :(
-			{
-			/*{{{*/
-			if (type == &ffi_type_uint8)
-				// Shared because vector requires copyable types
-				arguments.push_back(std::make_shared<uint8_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint8)
-				arguments.push_back(std::make_shared<int8_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint16)
-				arguments.push_back(std::make_shared<uint16_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint16)
-				arguments.push_back(std::make_shared<int16_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint32)
-				arguments.push_back(std::make_shared<uint32_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint32)
-				arguments.push_back(std::make_shared<int32_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint64)
-				arguments.push_back(std::make_shared<uint64_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint64)
-				arguments.push_back(std::make_shared<int64_t>(getNumericalValue(value)));
-			else if (type == &ffi_type_float)
-				arguments.push_back(std::make_shared<float>(getNumericalValue(value)));
-			else if (type == &ffi_type_double)
-				arguments.push_back(std::make_shared<double>(getNumericalValue(value)));
-			else if (type == &ffi_type_uchar)
-				arguments.push_back(std::make_shared<unsigned char>(getNumericalValue(value)));
-			else if (type == &ffi_type_schar)
-				arguments.push_back(std::make_shared<signed char>(getNumericalValue(value)));
-			else if (type == &ffi_type_ushort)
-				arguments.push_back(std::make_shared<unsigned short>(getNumericalValue(value)));
-			else if (type == &ffi_type_sshort)
-				arguments.push_back(std::make_shared<short>(getNumericalValue(value)));
-			else if (type == &ffi_type_uint)
-				arguments.push_back(std::make_shared<unsigned int>(getNumericalValue(value)));
-			else if (type == &ffi_type_sint)
-				arguments.push_back(std::make_shared<int>(getNumericalValue(value)));
-			else if (type == &ffi_type_ulong)
-				arguments.push_back(std::make_shared<unsigned long>(getNumericalValue(value)));
-			else if (type == &ffi_type_slong)
-				arguments.push_back(std::make_shared<long>(getNumericalValue(value)));
-			else if (type == &ffi_type_longdouble)
-				arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
-			else if (type == &ffi_type_cstring)
-				arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data()));
-			// TODO: Allow passing pointers, then update the objects with the values of
-			// the pointers after the function has been called
-			/* else if (type == &ffi_type_pointer) */
-			/* 	arguments.push_back(std::make_shared<void *>(getNumericalValue(value))); */
-			else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
-			// TODO: Other types
-			/*}}}*/
-			}
-		}
-		// Void pointer array of length narms
-		std::unique_ptr<void* []> call_args; // Generic pointers to args
-		call_args = std::make_unique<void* []>(narms); // Create list to arg pointers
-		// Pointer shenanigans
-		for (int i = 0; i < narms; ++i) {
-			// nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
-			// This is EXTREMELY prone to errors, errors which are likely quite hard to spot
-			{
-			/*{{{*/
-			if (arguments.at(i).type() == typeid(std::shared_ptr<uint8_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<uint8_t>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int8_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<int8_t>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint16_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<uint16_t>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int16_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<int16_t>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint32_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<uint32_t>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int64_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<int64_t>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<float>))
-				call_args[i] = std::any_cast<std::shared_ptr<float>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<double>))
-				call_args[i] = std::any_cast<std::shared_ptr<double>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned char>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned char>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<signed char>))
-				call_args[i] = std::any_cast<std::shared_ptr<signed char>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned short>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned short>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<short>))
-				call_args[i] = std::any_cast<std::shared_ptr<short>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned int>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned int>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
-				call_args[i] = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned long>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned long>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<long>))
-				call_args[i] = std::any_cast<std::shared_ptr<long>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<long double>))
-				call_args[i] = std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<void*>))
-				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<char*>)) // C string
-				call_args[i] = std::any_cast<std::shared_ptr<char*>>(arguments.at(i)).get(); 
-			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
-			/*}}}*/
-			}
-		}
-		// Turn custom ffi_types into real ones
-		// Doesn't modify params because of some cursed
-		// evil ass const cast bull idfk
-		for (int i = 0; i < narms; ++i) {
-			if (params[i] == &ffi_type_cstring)
-				params[i] = &ffi_type_pointer;
-		}
-		// Create CIF
-		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms, func.retType, params) != FFI_OK)
-			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
-		// Call
-		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
-		// Return value
-		if (func.retType == &ffi_type_void)
-			return True;
-		else if (func.retType == &ffi_type_sint) // TODO: The rest... :/
-			return static_cast<double>(*static_cast<int*>(ret));
-		else if (func.retType == &ffi_type_float)
-			return static_cast<double>(*static_cast<float*>(ret));
-		else if (func.retType == &ffi_type_double)
-			return static_cast<double>(*static_cast<double*>(ret));
-		else throw InterpreterException("Unimplemented return type", 0, "Unknown");
 	}
 }

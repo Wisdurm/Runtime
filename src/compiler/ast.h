@@ -107,27 +107,18 @@ namespace ast
 	class Call : public Expression
 	{
 	public:
-		~Call()
-		{
-			// Object
-			delete object;
-			// Args
-			for (int i = 0; i < args.size(); i++)
-				delete args[i];
-		}
-
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		Call(const rt::SourceLocation src, Expression* object, const std::vector<Expression*> args) : object(object), args(args), Expression(src) {};
+		Call(const rt::SourceLocation src, std::shared_ptr<Expression> object, std::vector<std::shared_ptr<Expression>> args) : object(object), args(args), Expression(src) {};
 		/// <summary>
 		/// Object to call
 		/// </summary>
-		Expression* object;
+		std::shared_ptr<Expression> object;
 		/// <summary>
 		/// Arguments to call object with. Array of pointers because Expression is an abstract class
 		/// </summary>
-		std::vector<Expression*> args; // I've spent hours on this
+		std::vector<std::shared_ptr<Expression>> args; // I've spent hours on this
 	private:
 		/// <summary>
 		/// Compare two ast trees
@@ -143,24 +134,18 @@ namespace ast
 	class BinaryOperator : public Expression
 	{
 	public:
-		~BinaryOperator()
-		{
-			delete left;
-			delete right;
-		}
-
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		BinaryOperator(const rt::SourceLocation src, Expression* left, Expression* right) : left(left), right(right), Expression(src) {};
+		BinaryOperator(const rt::SourceLocation src, std::shared_ptr<Expression> left, std::shared_ptr<Expression> right) : left(left), right(right), Expression(src) {};
 		/// <summary>
 		/// Left expression
 		/// </summary>
-		Expression* left;
+		std::shared_ptr<Expression> left;
 		/// <summary>
 		/// Right expression
 		/// </summary>
-		Expression* right;
+		std::shared_ptr<Expression> right;
 	private:
 		/// <summary>
 		/// Compare two ast trees

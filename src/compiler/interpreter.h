@@ -1,6 +1,9 @@
 #pragma once
-
+// Runtime
+#include "object.h"
+#include "shared_libs.h"
 #include "ast.h"
+// ??
 #include <tsl/ordered_map.h>
 // C++
 #include <unordered_map> // Do testing later on to figure out if a normal map would be better
@@ -10,51 +13,23 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
-// C
-#include <ffi.h>
+#include <any>
 
-namespace rt
-{
-	class Object;
-	class SymbolTable;
-	class ArgState;
-	struct LibFunc;
-};
-
-/// <summary>
-/// Object member type
-/// </summary>
-typedef std::variant<std::shared_ptr<rt::Object>, std::variant<double, std::string>> objectOrValue;
 /// <summary>
 /// Built-in Runtime function
 /// </summary>
-typedef std::function<objectOrValue(std::vector<objectOrValue>&, rt::SymbolTable*, rt::ArgState&)> BuiltIn;
+using BuiltIn = std::function<objectOrValue(std::vector<objectOrValue>&, rt::SymbolTable*, rt::ArgState&)>;
 /// <summary>
 /// Type which symbol table points to object, a function object referencing a built in function or a function from a shared library.
 /// </summary>
-typedef std::variant<std::shared_ptr<rt::Object>, BuiltIn, rt::LibFunc> Symbol;
+using Symbol = std::variant<std::shared_ptr<rt::Object>, BuiltIn, rt::LibFunc>;
 
 namespace rt
 {
-	/// <summary>
-	/// Custom type which is identical to pointer type, but interpreter has custom behaviour for TODO
-	/// </summary>
-	inline ffi_type ffi_type_cstring = ffi_type_pointer;
-
-
-	// Retrieves the value held by an object, or value
-#define VALUEHELD(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
-evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, true) : /* Get value of object */ \
-	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
-	)
-	// Variant of VALUEHELD which does not write evaluated values to memory
-#define VALUEHELD_E(x) (std::holds_alternative<std::shared_ptr<Object>>(x) ? /* If object */ \
-evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get value of object */ \
-	std::get<std::variant<double, std::string>>(x) /* If value, just use value */ \
-	)
+	// TODO: Inline is scary but I must confront it someday
 
 	/// <summary>
-	/// Returns the numerical value of std::variant<double, std::string>.valueHeld
+	/// Returns the numerical value of a value
 	/// </summary>
 	/// <returns></returns>
 	inline double getNumericalValue(std::variant<double, std::string> val)
@@ -80,7 +55,28 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 		return std::ranges::equal(lhs, rhs, ichar_equals);
 	}
 
-	// Evaluates a valueHeld as a bool
+	/// <summary>
+	/// Allocates a value on an altHeap, and then returns the pointer
+	/// </summary>
+	template <typename T>
+	[[nodiscard]] inline static T* altAlloc(T value, std::vector<std::any>& altheap)
+	{
+		altheap.push_back(std::make_shared<T>(value));
+		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
+	}
+	
+	/// <summary>
+	/// Gives a pointer to a smart pointer within an alt heap
+	/// </summary>
+	template <typename T>
+	[[nodiscard]] inline static T* altStore(T* ptr, std::vector<std::any>& altheap)
+	{
+		altheap.push_back(std::shared_ptr<T>(ptr));
+		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
+	}
+	/// <summary>
+	/// Evaluates a value as a bool
+	/// </summary>
 	inline bool toBoolean(std::variant<double, std::string> val)
 	{
 		if (std::holds_alternative<std::string>(val))
@@ -95,7 +91,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 				for (char c : str)
 				{
 					if (not isalnum(c) or c == '.') // If string is not "true", "false" or a number, then it can't be evaluated as a boolean
-						return 0;
+						throw;
 				}
 				return std::stod(str) >= 1;
 			}
@@ -107,61 +103,38 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 	}
 
 	/// <summary>
-	///	Container for a function which has been loaded from a shared library
-	/// </summary>
-	struct LibFunc
-	{
-		/// <summary>
-		///	Pointer to the function
-		/// </summary>
-		void* function;
-		/// <summary>
-		///	Whether or not this function has all of its parameters and return types specified
-		/// </summary>
-		bool initialized;
-		/// <summary>
-		/// Return type of the function
-		/// </summary>
-		ffi_type* retType;
-		/// <summary>
-		/// Argument types
-		/// </summary>
-		std::vector<ffi_type*> argTypes;
-	};
-
-	/// <summary>
-	/// Loads a shared library
-	/// </summary>
-	void loadSharedLibrary(const char* fileName);
-	/// <summary>
-	/// Unloads all shared libraries
-	/// </summary>
-	void cleanLibraries();
-	/// <summary>
 	/// Sets up the required variables for live interpreting
 	/// </summary>
 	void liveIntrepretSetup();
 	/// <summary>
 	/// Interprets in live cli session
 	/// </summary>
-	void liveIntrepret(ast::Expression* expr);
+	void liveIntrepret(std::shared_ptr<ast::Expression> expr);
 	/// <summary>
 	/// Interprets ast tree
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
-	void interpret(ast::Expression* expr, int argc, char** argv);
+	void interpret(std::shared_ptr<ast::Expression> expr, int argc, char** argv);
 	/// <summary>
 	/// Evaluates ast tree and adds all of an it's symbols to another symbol table
 	/// </summary>
 	/// <param name="expr"></param>
-	void include(ast::Expression* expr, SymbolTable* symtab, ArgState& argState);
+	void include(std::shared_ptr<ast::Expression> expr, SymbolTable* symtab, ArgState& argState);
 	/// <summary>
 	/// Returns the value of a member, derived from it's contained expression and other values.
 	/// </summary>
 	/// <param name="member">Member to evaluate</param>
 	/// <param name="write">Whether or not to write the evaluated value down. Function calls need to be able to repeatedly evaluate</param>
 	/// <returns>An std::variant<double, std::string> representing the ultimate value of the object</returns>
-	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write);
+	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write = true);
+	/// <summary>
+	/// Returns the value of a member, derived from it's contained expression and other values. 
+	/// Does not double evaluate, making it not suitable for member functions. Otherwise identical to evaluate
+	/// </summary>
+	/// <param name="member">Member to evaluate</param>
+	/// <param name="write">Whether or not to write the evaluated value down. Function calls need to be able to repeatedly evaluate</param>
+	/// <returns>An std::variant<double, std::string> representing the ultimate value of the object</returns>
+	objectOrValue softEvaluate(objectOrValue member, SymbolTable* symtab, ArgState& args, bool write = true); // TODO: Better name
 	/// <summary>
 	/// Calls object
 	/// </summary>
@@ -172,7 +145,7 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
 	/// <returns>String list containing everything printed to cout</returns>
-	std::string* interpretAndReturn(ast::Expression* expr);
+	std::string* interpretAndReturn(std::shared_ptr<ast::Expression> expr);
 	/// <summary>
 	/// Adds a string to the captured cout vector
 	/// </summary>
@@ -183,399 +156,4 @@ evaluate(std::get<std::shared_ptr<Object>>(x), symtab, argState, false) : /* Get
 	/// </summary>
 	/// <returns></returns>
 	bool isCapture();
-
-	/// <summary>
-	/// Main class for representing Runtime objects
-	/// </summary>
-	class Object
-	{
-	public:
-		/// <summary>
-		/// Default constructor
-		/// </summary>
-		Object()
-		{
-			name = "";
-			expr = nullptr;
-		}
-		/// <summary>
-		/// Creates object with expression
-		/// </summary>
-		/// <param name="expr"></param>
-		Object(ast::Expression* expr)
-		{
-			name = "";
-			this->expr = expr;
-		}
-		/// <summary>
-		/// Creates empty object with specified name and expression
-		/// </summary>
-		Object(std::string name, ast::Expression* expr)
-		{
-			this->name = name;
-			this->expr = expr;
-		}
-		/// <summary>
-		/// Creates empty object with specified name
-		/// </summary>
-		Object(std::string name)
-		{
-			this->name = name;
-			expr = nullptr;
-		}
-
-		/// <summary>
-		/// Creates an empty unnamed object with a single value as a member
-		/// </summary>
-		/// <param name="value"></param>
-		Object(std::variant<double, std::string>& value)
-		{
-			name = "";
-			expr = nullptr;
-			addMember(value);
-		}
-
-		/// <summary>
-		/// Return name member
-		/// </summary>
-		/// <returns></returns>
-		std::string* getName() { return &name; };
-		/// <summary>
-		/// Return expr member
-		/// </summary>
-		/// <returns></returns>
-		ast::Expression* getExpression() const { return expr; };
-		/// <summary>
-		/// Returns member by index
-		/// </summary>
-		/// <param name="key">Index</param>
-		/// <returns></returns>
-		objectOrValue* getMember(int key) 
-		{
-			// If exists, return
-			tsl::ordered_map<int, objectOrValue>::iterator it = members.find(key);
-			if (it != members.end()) // Exists
-				return &it.value();
-			// if not exist, create
-			addMember(key);
-			return getMember(key);
-		};
-		/// <summary>
-		/// Returns member by name
-		/// </summary>
-		/// <param name="key">Name</param>
-		/// <returns></returns>
-		objectOrValue* getMember(std::string name)
-		{ 
-			// If exists, return
-			std::unordered_map<std::string, int>::iterator it = memberStringMap.find(name);
-			if (it != memberStringMap.end()) // Exists
-				return &members[it->second];
-			// if not exist, create
-			addMember(name);
-			return getMember(name);
-		}; // TODO: idfk man
-
-		/// <summary>
-		/// Returns member by key
-		/// </summary>
-		/// <returns></returns>
-		objectOrValue* getMember(std::variant<double, std::string> key)
-		{
-			if (std::holds_alternative<double>(key)) // Number
-			{
-				int memberKey = static_cast<int>(std::get<double>(key));
-				return getMember(memberKey);
-			}
-			else
-			{
-				std::string memberKey = std::get<std::string>(key); // String
-				return getMember(memberKey);
-			}
-		}
-		/// <summary>
-		/// Returns a vector containing all of the members
-		/// </summary>
-		/// <returns></returns>
-		std::vector<objectOrValue> getMembers()
-		{
-			std::vector<objectOrValue> r;
-			for (tsl::ordered_map<int, objectOrValue>::iterator it = members.begin(); it != members.end(); ++it)
-			{
-				r.push_back(it->second);
-			};
-			return r; 
-		};
-		/// <summary>
-		/// Add member with just int key
-		/// </summary>
-		/// <param name="key"></param>
-		void addMember(int key)
-		{
-			members.insert({key, std::make_shared<Object>()});
-		}
-		/// <summary>
-		/// Add member with just string key
-		/// </summary>
-		/// <param name="key"></param>
-		void addMember(std::string key)
-		{
-			if (not members.contains(counter))
-			{
-				members.insert({counter, std::make_shared<Object>() });
-				memberStringMap.insert({ key, counter });
-				counter++;
-			}
-			else
-			{
-				// :(
-				counter++;
-				this->addMember(key);
-			}
-		}
-		/// <summary>
-		/// Adds member with int key
-		/// </summary>
-		/// <param name="member"></param>
-		/// <param name="key"></param>
-		void addMember(objectOrValue member, int key) { 
-			if (key == counter) 
-				counter++;
-			members.insert({ key, member });
-		};
-
-		/// <summary>
-		/// Add member with no key
-		/// </summary>
-		/// <param name="member"></param>
-		void addMember(objectOrValue member)
-		{
-			if (not members.contains(counter))
-			{
-				members.insert({counter, member});
-				counter++;
-			}
-			else
-			{
-				// :(
-				counter++;
-				this->addMember(member);
-			}
-		}
-		/// <summary>
-		/// Adds member with string key
-		/// </summary>
-		/// <param name="member"></param>
-		/// <param name="key"></param>
-		void addMember(objectOrValue member, std::string key) {
-			if (not members.contains(counter))
-			{
-				members.insert({counter, member});
-				memberStringMap.insert({key, counter});
-				counter++;
-			}
-			else
-			{
-				// :(
-				counter++;
-				this->addMember(member, key);
-			}
-		};
-		/// <summary>
-		/// Sets the value of "key" to "value"
-		/// </summary>
-		/// <param name="key"></param>
-		/// <param name="value"></param>
-		void setMember(std::variant<double, std::string> key, objectOrValue value)
-		{
-			// Delete old member and add new one because no assignment operator idk don't feel like figuring that out :/
-			// TODO: Probably not particularly hard to fix, at least anymore
-			if (std::holds_alternative<double>(key)) // Number
-			{
-				int memberKey = static_cast<int>(std::get<double>(key));
-				if (members.contains(memberKey))
-					members.erase(memberKey);
-				addMember(value, memberKey);
-			}
-			else
-			{
-				std::string memberKey = std::get<std::string>(key); // String
-				if (memberStringMap.contains(memberKey))
-				{
-					members.erase(memberStringMap.at(memberKey));
-					memberStringMap.erase(memberKey);
-				}
-				addMember(value, memberKey);
-			}
-		}
-		/// <summary>
-		/// Deletes the expression of this object
-		/// </summary>
-		void deleteExpression()
-		{
-			//delete expr; // NOT SURE IF THIS SHOULD BE DELETED?
-			expr = nullptr;
-		}
-		/// <summary>
-		/// Creates an object from an std::variant<double, std::string>
-		/// </summary>
-		/// <param name=""></param>
-		/// <returns></returns>
-		static std::shared_ptr<Object> objectFromValue(std::variant<double, std::string> value)
-		{
-			// TODO: Might not be needed, depends...
-			// Remember the constructor associated with this!
-			return std::make_shared<Object>(value);
-		}
-	private:
-		/// <summary>
-		/// Name of the object
-		/// </summary>
-		std::string name;
-		/// <summary>
-		/// (Optional) expression value. Can be evaluated
-		/// </summary>
-		ast::Expression* expr;
-		/// <summary>
-		/// Members of the object. Can either be objects, or values
-		/// </summary>
-		tsl::ordered_map<int, objectOrValue> members;
-		/// <summary>
-		/// Maps strings to their placement on the members list. Definitely not the best way to implement this, but I can always change it later
-		/// </summary>
-		std::unordered_map<std::string, int> memberStringMap;
-		/// <summary>
-		/// Counts up the indexing of new members
-		/// </summary>
-		int counter = 0;
-	};
-
-	class SymbolTable
-	{
-	private:
-		/// <summary>
-		/// Stores the values of variables in the local scope. Also points to built in functions
-		/// </summary>
-		std::unordered_map<std::string, Symbol> locals;
-		/// <summary>
-		/// Stores higher level variables
-		/// </summary>
-		SymbolTable* parent;
-	public:
-		/// <summary>
-		/// Default constructor
-		/// </summary>
-		SymbolTable()
-		{
-			parent = nullptr;
-		}
-		/// <summary>
-		/// Initialized symbol constructor
-		/// </summary>
-		SymbolTable(const std::unordered_map<std::string, Symbol> locals)
-		{
-			parent = nullptr;
-			this->locals = std::unordered_map<std::string, Symbol>(locals); // TODO what the fuck maaan
-		}
-		/// <summary>
-		/// Parent constructor
-		/// </summary>
-		/// <param name="symtab"></param>
-		SymbolTable(SymbolTable* parent)
-		{
-			this->parent = parent;
-		}
-
-		/// <summary>
-		/// Looks up a key from the symbol table and its parents
-		/// </summary>
-		/// <param name="key">Key to look for</param>
-		/// <param name="args">Arguments in current scope. If there are values here, they will be used instead of initializing a new one.</param>
-		/// <returns>The value of a key, if not found will create new empty value</returns>
-		Symbol& lookUp(std::string key, ArgState& args);
-		/// <summary>
-		/// Looks up a key from the symbol table and its parents, will not create a new one in case it doesn't find anything.
-		/// </summary>
-		/// <param name="key">Key to look for</param>
-		/// <returns>The value of a key, throws an exception if not found</returns>
-		Symbol& lookUpHard(std::string key); // cant be const :(
-		/// <summary>
-		/// Changes the value of a symbol, or adds a new one to the local scope if not found
-		/// </summary>
-		/// <param name="key">Name of the symbol</param>
-		/// <param name="object">Value of the symbol</param>
-		void updateSymbol(const std::string& key, const std::shared_ptr<rt::Object> object);
-		/// <summary>
-		/// Changes the value of a symbol, or adds a new one to the local scope if not found
-		/// </summary>
-		/// <param name="key">Name of the symbol</param>
-		/// <param name="object">Value of the symbol</param>
-		void updateSymbol(const std::string& key, LibFunc object);
-		/// <summary>
-		/// Clears the symbol table
-		/// </summary>
-		void clear();
-		/// <summary>
-		/// Whether or not the symbol table contains the specified key
-		/// </summary>
-		/// <param name="key">Key to look for</param>
-		/// <returns></returns>
-		bool contains(std::string& key) const;
-		/// <summary>
-		/// Returns all keys from the symbol table and it's parents
-		/// </summary>
-		/// <param name="key">Key to look for</param>
-		/// <returns></returns>
-		std::vector<std::string> getKeys();
-	};
-
-	/// <summary>
-	/// Root symbol table of the program
-	/// </summary>
-	static SymbolTable globalSymtab;
-
-	/// <summary>
-	/// Current state of arguments in the interpreter.
-	/// </summary>
-	class ArgState
-	{
-	private:
-		/// <summary>
-		/// Arguments currently
-		/// </summary>
-		std::vector<objectOrValue> args;
-		/// <summary>
-		/// Position of earliest argument currently yet to be initialized
-		/// </summary>
-		int pos;
-		/// <summary>
-		/// Arguments from higher level
-		/// </summary>
-		ArgState* parent;
-	public:
-		/// <summary>
-		/// Parent constructor
-		/// </summary>
-		ArgState(std::vector<objectOrValue>& args, ArgState* parent)
-		{
-			this->args = args;
-			pos = 0;
-			this->parent = parent;
-		};
-		/// <summary>
-		/// Parentless constructor
-		/// </summary>
-		ArgState(std::vector<objectOrValue>& args)
-		{
-			this->args = args;
-			pos = 0;
-			parent = nullptr;
-		};
-
-		/// <summary>
-		/// Returns a pointer to an argument, or nullptr if none exist.
-		/// </summary>
-		/// <returns></returns>
-		objectOrValue* getArg();
-	};
 }

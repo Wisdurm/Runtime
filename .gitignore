@@ -6,7 +6,6 @@ build.ninja
 # CMake
 CMakeCache.txt
 CMakeFiles/
-*.cmake
 # Should be setup manually by user
 CMakeUserPresets.json
 
@@ -31,11 +30,6 @@ Testing/
 
 # Debugger Files
 *.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
 
 # Fortran module files
 *.mod

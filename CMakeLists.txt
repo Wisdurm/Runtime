@@ -29,8 +29,8 @@ endif()
 
 # Global vars
 configure_file(
-	${CMAKE_SOURCE_DIR}/src/Runtime.h.in
-	${PROJECT_BINARY_DIR}/Runtime.h @ONLY
+	${CMAKE_SOURCE_DIR}/src/Runtime.hpp.in
+	${PROJECT_BINARY_DIR}/Runtime.hpp @ONLY
 )
 	
 # Libraries 
@@ -42,8 +42,26 @@ add_subdirectory(src)
 target_include_directories(Runtime PUBLIC ${PROJECT_BINARY_DIR}) # Runtime.h
 target_link_libraries( Runtime PUBLIC tsl::ordered_map readline ffi)
 
-# Tests
+# Tests and coverage
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 if (RUNTIME_BUILD_TESTS)
+	# Coverage
+	if(CMAKE_COMPILER_IS_GNUCXX)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -g -O0")
+		set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS} --coverage -g -O0")
+		set(GCOVR_ADDITIONAL_ARGS
+			"--exclude-unreachable-branches"
+			"--exclude-throw-branches")
+		include(CodeCoverage)
+		setup_target_for_coverage_gcovr_html(
+			NAME ${PROJECT_NAME}_coverage
+			EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/tests_runtime
+			EXCLUDE "${PROJECT_BINARY_DIR}/vcpkg_installed" # Don't include vcpkg libraries
+		)
+		# You still need to manually run `ninja Runtime_coverage` for whatever reason
+	endif()
+
+	# Tests
 	add_subdirectory(tests)
 	enable_testing()
 	add_test(

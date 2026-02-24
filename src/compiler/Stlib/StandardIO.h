@@ -27,7 +27,7 @@ namespace rt
         if (args.size() > 1)
 	    {
             std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
-            auto arg1 = VALUEHELD(args.at(1));
+            auto arg1 = evaluate(args.at(1), symtab, argState);
             std::string path;
             if (std::holds_alternative<std::string>(arg1))
                 path = std::get<std::string>(arg1);
@@ -57,7 +57,7 @@ namespace rt
             std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
             // Get path
             std::string path;
-            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            auto p = evaluate(*file->getMember(std::string("path")), symtab, argState); // Constructor jank; the ghost of ast::value
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
@@ -94,7 +94,7 @@ namespace rt
             std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
             // Get path
             std::string path;
-            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            auto p = evaluate(*file->getMember(std::string("path")), symtab, argState); // Constructor jank; the ghost of ast::value
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
@@ -123,7 +123,7 @@ namespace rt
             std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
             // Get path
             std::string path;
-            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            auto p = evaluate(*file->getMember(std::string("path")), symtab, argState); // Constructor jank; the ghost of ast::value
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
@@ -155,7 +155,7 @@ namespace rt
             std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
             // Get path
             std::string path;
-            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            auto p = evaluate(*file->getMember(std::string("path")), symtab, argState); // Constructor jank; the ghost of ast::value
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
@@ -165,7 +165,7 @@ namespace rt
             if (not f->is_open())
 				return giveException("File failed to open");
             // Get text to add
-            auto write = VALUEHELD(args.at(1));
+            auto write = evaluate(args.at(1), symtab, argState);
 			if (not std::holds_alternative<std::string>(write))
 			{
 				return giveException("String is of wrong type");
@@ -195,7 +195,7 @@ namespace rt
             std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
             // Get path
             std::string path;
-            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            auto p = evaluate(*file->getMember(std::string("path")), symtab, argState); // Constructor jank; the ghost of ast::value
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
@@ -205,14 +205,14 @@ namespace rt
             if (not f->is_open())
 				return giveException("File failed to open");
 			// Get file position
-			auto v = VALUEHELD(*file->getMember(std::string("pointer")));
+			auto v = evaluate(*file->getMember(std::string("pointer")), symtab, argState);
 			if (not std::holds_alternative<double>(v)) {
 				return giveException("Pointer is of wrong type");
 			}
 			const int pos = std::get<double>(v);
 			f->seekp(pos);
             // Get text to add
-            auto write = VALUEHELD(args.at(1));
+            auto write = evaluate(args.at(1), symtab, argState);
 			if (not std::holds_alternative<std::string>(write))
 			{
 				return giveException("String is of wrong type");
@@ -239,7 +239,7 @@ namespace rt
             std::shared_ptr<Object> file = std::get<std::shared_ptr<Object>>(args.at(0));
             // Get path
             std::string path;
-            auto p = VALUEHELD(*file->getMember(std::string("path"))); // Constructor jank; the ghost of ast::value
+            auto p = evaluate(*file->getMember(std::string("path")), symtab, argState); // Constructor jank; the ghost of ast::value
             if (std::holds_alternative<std::string>(p))
                 path = std::get<std::string>(p);
             else
@@ -249,14 +249,14 @@ namespace rt
             if (not f->is_open())
                 return giveException("File failed to open");
             // Get file position
-			auto v = VALUEHELD(*file->getMember(std::string("pointer")));
+			auto v = evaluate(*file->getMember(std::string("pointer")), symtab, argState);
 			if (not std::holds_alternative<double>(v)) {
 				return giveException("Pointer is of wrong type");
 			}
 			const int pos = std::get<double>(v);
 			f->seekg(pos);
 			// Get data amount
-			auto a = VALUEHELD(args.at(1));
+			auto a = evaluate(args.at(1), symtab, argState);
 			if (not std::holds_alternative<double>(a)) {
 				return giveException("Amount is of wrong type");
 			}

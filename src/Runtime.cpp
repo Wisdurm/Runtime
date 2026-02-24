@@ -1,6 +1,7 @@
 ﻿// Runtime
-#include "Runtime.h"
+#include "Runtime.hpp"
 #include "compiler/tokenizer.h"
+#include "compiler/shared_libs.h"
 #include "compiler/parser.h"
 #include "compiler/interpreter.h"
 #include "compiler/exceptions.h"
@@ -94,7 +95,7 @@ int main(int argc, char* argv[])
 
 		try
 		{
-			rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true).get(), argc, argv);
+			rt::interpret(rt::parse((rt::tokenize(fileText.c_str(), argv[1])), true), argc, argv);
 		}
 		catch (ParserException e)
 		{
@@ -155,7 +156,7 @@ int main(int argc, char* argv[])
 			{
 				try
 				{
-					rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false).get());
+					rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false));
 				}
 				catch (ParserException e)
 				{

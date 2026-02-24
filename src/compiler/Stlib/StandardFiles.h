@@ -16,7 +16,7 @@ namespace rt
 	/// Creates a Runtime exception with the given error message.
 	/// </summary>
 	/// <returns>Exception object</returns>
-	std::shared_ptr<Object> giveException(const std::string& msg)
+	inline std::shared_ptr<Object> giveException(const std::string& msg)
 	{
 		auto exception = std::make_shared<Object>("Exception");
 		exception->addMember(msg, "message");
