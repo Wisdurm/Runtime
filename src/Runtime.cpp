@@ -1,5 +1,6 @@
 ﻿// Runtime
 #include "Runtime.hpp"
+#include "compiler/object.h"
 #include "compiler/tokenizer.h"
 #include "compiler/shared_libs.h"
 #include "compiler/parser.h"
@@ -9,10 +10,14 @@
 #include <iostream> 
 #include <fstream>
 // C
+#include <memory>
+#include <ostream>
 #include <stdlib.h>
 // Gnu
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <string>
+#include <variant>
 
 #ifdef _WIN32
 
@@ -26,6 +31,7 @@
 // Unix-like coloring
 #define YELLOW_TEXT std::cout << "\033[33m";
 #define WHITE_TEXT std::cout << "\033[37m";
+#define CYAN_TEXT std::cout << "\033[36m";
 
 #endif // _WIN32
 
@@ -115,7 +121,17 @@ int main(int argc, char* argv[])
 			{
 				try
 				{
-					rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false));
+					objectOrValue v = rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false));
+					CYAN_TEXT;
+					if (auto obj = std::get_if<std::shared_ptr<rt::Object>>(&v)) {
+						std::cout << "Object \"" << *(*obj)->getName() << "\"" << std::endl;
+					} else {
+						std::variant<double, std::string> value = std::get<std::variant<double, std::string>>(v);
+						if (auto str = std::get_if<std::string>(&value))
+							std::cout << str << std::endl;
+						else
+							std::cout << std::get<double>(value) << std::endl;
+					}
 				}
 				catch (ParserException e)
 				{

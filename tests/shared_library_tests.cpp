@@ -15,7 +15,7 @@ TEST_CASE("Exceptions", "[shared_libraries]")
 	// Excepted output: Exception
 
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"test(5)"));
+					 "test(5)"));
 	REQUIRE_THROWS_WITH(rt::interpretAndReturn(r1), "Shared function is not yet bound");
 
 	// Object(Main,
@@ -38,8 +38,8 @@ TEST_CASE("Basic function calling", "[shared_libraries]")
 
 	const std::string test1 = "10.000000";
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Bind(\"test\",\"int\",\"int\")"
-				"Print(test(5))"));
+					 "Bind(\"test\",\"int\",\"int\")"
+					 "Print(test(5))"));
 	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 
 	// Object(Main,
@@ -51,25 +51,45 @@ TEST_CASE("Basic function calling", "[shared_libraries]")
 
 	const std::string test2 = "10.000000";
 	auto r2 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Bind(\"testVoid\",\"void\")"
-				"Print(testVoid())"));
+					 "Bind(\"testVoid\",\"void\")"
+					 "Print(testVoid())"));
 	REQUIRE_NOTHROW(rt::interpretAndReturn(r2));
 }
 
-TEST_CASE("Multiple string arguments", "[shared_libraries]")
-{
+TEST_CASE("String arguments", "[shared_libraries]")
+{	
 	// Object(Main,
 	//	Include("../tests/lib.so")
-	//	Bind("compareStr", "void", "cstring", "cstring")
+	//	Bind("capString", "void", "cstring")
+	//	Object(str "hello")
+	//	capString(str)
+	//	Print(str)
+	// )
+	// Expected output: Hello
+	
+	const std::string test1 = "Hello";
+	auto r1 = rt::parse(rt::tokenize("Include('../tests/lib.so')"
+					 "Bind('capString', 'void', 'cstring')"
+					 "Object(str 'hello')"
+					 "capString(str)"
+					 "Print(str)"));
+	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
+	
+	// Object(Main,
+	//	Include("../tests/lib.so")
+	//	Bind("compareStr", "int", "cstring", "cstring")
 	//	Print(compareStr("Hello", "Hello"))
+	//	Print(compareStr("Hello", "Moi"))
 	// )
 	// Excepted output: "1" (True)
 
-	const std::string test1 = "1.000000";
-	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Bind(\"compareStr\",\"void\",\"cstring\", \"cstring\")"
-				"Print(compareStr(\"Hello\", \"Hello\"))"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
+	const std::string test2[]{"1.000000", "0.000000"};
+	auto r2 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
+					 "Bind(\"compareStr\",\"int\",\"cstring\", \"cstring\")"
+					 "Print(compareStr(\"Hello\", \"Hello\"))"));
+	auto v2 = rt::interpretAndReturn(r2);
+	REQUIRE(v2[0] == test2[0]);
+	REQUIRE(v2[1] == test2[1]);
 }
 
 TEST_CASE("Struct argument", "[shared_libraries]")
@@ -85,10 +105,10 @@ TEST_CASE("Struct argument", "[shared_libraries]")
 
 	const std::string test1 = "0.000000";
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Object(structure, \"int\", \"float\")"
-				"Bind(\"compareStruct\",\"int\",structure)"
-				"Object(sr, 2.9, 2.1)"
-				"Print(compareStruct(sr))"));
+					 "Object(structure, \"int\", \"float\")"
+					 "Bind(\"compareStruct\",\"int\",structure)"
+					 "Object(sr, 2.9, 2.1)"
+					 "Print(compareStruct(sr))"));
 	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
 }
 
@@ -106,11 +126,11 @@ TEST_CASE("Pointer argument", "[shared_libraries]")
 
 	const std::string test1[]{"7.000000", "21.000000"};
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Bind(\"triplePtr\", \"void\", \"int*\")"
-				"Object(i, 7)"
-				"Print(i)"
-				"triplePtr(i)"
-				"Print(i)"));
+					 "Bind(\"triplePtr\", \"void\", \"int*\")"
+					 "Object(i, 7)"
+					 "Print(i)"
+					 "triplePtr(i)"
+					 "Print(i)"));
 	auto v1 = rt::interpretAndReturn(r1); 
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
@@ -130,11 +150,11 @@ TEST_CASE("Struct return value", "[shared_libraries]")
 
 	const std::string test1[]{"2.000000", "5.000000"};
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Object(structure, \"int\", \"float\")"
-				"Bind(\"retStruct\", structure, \"int\", \"float\")"
-				"Copy(obj, retStruct(2,5))"
-				"Print(obj-0-0)"
-				"Print(obj-0-1)"));
+					 "Object(structure, \"int\", \"float\")"
+					 "Bind(\"retStruct\", structure, \"int\", \"float\")"
+					 "Copy(obj, retStruct(2,5))"
+					 "Print(obj-0-0)"
+					 "Print(obj-0-1)"));
 	auto v1 = rt::interpretAndReturn(r1); 
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
@@ -158,13 +178,13 @@ TEST_CASE("Nested struct", "[shared_libraries]")
 
 	const std::string test1[]{"5.000000", "6.000000", "7.000000"};
 	auto r1 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Object(structure, \"int\", \"float\")"
-				"Object(nested, \"int\", structure)"
-				"Bind(\"complex\", nested, \"int\")"
-				"Copy(obj, complex(5))"
-				"Print(obj-0-0)"
-				"Print(obj-0-1-0)"
-				"Print(obj-0-1-1)"));
+					 "Object(structure, \"int\", \"float\")"
+					 "Object(nested, \"int\", structure)"
+					 "Bind(\"complex\", nested, \"int\")"
+					 "Copy(obj, complex(5))"
+					 "Print(obj-0-0)"
+					 "Print(obj-0-1-0)"
+					 "Print(obj-0-1-1)"));
 	auto v1 = rt::interpretAndReturn(r1); 
 	REQUIRE(v1[0] == test1[0]);
 	REQUIRE(v1[1] == test1[1]);
@@ -186,11 +206,11 @@ TEST_CASE("Nested struct", "[shared_libraries]")
 
 	const std::string test2 = "67.000000";
 	auto r2 = rt::parse(rt::tokenize("Include(\"../tests/lib.so\")"
-				"Object(structure, \"int\", \"float\")"
-				"Object(nested, \"int\", structure)"
-				"Bind(\"cmxParam\", \"int\", nested)"
-				"Object(buried, 26, 5)"
-				"Object(obj, 36, buried)"
-				"Print(cmxParam(obj))"));
+					 "Object(structure, \"int\", \"float\")"
+					 "Object(nested, \"int\", structure)"
+					 "Bind(\"cmxParam\", \"int\", nested)"
+					 "Object(buried, 26, 5)"
+					 "Object(obj, 36, buried)"
+					 "Print(cmxParam(obj))"));
 	REQUIRE(rt::interpretAndReturn(r2)[0] == test2);
 }

@@ -61,9 +61,9 @@ namespace rt
 		clearSymtab(globalSymtab);
 	}
 
-	void liveIntrepret(std::shared_ptr<ast::Expression> expr)
+	[[nodiscard]] objectOrValue liveIntrepret(std::shared_ptr<ast::Expression> expr)
 	{
-		interpret_internal(expr, &globalSymtab, true, mainArgState);
+		return interpret_internal(expr, &globalSymtab, true, mainArgState);
 	}
 
 	void captureString(std::string str)

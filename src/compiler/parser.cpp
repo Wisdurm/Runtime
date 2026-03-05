@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "tokenizer.h"
 #include "exceptions.h"
+#include <cctype>
 
 namespace rt
 {
@@ -51,13 +52,14 @@ namespace rt
 		std::shared_ptr<ast::Expression> expr;
 		switch (peek(tokens).getType())
 		{
-		case TokenType::IDENTIFIER:
+		case TokenType::IDENTIFIER:			
 		{
 			expr = parseIdentifier(tokens);
 			parsePure = false;
 			break;
 		}
-		case TokenType::LITERAL:
+		case TokenType::NUMBER: [[fallthrough]];
+		case TokenType::STRING:
 		{
 			expr = parseLiteral(tokens);
 			break;
@@ -95,7 +97,7 @@ namespace rt
 	/// <returns>Ast tree</returns>
 	static std::shared_ptr<ast::Expression> parseIdentifier(const std::vector<Token>& tokens)
 	{
-		Token token = consume(tokens);
+		const Token token = consume(tokens);
 		return make_shared<ast::Identifier>(token.getSrc(), *token.getText());
 	}
 	
@@ -107,16 +109,14 @@ namespace rt
 	{
 		consume(tokens, "-");
 		std::shared_ptr<ast::Literal> expr = std::dynamic_pointer_cast<ast::Literal>(parseExpression(tokens, true));
-		if (expr == nullptr)
+		if (expr == nullptr) [[unlikely]]
 			throw ParserException("Expected literal after '-' token", expr->src.getLine(), expr->src.getFile()->c_str());
-		
 		// Invert value
 		if (std::holds_alternative<double>(expr->litValue)) // Kind of weird to have this in the parser but it works :shrug:
 			expr->litValue = std::get<double>(expr->litValue) * -1;
-		else
+		else [[unlikely]]
 			throw ParserException("You're mentally ill", expr->src.getLine(), expr->src.getFile()->c_str());
 			// If you genuinely wrote -"1" in your code you don't deserve to have access to a computer
-
 		return expr;
 	}
 
@@ -126,18 +126,13 @@ namespace rt
 	/// <returns>Ast tree</returns>
 	static std::shared_ptr<ast::Expression> parseLiteral(const std::vector<Token>& tokens)
 	{
-		Token token = consume(tokens);
-		if ((*token.getText())[0] == '\"')
-		{	// String literal
-			std::string stringValue = *token.getText();
-			// Remove quatation marks
-			stringValue.erase(0,1);
-			stringValue.pop_back();
-			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(stringValue)); // Using value constructor for clarity
-		}
-		else 
+		const Token token = consume(tokens);
+		if (token.getType() == TokenType::NUMBER)
 		{	// Number literal
-			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(std::stod(*token.getText()) ));
+			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(std::stod(*token.getText())));
+		} else {
+			// String literal
+			return std::make_shared<ast::Literal>(token.getSrc(), *token.getText());
 		}
 	}
 
@@ -165,7 +160,7 @@ namespace rt
 	/// <returns>Ast tree</returns>
 	static std::shared_ptr<ast::Expression> parseFunction(const std::vector<Token>& tokens, std::shared_ptr<ast::Expression> function)
 	{
-		auto beg = consume(tokens, "(");
+		const auto beg = consume(tokens, "(");
 		
 		std::vector<std::shared_ptr<ast::Expression>> args;
 		while (*peek(tokens).getText() != ")")

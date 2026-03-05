@@ -6,7 +6,8 @@ namespace rt
 {
 	enum class TokenType {
 		IDENTIFIER,
-		LITERAL,
+		STRING,
+		NUMBER,
 		PUNCTUATION, // - operator as well as parentheses (also commas)
 		END // Used by parser
 	};
@@ -104,7 +105,7 @@ namespace rt
 		/// </summary>
 		const std::string text;
 		/// <summary>
-		/// The type of the token (C style string)
+		/// The type of the token
 		/// </summary>
 		const TokenType type;
 		/// <summary>
