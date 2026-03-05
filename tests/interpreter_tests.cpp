@@ -19,7 +19,7 @@ TEST_CASE("Object creation, basic evaluation and console output", "[interpreter]
 	const std::string test1 = "Hello world";
 	auto r1 = rt::parse(rt::tokenize("Object(str, Print(\"NULL\"), 'Hello world')\n"
 					 "Print(str)"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1); // Print "Hello world", but not "NULL"
+	REQUIRE(rt::interpretAndReturn(r1).at(0) == test1); // Print "Hello world", but not "NULL"
 }
 
 TEST_CASE("Assignment", "[interpreter]")
@@ -33,7 +33,7 @@ TEST_CASE("Assignment", "[interpreter]")
 
 	const std::string test1 = "2.000000";
 	auto r1 = rt::parse(rt::tokenize("Object(num, 1)\nAssign(num, 0, 2)\nPrint(num)"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
+	REQUIRE(rt::interpretAndReturn(r1).at(0) == test1);
 }
 
 TEST_CASE("Member accession", "[interpreter]")
@@ -47,7 +47,7 @@ TEST_CASE("Member accession", "[interpreter]")
 
 	const std::string test1 = "Hi";
 	auto r1 = rt::parse(rt::tokenize("Object(args, \"Hi\", \"Hello\")\nargs-0\nPrint(args-0)"));
-	REQUIRE(rt::interpretAndReturn(r1)[0] == test1);
+	REQUIRE(rt::interpretAndReturn(r1).at(0) == test1);
 
 	// Object(Main,
 	//	Assign(args-0, 0, "Hi"),
@@ -57,7 +57,7 @@ TEST_CASE("Member accession", "[interpreter]")
 
 	const std::string test2 = "Hi";
 	auto r2 = rt::parse(rt::tokenize("Assign(args-0, 0, \"Hi\")\nPrint(args-0-0)"));
-	REQUIRE(rt::interpretAndReturn(r2)[0] == test2);
+	REQUIRE(rt::interpretAndReturn(r2).at(0) == test2);
 
 	// Object(Main,
 	//	Assign(named, "Hello", "Hi"),
@@ -67,7 +67,7 @@ TEST_CASE("Member accession", "[interpreter]")
 
 	const std::string test3 = "Hi";
 	auto r3 = rt::parse(rt::tokenize("Assign(named, \"Hello\", \"Hi\")\nPrint(named-\"Hello\")"));
-	REQUIRE(rt::interpretAndReturn(r3)[0] == test3);
+	REQUIRE(rt::interpretAndReturn(r3).at(0) == test3);
 
 	// Object(Main,
 	//	Object(zero, 0),
@@ -78,7 +78,7 @@ TEST_CASE("Member accession", "[interpreter]")
 
 	const std::string test4 = "Hi";
 	auto r4 = rt::parse(rt::tokenize("Object(zero,0)\nObject(values,\"Hi\",\"Hello\")\nPrint(values-zero())"));
-	REQUIRE(rt::interpretAndReturn(r4)[0] == test4);
+	REQUIRE(rt::interpretAndReturn(r4).at(0) == test4);
 }
 
 TEST_CASE("Reference passing and explicit evaluation", "[interpreter]")
@@ -96,8 +96,8 @@ TEST_CASE("Reference passing and explicit evaluation", "[interpreter]")
 	std::string test1[] { "1.000000", "2.000000" };
 	auto r1 = rt::parse(rt::tokenize("Object(one, 1)\nObject(value, one-0)\nObject(reference, one)\nAssign(one, 0, 2)\nPrint(value)\nPrint(reference)"));
 	auto v = rt::interpretAndReturn(r1);
-	REQUIRE(v[0] == test1[0]);
-	REQUIRE(v[1] == test1[1]);
+	REQUIRE(v.at(0) == test1[0]);
+	REQUIRE(v.at(1) == test1[1]);
 }
 
 TEST_CASE("Params", "[interpreter]")
@@ -114,8 +114,8 @@ TEST_CASE("Params", "[interpreter]")
 	std::string test1 []{ "0.000000", "1.000000" };
 	auto r1 = rt::parse(rt::tokenize("Object(PrintArg,Print(arg))\nPrintArg()\nPrintArg(1)"));
 	auto v = rt::interpretAndReturn(r1);
-	REQUIRE(v[0] == test1[0]);
-	REQUIRE(v[1] == test1[1]);
+	REQUIRE(v.at(0) == test1[0]);
+	REQUIRE(v.at(1) == test1[1]);
 
 	// Object(Main,
 	//	Object(PrintArg,
@@ -129,11 +129,11 @@ TEST_CASE("Params", "[interpreter]")
   
 	std::string test2[]{ "1.000000", "0.000000", "1.000000", "2.000000"};
 	auto r2 = rt::parse(rt::tokenize("Object(PrintArg,Print(argone),Print(argtwo))\nPrintArg(1)\nPrintArg(1,2)"));
-  auto v2 = rt::interpretAndReturn(r2);
-	REQUIRE(v2[0] == test2[0]);
-	REQUIRE(v2[1] == test2[1]);
-	REQUIRE(v2[2] == test2[2]);
-	REQUIRE(v2[3] == test2[3]);
+	auto v2 = rt::interpretAndReturn(r2);
+	REQUIRE(v2.at(0) == test2[0]);
+	REQUIRE(v2.at(1) == test2[1]);
+	REQUIRE(v2.at(2) == test2[2]);
+	REQUIRE(v2.at(3) == test2[3]);
 
 	// Hierachical
 
@@ -153,8 +153,8 @@ TEST_CASE("Params", "[interpreter]")
 	auto r3 = rt::parse(rt::tokenize("Object(Display,Print(arg))\nObject(PrintArg,Display(arg))\nPrintArg()\nPrintArg(1)"));
 	// TODO: yeah
 	auto v3 = rt::interpretAndReturn(r3);
-	REQUIRE(v3[0] == test3[0]);
-	REQUIRE(v3[1] == test3[1]);
+	REQUIRE(v3.at(0) == test3[0]);
+	REQUIRE(v3.at(1) == test3[1]);
 }
 
 TEST_CASE("Member functions", "[interpreter]")
@@ -172,8 +172,8 @@ TEST_CASE("Member functions", "[interpreter]")
 				"obj-1()"
 				"obj-0()"));
 	auto v = rt::interpretAndReturn(r1);
-	REQUIRE(v[0] == test1[0]);
-	REQUIRE(v[1] == test1[1]);
+	REQUIRE(v.at(0) == test1[0]);
+	REQUIRE(v.at(1) == test1[1]);
 }
 
 TEST_CASE("Exceptions", "[interpreter]")
@@ -203,5 +203,5 @@ TEST_CASE("Runtime exceptions", "[interpreter]")
 	std::string test1 = "Incorrect arguments";
 	auto r1 = rt::parse(rt::tokenize("Print(Object(1))"));
 	auto v = rt::interpretAndReturn(r1);
-	REQUIRE(v[0] == test1);
+	REQUIRE(v.at(0) == test1);
 }

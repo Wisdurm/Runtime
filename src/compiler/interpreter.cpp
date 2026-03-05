@@ -71,7 +71,7 @@ namespace rt
 		capturedCout.push_back(str);
 	}
 
-	std::string* interpretAndReturn(std::shared_ptr<ast::Expression> expr)
+	const std::vector<std::string> interpretAndReturn(std::shared_ptr<ast::Expression> expr)
 	{
 		// Clear
 		mainArgs.clear();
@@ -87,7 +87,7 @@ namespace rt
 		callObject(main, &globalSymtab, mainArgState);
 		// Clear
 		cleanLibraries();
-		return capturedCout.data();
+		return capturedCout;
 	}
 
 	void interpret(std::shared_ptr<ast::Expression> expr, int argc, char** argv)

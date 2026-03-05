@@ -2,6 +2,7 @@
 // Runtime
 #include "object.h"
 // C++
+#include <deque>
 #include <ffi.h>
 #include <memory>
 #include <variant>
@@ -69,7 +70,7 @@ namespace rt
 		/// <summary>
 		/// Smart pointer array; stores values that need to exist for this objects lifetime
 		/// </summary>
-		std::vector<std::any> altHeap;
+		std::deque<std::any> altHeap;
 	};
 
 	/// <summary>

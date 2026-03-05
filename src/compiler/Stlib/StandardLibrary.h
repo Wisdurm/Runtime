@@ -6,6 +6,7 @@
 #include "../parser.h"
 #include "../shared_libs.h"
 // C++
+#include <deque>
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
@@ -472,7 +473,7 @@ namespace rt
 	/// <summary>
 	/// Creates custom struct ffi_type from Object
 	/// </summary>
-	[[nodiscard]] static ffi_type* makeFfiType(std::shared_ptr<Object> obj, SymbolTable* symtab, ArgState& argState, std::vector<std::any>& altHeap)
+	[[nodiscard]] static ffi_type* makeFfiType(std::shared_ptr<Object> obj, SymbolTable* symtab, ArgState& argState, std::deque<std::any>& altHeap)
 	{
 		// Very non-portable function
 		// TOO BAD!
@@ -583,7 +584,7 @@ namespace rt
 		static bool works = false;
 		if (not works and system(NULL)) // Check whether shell exists
 			works = true;
-		else
+		if (not works)
 			return giveException("Shell enviroment does not exist"); // Not sure if this is true, TODO...
 
 		if (args.size() > 0)

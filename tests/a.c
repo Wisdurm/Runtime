@@ -25,6 +25,10 @@ int test(int i)
 {
 	return i * 2;
 }
+int addition(int a, float b)
+{
+	return a + b;
+}
 void testVoid()
 {
 	1 + 2 == 3;
@@ -39,10 +43,13 @@ void testVoid()
 int compareStr(char* str1, char* str2)
 {
 	printf("%s == %s\n", str1, str2);
-	return strcmp(str1, str2);
+	int v = strcmp(str1, str2);
+	printf("Comparison: %d\n", v);
+	return v;
 }
 void capString(char* str)
 {
+	printf("STRING: %s\n", str);
 	str[0] = toupper(str[0]);
 }
 // Structures
@@ -74,6 +81,10 @@ int cmxParam(cmx c)
 void triplePtr(int* ptr)
 {
 	*ptr *= 3;
+}
+void addPtr(int* ip, float* fp)
+{
+	*ip += *fp;
 }
 // Pointer storage
 int* allocInt(int value)

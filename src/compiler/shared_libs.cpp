@@ -7,6 +7,10 @@
 // C++
 #include <algorithm>
 #include <any>
+#include <deque>
+#include <list>
+#include <memory>
+#include <string>
 #include <vector>
 #include <stdexcept>
 // C
@@ -142,7 +146,7 @@ namespace rt
 	/// Creates a struct in a specified area of memory based on a Runtime object
 	/// </summary>
 	static void structFromObject(void* structMem, std::shared_ptr<Object> obj, ffi_type type,
-			std::vector<std::any>& altHeap, SymbolTable* symtab, ArgState& argState)
+				     SymbolTable* symtab, ArgState& argState)
 	{
 		// Here we assume we already have all the memory we need allocated;
 		// this function does not allocate any memory, we are passed the structMem
@@ -160,7 +164,7 @@ namespace rt
 			const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
 			if (t->type == FFI_TYPE_STRUCT) { // Struct
 				auto member = std::get<std::shared_ptr<Object>>(members.at(j)); // TODO: Error handling
-				structFromObject(p + pos, member, *t, altHeap, symtab, argState);
+				structFromObject(p + pos, member, *t, symtab, argState);
 			} else {
 				const auto value = evaluate(members.at(j), symtab, argState);
 				double val = std::get<double>(value); // STRING? TODO!
@@ -253,7 +257,7 @@ namespace rt
 		// but cant be smart pointers by themselves, since they're
 		// created inline, and need to pass pointers to libffi.
 		// Understand?
-		std::vector<std::any> altHeap;
+		std::deque<std::any> altHeap;
 		// Get arguments
 		for (int i = 0; i < narms; ++i) {
 			// Cast arg to type wanted by lib
@@ -267,7 +271,7 @@ namespace rt
 				// This SHOULD work, but not 100% confident, TODO if bored
 				altHeap.push_back(std::shared_ptr<void>(structMem, [](void* ptr){free(ptr);} ));
 				// This function actually pushes all the the necessary data to the memory buffer
-				structFromObject(structMem, obj, *type, altHeap, symtab, argState);
+				structFromObject(structMem, obj, *type, symtab, argState);
 				arguments.push_back(structMem);
 			}
 			else { // Not struct, feel free to evaluate
@@ -314,10 +318,19 @@ namespace rt
 				else if (type == &ffi_type_longdouble)
 					arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
 				// Pointer types
-				else if (type == &ffi_type_cstring)
-					arguments.push_back(std::make_shared<char*>(std::get<std::string>(value).data())); // Accesses data directly!
+				else if (type == &ffi_type_cstring) {
+					// Add to alt heap so object lifetime survives function call
+					altHeap.push_back(std::get<std::string>(value));
+					arguments.push_back(std::any_cast<std::string&>(altHeap.back()).data());
+					std::cout << "Argument added: " << std::any_cast<char*&>(arguments.back()) << "\n";
+					for (auto h : arguments) {
+						std::cout << "* Argument: " << std::any_cast<char*&>(h) << "\n";
+					}
+				}
 				else if (type == &ffi_type_psint)
 					arguments.push_back(std::make_shared<int*>( altAlloc<int>(getNumericalValue(value), altHeap)));
+				else if (type == &ffi_type_pfloat)
+					arguments.push_back(std::make_shared<float*>( altAlloc<float>(getNumericalValue(value), altHeap)));
 				// TODO: The rest
 				else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 				// TODO: Other types
@@ -377,10 +390,12 @@ namespace rt
 			// Pointers
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<void*>)) // Not sure what this is?
 				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<char*>)) // C string
-				call_args[i] = std::any_cast<std::shared_ptr<char*>>(arguments.at(i)).get(); 
+			else if (arguments.at(i).type() == typeid(char*)) // C string
+				call_args[i] = &std::any_cast<char*&>(arguments.at(i));		
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<int*>))
 				call_args[i] = std::any_cast<std::shared_ptr<int*>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(std::shared_ptr<float*>))
+				call_args[i] = std::any_cast<std::shared_ptr<float*>>(arguments.at(i)).get();
 			// TODO: The rest
 			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
 			/*}}}*/
@@ -391,10 +406,18 @@ namespace rt
 		delete[] params;
 		// Write pointer values back to their Runtime counterparts
 		for (int i = 0; i < narms; ++i) {
+			if (params[i] != paramsCopy[i])
 			if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization
+				if (paramsCopy[i] == &ffi_type_cstring) {
+					pObj->get()->setLast(*reinterpret_cast<char**>(call_args[i]));
+					continue;
+				}
+				// If not string
 				double val;
 				if (paramsCopy[i] == &ffi_type_psint)
 					val = **reinterpret_cast<int**>(call_args[i]);
+				if (paramsCopy[i] == &ffi_type_pfloat)
+					val = **reinterpret_cast<float**>(call_args[i]);
  				// TODO: The rest
 				pObj->get()->setLast(val);
 			}

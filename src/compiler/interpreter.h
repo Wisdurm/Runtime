@@ -4,6 +4,7 @@
 #include "shared_libs.h"
 #include "ast.h"
 // ??
+#include <deque>
 #include <tsl/ordered_map.h>
 // C++
 #include <unordered_map> // Do testing later on to figure out if a normal map would be better
@@ -59,7 +60,7 @@ namespace rt
 	/// Allocates a value on an altHeap, and then returns the pointer
 	/// </summary>
 	template <typename T>
-	[[nodiscard]] inline static T* altAlloc(T value, std::vector<std::any>& altheap)
+	[[nodiscard]] inline static T* altAlloc(T value, std::deque<std::any>& altheap)
 	{
 		altheap.push_back(std::make_shared<T>(value));
 		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
@@ -69,7 +70,7 @@ namespace rt
 	/// Gives a pointer to a smart pointer within an alt heap
 	/// </summary>
 	template <typename T>
-	[[nodiscard]] inline static T* altStore(T* ptr, std::vector<std::any>& altheap)
+	[[nodiscard]] inline static T* altStore(T* ptr, std::deque<std::any>& altheap)
 	{
 		altheap.push_back(std::shared_ptr<T>(ptr));
 		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
@@ -145,7 +146,7 @@ namespace rt
 	/// </summary>
 	/// <param name="astTree">Ast tree to be interpreted</param>
 	/// <returns>String list containing everything printed to cout</returns>
-	std::string* interpretAndReturn(std::shared_ptr<ast::Expression> expr);
+	const std::vector<std::string> interpretAndReturn(std::shared_ptr<ast::Expression> expr);
 	/// <summary>
 	/// Adds a string to the captured cout vector
 	/// </summary>
