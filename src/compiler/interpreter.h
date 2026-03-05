@@ -109,7 +109,7 @@ namespace rt
 	/// <summary>
 	/// Interprets in live cli session
 	/// </summary>
-	void liveIntrepret(std::shared_ptr<ast::Expression> expr);
+	[[nodiscard]] objectOrValue liveIntrepret(std::shared_ptr<ast::Expression> expr);
 	/// <summary>
 	/// Interprets ast tree
 	/// </summary>

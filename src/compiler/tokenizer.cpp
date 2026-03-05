@@ -61,11 +61,12 @@ namespace rt
 					intLiteral += src[srcI];
 					advance();
 				} while (isdigit(src[srcI]) or src[srcI] == '.');
-				tokens.push_back(Token(intLiteral, TokenType::LITERAL, SourceLocation(line, srcFile)));
+				tokens.push_back(Token(intLiteral, TokenType::NUMBER, SourceLocation(line, srcFile)));
 			}		
 			// Check for string literal
-			if (src[srcI] == '\"')
+			if (src[srcI] == '\"' or src[srcI] == '\'')
 			{
+				advance();
 				match = true;
 				std::string stringLiteral;
 				do {
@@ -78,10 +79,11 @@ namespace rt
 						else // Bruhhh
 							throw TokenizerException("Unmatched string literal", line-1, srcFile);
 					}
-				} while (not(src[srcI] == '\"' and src[srcI-1] != '\\')); // Go until the end of the string literal
-				stringLiteral += '\"';
+				} while (not((src[srcI] == '\"' or src[srcI] == '\'')
+					     and src[srcI-1] != '\\'));
+				// Go until the end of the string literal
 				advance();
-				tokens.push_back(Token(stringLiteral, TokenType::LITERAL, SourceLocation(line, srcFile)));
+				tokens.push_back(Token(stringLiteral, TokenType::STRING, SourceLocation(line, srcFile)));
 			}
 			// Check for punctuation
 			for (char punc : Token::punctuation)

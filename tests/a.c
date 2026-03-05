@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,11 +38,12 @@ void testVoid()
 // Strings
 int compareStr(char* str1, char* str2)
 {
+	printf("%s == %s\n", str1, str2);
 	return strcmp(str1, str2);
 }
-void testStr(char* str)
+void capString(char* str)
 {
-	printf("%s", str);
+	str[0] = toupper(str[0]);
 }
 // Structures
 void testStruct(structure val)

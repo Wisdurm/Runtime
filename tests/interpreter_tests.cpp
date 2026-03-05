@@ -17,7 +17,8 @@ TEST_CASE("Object creation, basic evaluation and console output", "[interpreter]
 	// Excepted output: "Hello world"
 
 	const std::string test1 = "Hello world";
-	auto r1 = rt::parse(rt::tokenize("Object(str, Print(\"NULL\"), \"Hello world\")\nPrint(str)"));
+	auto r1 = rt::parse(rt::tokenize("Object(str, Print(\"NULL\"), 'Hello world')\n"
+					 "Print(str)"));
 	REQUIRE(rt::interpretAndReturn(r1)[0] == test1); // Print "Hello world", but not "NULL"
 }
 
