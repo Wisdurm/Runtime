@@ -320,17 +320,13 @@ namespace rt
 				// Pointer types
 				else if (type == &ffi_type_cstring) {
 					// Add to alt heap so object lifetime survives function call
-					altHeap.push_back(std::get<std::string>(value));
+					altHeap.push_back(std::get<std::string>(value)); // TODO: Altalloc or store?
 					arguments.push_back(std::any_cast<std::string&>(altHeap.back()).data());
-					std::cout << "Argument added: " << std::any_cast<char*&>(arguments.back()) << "\n";
-					for (auto h : arguments) {
-						std::cout << "* Argument: " << std::any_cast<char*&>(h) << "\n";
-					}
 				}
 				else if (type == &ffi_type_psint)
-					arguments.push_back(std::make_shared<int*>( altAlloc<int>(getNumericalValue(value), altHeap)));
+					arguments.push_back(altAlloc<int>(getNumericalValue(value), altHeap));
 				else if (type == &ffi_type_pfloat)
-					arguments.push_back(std::make_shared<float*>( altAlloc<float>(getNumericalValue(value), altHeap)));
+					arguments.push_back(altAlloc<float>(getNumericalValue(value), altHeap));
 				// TODO: The rest
 				else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 				// TODO: Other types
@@ -392,10 +388,10 @@ namespace rt
 				call_args[i] = std::any_cast<std::shared_ptr<void*>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(char*)) // C string
 				call_args[i] = &std::any_cast<char*&>(arguments.at(i));		
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int*>))
-				call_args[i] = std::any_cast<std::shared_ptr<int*>>(arguments.at(i)).get();
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<float*>))
-				call_args[i] = std::any_cast<std::shared_ptr<float*>>(arguments.at(i)).get();
+			else if (arguments.at(i).type() == typeid(int*))
+				call_args[i] = &std::any_cast<int*&>(arguments.at(i));
+			else if (arguments.at(i).type() == typeid(float*))
+				call_args[i] = &std::any_cast<float*&>(arguments.at(i));
 			// TODO: The rest
 			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
 			/*}}}*/

@@ -42,14 +42,10 @@ void testVoid()
 // Strings
 int compareStr(char* str1, char* str2)
 {
-	printf("%s == %s\n", str1, str2);
-	int v = strcmp(str1, str2);
-	printf("Comparison: %d\n", v);
-	return v;
+	return strcmp(str1, str2);
 }
 void capString(char* str)
 {
-	printf("STRING: %s\n", str);
 	str[0] = toupper(str[0]);
 }
 // Structures
