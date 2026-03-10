@@ -57,13 +57,13 @@ namespace rt
 	}
 
 	/// <summary>
-	/// Allocates a value on an altHeap, and then returns the pointer
+	/// Allocates a value on an altHeap, and then returns a pointer to the value
 	/// </summary>
 	template <typename T>
 	[[nodiscard]] inline static T* altAlloc(T value, std::deque<std::any>& altheap)
 	{
 		altheap.push_back(std::make_shared<T>(value));
-		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
+		return std::any_cast<std::shared_ptr<T>&>(altheap.back()).get();
 	}
 	
 	/// <summary>
@@ -73,7 +73,7 @@ namespace rt
 	[[nodiscard]] inline static T* altStore(T* ptr, std::deque<std::any>& altheap)
 	{
 		altheap.push_back(std::shared_ptr<T>(ptr));
-		return std::any_cast<std::shared_ptr<T>>(altheap.back()).get();
+		return std::any_cast<std::shared_ptr<T>&>(altheap.back()).get();
 	}
 	/// <summary>
 	/// Evaluates a value as a bool

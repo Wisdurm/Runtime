@@ -496,11 +496,11 @@ namespace rt
 		}
 		e[size] = NULL; // Last one (NULL terminated array)
 		return new ffi_type(
-							0, // size (init 0)
-							0, // align (init 0)
-							FFI_TYPE_STRUCT,// type
-							e// elements
-							);
+			0, // size (init 0)
+			0, // align (init 0)
+			FFI_TYPE_STRUCT, // type
+			e // elements
+			);
 	}
 
 	/*
@@ -514,7 +514,7 @@ namespace rt
 	objectOrValue Bind(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
 		// TODO: If fails midway through, undefined behaviour // ??
-		if (args.size() < 2)
+		if (args.size() < 2) [[unlikely]]
 			return giveException("Wrong amount of arguments");
 		LibFunc* func = nullptr; // Function to bind
 		 // Get function by name
@@ -522,12 +522,12 @@ namespace rt
 			auto v = evaluate(args.at(0), symtab, argState);
 			if (const std::string* name = std::get_if<std::string>(&v)){
 				if ((func = std::get_if<LibFunc>(&symtab->lookUpHard(*name)))) {}
-				else {
+				else { [[unlikely]]
 					return giveException("Func name was not of a shared function");
 				}
-			}
-			else
+			} else [[unlikely]] {
 				return giveException("Func name was of wrong type");
+			}
 		}
 		// Reset function
 		func->argTypes.clear();
@@ -538,16 +538,18 @@ namespace rt
 			// Struct
 			if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
 				func->retType = std::shared_ptr<ffi_type>(sT);
-			} else giveException("Return type was of wrong type");
+			} else [[unlikely]] {
+				return giveException("Return type was of wrong type");
+			}
 		}
 		else { // Not struct
 			ffi_type* ret;
 			auto rV = evaluate(args.at(1), symtab, argState);
-			if (const std::string* rType = std::get_if<std::string>(&rV)){
+			if (const std::string* rType = std::get_if<std::string>(&rV)) {
 				ret = typeNames.at(*rType);
-			}
-			else
+			} else [[unlikely]] {
 				return giveException("Return name was of wrong type");
+			}
 			func->retType = std::experimental::make_observer<ffi_type>(ret);
 		}
 		// Get parameters
@@ -557,16 +559,20 @@ namespace rt
 				if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
 					func->argTypes.push_back(std::shared_ptr<ffi_type>(sT)); // Struct parameter
 					continue;
-				} else giveException("Arg type was of wrong type");
+				} else [[unlikely]] {
+					return giveException("Arg type was of wrong type");
+				}
 			}
 			// Not struct
 			auto rP = evaluate(*it, symtab, argState);
 			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
-				if (*pType == "void") { // TODO: Faster comparison
+				if (*pType == "void") {
 					return giveException("Shared function cannot have parameters of type void");
 				}
 				func->argTypes.push_back(std::experimental::make_observer<ffi_type>(typeNames.at(*pType))); // TODO: Error handling
-			} else return giveException("Argument type was of wrong type");
+			} else [[unlikely]] {
+				return giveException("Argument type was of wrong type");
+			}
 		}
 		// Finished
 		func->initialized = true;

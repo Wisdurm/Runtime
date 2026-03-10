@@ -102,7 +102,10 @@ void freeInt(int* mem)
 	free(mem);
 }
 // EVEN MORE difficult structs :DD
-dif difficult(int num, char* srt)
+void difficult(dif f)
 {
-	/* dif d = { .in = num, .num = num * 4.2f, .str = srt }; */
+	printf("%d, %f, %s\n", f.in, *f.num, f.str);
+	*f.num *= 2;
+	strcpy(f.str, "Updated");
+	printf("%d, %f, %s\n", f.in, *f.num, f.str);
 }

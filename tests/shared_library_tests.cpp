@@ -251,3 +251,30 @@ TEST_CASE("Nested struct", "[shared_libraries]")
 					 "Print(cmxParam(obj))"));
 	REQUIRE(rt::interpretAndReturn(r2).at(0) == test2);
 }
+
+TEST_CASE("Difficult struct", "[shared_libraries]")
+{
+	// Object(Main,
+	//	Include("../tests/lib.so")
+	//	# Bindings
+	//	Object(structure, "int", "float*" "cstring")
+	//	Bind("difficult", "void", structure)
+	//	# Create object
+	//	Object(obj, 0, 1.6, "Hello")
+	//	difficult(obj)
+	//	Print(obj-1)
+	//	Print(obj-2)
+	// )
+	// Excepted output: "3.2\nUpdated"
+
+	const std::string test1[]{"3.200000", "Updated"};
+	auto r2 = rt::parse(rt::tokenize("Include('../tests/lib.so')"
+					 "Object(structure, 'int', 'float*', 'cstring')"
+					 "Bind('difficult', 'void', structure)"
+					 "Object(obj, 0, 1.6, 'Hello')"
+					 "difficult(obj)"
+					 "Print(obj-1)"
+					 "Print(obj-2)"));
+	REQUIRE(rt::interpretAndReturn(r2).at(0) == test1[0]);
+	REQUIRE(rt::interpretAndReturn(r2).at(1) == test1[1]);	
+}
