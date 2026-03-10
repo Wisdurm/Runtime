@@ -5,6 +5,7 @@
 #include "Stlib/StandardFiles.h"
 #include "object.h"
 #include "symbol_table.h"
+#include "memoryexplorer.h"
 // C++
 #include <algorithm>
 #include <any>
@@ -159,36 +160,34 @@ namespace rt
 		// TODO: Packed support, as well as look into the libffi way of doing this
 		// Get members of arg
 		auto members = obj->getMembers(); // TODO: error handling
+		MemoryExplorer expl = MemoryExplorer(structMem, &type);
 		// Assign members
-		uint8_t* p = static_cast<uint8_t*>(structMem); // Move a byte at a time
-		for (int j = 0, totSize = 0; type.elements[j] != NULL; ++j) {
+		for (int i = 0; type.elements[i] != NULL; ++i) {
 			// Loop through member types
-			const auto t = type.elements[j];
-			const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
+			const auto [memory, t] = expl[i];
 			if (t->type == FFI_TYPE_STRUCT) { // Struct
-				auto member = std::get<std::shared_ptr<Object>>(members.at(j)); // TODO: Error handling
-				structFromObject(p + pos, member, *t, symtab, argState, altHeap);
+				auto member = std::get<std::shared_ptr<Object>>(members.at(i)); // TODO: Error handling
+				structFromObject(memory, member, *t, symtab, argState, altHeap);
 			} else {
-				const auto value = evaluate(members.at(j), symtab, argState);
+				const auto value = evaluate(members.at(i), symtab, argState);
 				if (auto str = std::get_if<std::string>(&value)) {
 					// TODO: Maybe should be stored somewhere else? Idk
 					altHeap.push_back(*str);
-					*reinterpret_cast<char**>(p+pos) = std::any_cast<std::string&>(altHeap.back()).data();
+					*reinterpret_cast<char**>(memory) = std::any_cast<std::string&>(altHeap.back()).data();
 				} else {
 					double val = std::get<double>(value);
 					if (t == &ffi_type_sint)  // TODO TE RES
-						*reinterpret_cast<int*>(p+pos) = static_cast<int>(val);
+						*reinterpret_cast<int*>(memory) = static_cast<int>(val);
 					else if (t == &ffi_type_uchar) 
-						*reinterpret_cast<unsigned char*>(p+pos) = static_cast<unsigned char>(val);
+						*reinterpret_cast<unsigned char*>(memory) = static_cast<unsigned char>(val);
 					else if (t == &ffi_type_float) 
-						*reinterpret_cast<float*>(p+pos) = static_cast<float>(val);
+						*reinterpret_cast<float*>(memory) = static_cast<float>(val);
 					// Pointers
 					else if (t == &ffi_type_pfloat)
-						*reinterpret_cast<float**>(p+pos) = altAlloc(static_cast<float>(val), altHeap);
+						*reinterpret_cast<float**>(memory) = altAlloc(static_cast<float>(val), altHeap);
 					else throw InterpreterException("Unimplemented element type", 0, "Unknown");
 				}
 			}
-			totSize += t->size + (totSize%t->alignment);
 		}
 	}
 
@@ -199,25 +198,22 @@ namespace rt
 	{
 		// TODO: Packed support, as well as look into the libffi way of doing this
 		auto obj = std::make_shared<Object>();
-		uint8_t* p = static_cast<uint8_t*>(strc); // Move a byte at a time
-		for (int i = 0, totSize = 0; structType.elements[i] != NULL; ++i) {
+		MemoryExplorer expl = MemoryExplorer(strc, &structType);
+		for (int i = 0; structType.elements[i] != NULL; ++i) {
 			// Loop through member types
-			const auto t = structType.elements[i];
-			const int pos = totSize + (totSize%t->alignment); // Align position to next block of preferred alignment
+			const auto [memory, t] = expl[i];
 			// Get value
 			std::variant<double, std::string> value;
 			if (t == &ffi_type_sint)  // TODO TE RES
-				value = static_cast<double>(*reinterpret_cast<int*>(p+pos));
+				value = static_cast<double>(*reinterpret_cast<int*>(memory));
 			else if (t == &ffi_type_float)
-				value = static_cast<double>(*reinterpret_cast<float*>(p+pos));
+				value = static_cast<double>(*reinterpret_cast<float*>(memory));
 			else if (t->type == FFI_TYPE_STRUCT) {
-				obj->addMember(objectFromStruct(p+pos, *t));
+				obj->addMember(objectFromStruct(memory, *t));
 			}
 			else throw InterpreterException("Unimplemented element type", 0, "Unknown");
 			// Add value
 			obj->addMember(value);
-			// For alignment
-			totSize += t->size + (totSize%t->alignment);
 		}
 		return obj;
 	}
@@ -226,15 +222,15 @@ namespace rt
 	static void updateObject(ffi_type strct, ffi_type strctCpy, std::shared_ptr<Object> obj, void* callArg)
 	{
 		// Loop through all the members and check if they are pointers
-		uint8_t* p = static_cast<uint8_t*>(callArg);
-		for (int i = 0, totSize = 0; strct.elements[i] != NULL; i++) {
-			const auto t = strctCpy.elements[i];
-			const int pos = totSize + (totSize%t->alignment);
+		MemoryExplorer expl = MemoryExplorer(callArg, &strctCpy);
+		for (int i = 0; strct.elements[i] != NULL; i++) {
+			// Loop through member types
+			const auto [memory, t] = expl[i];
 			auto member = obj->getMembers()[i];
 			if (strct.elements[i] != strctCpy.elements[i]) { // Check if custom type, as they're the only pointers
 				// First check if string
 				if (strctCpy.elements[i] == &ffi_type_cstring) {
-					char* str = *reinterpret_cast<char**>(p+pos);
+					char* str = *reinterpret_cast<char**>(memory);
 					if (auto op = std::get_if<std::shared_ptr<Object>>(&member)) {
 						(*op)->setLast(str);
 					} else {
@@ -245,9 +241,9 @@ namespace rt
 				// If not string
 				double val;
 				if (strctCpy.elements[i] == &ffi_type_psint)
-					val = **reinterpret_cast<int**>(p+pos);
+					val = **reinterpret_cast<int**>(memory);
 				if (strctCpy.elements[i] == &ffi_type_pfloat)
-					val = **reinterpret_cast<float**>(p+pos);
+					val = **reinterpret_cast<float**>(memory);
 				// TODO: The rest
 				if (auto op = std::get_if<std::shared_ptr<Object>>(&member)) {
 					(*op)->setLast(val);
@@ -255,9 +251,8 @@ namespace rt
 					std::get<std::variant<double, std::string>>(member) = val;
 				}
 			} else if (strct.elements[i]->type == FFI_TYPE_STRUCT) {
-				updateObject(*strct.elements[i], *t, std::get<std::shared_ptr<Object>>(member), p+pos); // TODO: Error handling for get<>
+				updateObject(*strct.elements[i], *t, std::get<std::shared_ptr<Object>>(member), memory); // TODO: Error handling for get<>
 			}
-			totSize += t->size + (totSize%t->alignment);
 		}
 	}
 
@@ -337,6 +332,9 @@ namespace rt
 		}
 		// Arguments
 		std::vector<std::any> arguments;
+		// List of generic pointers to the values actually used to call the function
+		std::unique_ptr<void* []> call_args; // Generic pointers to args
+		call_args = std::make_unique<void* []>(narms); // Create list to arg pointers
 		// Get arguments
 		for (int i = 0; i < narms; ++i) {
 			// Cast arg to type wanted by lib
@@ -411,9 +409,6 @@ namespace rt
 				/*}}}*/
 			}
 		}
-		// Void pointer array of length narms
-		std::unique_ptr<void* []> call_args; // Generic pointers to args
-		call_args = std::make_unique<void* []>(narms); // Create list to arg pointers
 		// Pointer shenanigans
 		for (int i = 0; i < narms; ++i) {
 			// nightmare nightmare nightmare nightmare nightmare nightmare nightmare 

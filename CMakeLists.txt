@@ -62,6 +62,7 @@ if (RUNTIME_BUILD_TESTS)
 	endif()
 
 	# Tests
+	find_package(Catch2 CONFIG REQUIRED)
 	add_subdirectory(tests)
 	enable_testing()
 	add_test(
@@ -69,6 +70,7 @@ if (RUNTIME_BUILD_TESTS)
 		COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests_runtime
 	)
 	target_include_directories(tests_runtime PRIVATE ${PROJECT_BINARY_DIR}) # Runtime.h
+	target_link_libraries( tests_runtime PRIVATE Catch2::Catch2WithMain tsl::ordered_map readline ffi)
 endif()
 
 # Packaging
