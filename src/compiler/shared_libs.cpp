@@ -5,7 +5,7 @@
 #include "Stlib/StandardFiles.h"
 #include "object.h"
 #include "symbol_table.h"
-#include "memoryexplorer.h"
+#include "utils.h"
 // C++
 #include <algorithm>
 #include <any>
@@ -29,31 +29,6 @@ namespace rt
 	/// Stores all currently loaded shared libraries
 	/// </summary>
 	static std::vector<void*> libraries;
-	/// <summary>
-	/// ffi_types
-	/// </summary>
-	static constexpr std::array<ffi_type*, 20> ffiTypes = {
-		&ffi_type_uint8,
-		&ffi_type_sint8,
-		&ffi_type_uint16,
-		&ffi_type_sint16,
-		&ffi_type_uint32,
-		&ffi_type_sint32,
-		&ffi_type_uint64,
-		&ffi_type_sint64,
-		&ffi_type_float,
-		&ffi_type_double,
-		&ffi_type_uchar,
-		&ffi_type_schar,
-		&ffi_type_ushort,
-		&ffi_type_sshort,
-		&ffi_type_uint,
-		&ffi_type_sint,
-		&ffi_type_ulong,
-		&ffi_type_slong,
-		&ffi_type_longdouble,
-		&ffi_type_pointer,
-	};
 	
 	static std::vector<std::string> getSymbols(void* library)
 	{
@@ -219,17 +194,18 @@ namespace rt
 	}
 
 	// Sets the values of a Runtime object based on pointers within a struct
-	static void updateObject(ffi_type strct, ffi_type strctCpy, std::shared_ptr<Object> obj, void* callArg)
+	// struct may have custom types
+	static void updateObject(ffi_type strct, std::shared_ptr<Object> obj, void* callArg)
 	{
 		// Loop through all the members and check if they are pointers
-		MemoryExplorer expl = MemoryExplorer(callArg, &strctCpy);
+		MemoryExplorer expl = MemoryExplorer(callArg, &strct);
 		for (int i = 0; strct.elements[i] != NULL; i++) {
 			// Loop through member types
 			const auto [memory, t] = expl[i];
 			auto member = obj->getMembers()[i];
-			if (strct.elements[i] != strctCpy.elements[i]) { // Check if custom type, as they're the only pointers
+			if (strct.elements[i]->type == FFI_TYPE_POINTER) { // Check if pointer
 				// First check if string
-				if (strctCpy.elements[i] == &ffi_type_cstring) {
+				if (strct.elements[i] == &ffi_type_cstring) {
 					char* str = *reinterpret_cast<char**>(memory);
 					if (auto op = std::get_if<std::shared_ptr<Object>>(&member)) {
 						(*op)->setLast(str);
@@ -240,9 +216,9 @@ namespace rt
 				}
 				// If not string
 				double val;
-				if (strctCpy.elements[i] == &ffi_type_psint)
+				if (strct.elements[i] == &ffi_type_psint)
 					val = **reinterpret_cast<int**>(memory);
-				if (strctCpy.elements[i] == &ffi_type_pfloat)
+				if (strct.elements[i] == &ffi_type_pfloat)
 					val = **reinterpret_cast<float**>(memory);
 				// TODO: The rest
 				if (auto op = std::get_if<std::shared_ptr<Object>>(&member)) {
@@ -251,32 +227,8 @@ namespace rt
 					std::get<std::variant<double, std::string>>(member) = val;
 				}
 			} else if (strct.elements[i]->type == FFI_TYPE_STRUCT) {
-				updateObject(*strct.elements[i], *t, std::get<std::shared_ptr<Object>>(member), memory); // TODO: Error handling for get<>
+				updateObject(*t, std::get<std::shared_ptr<Object>>(member), memory); // TODO: Error handling for get<>
 			}
-		}
-	}
-
-	// Copy ffi types from one array to another
-	static void copyTypeArray(ffi_type**& srcArray, ffi_type**& destArray, int len, std::deque<std::any>& altHeap)
-	{
-		// Not really sure if this works, TODO: Tests
-		for (int i = 0; i < len; i++) {
-			const auto copy = [&altHeap](ffi_type*& src, ffi_type*& dest, auto&& copy) -> void {
-				if (src->type == FFI_TYPE_STRUCT) {
-					// I cannot believe this
-					dest = altStore<ffi_type>(new ffi_type, altHeap);
-					int len = 0;
-					for (; src->elements[len] != NULL; len++) {}
-					dest->elements = altStore<ffi_type*>(new ffi_type*[len], altHeap);
-					for (int i = 0; src->elements[i] != NULL; i++) {
-						copy(src->elements[i], dest->elements[i], copy);
-					}
-				} else {
-					// Just copy the pointer, trivial
-					dest = src;
-				}
-			};
-			copy(srcArray[i], destArray[i], copy);
 		}
 	}
 
@@ -297,23 +249,16 @@ namespace rt
 		
 		ffi_cif cif; // Function signature
 		const int narms = func.argTypes.size(); // n params
-		// Get argument types
-		ffi_type** params = new ffi_type*[narms]; // Array of pointers
+		// A list of the types of each argument
+		auto params = ParamWrapper(narms);
 		// Sometimes normal pointers are 
 		// easier than smart pointers...
 		for (int i = 0; i < narms; ++i) {
 			if (std::holds_alternative<std::shared_ptr<ffi_type>>(func.argTypes.at(i)))
-				params[i] = std::get<std::shared_ptr<ffi_type>>(func.argTypes.at(i)).get();
+				params.push_back(std::get<std::shared_ptr<ffi_type>>(func.argTypes.at(i)).get());
 			else
-				params[i] = std::get<std::experimental::observer_ptr<ffi_type>>(func.argTypes.at(i)).get();
+				params.push_back(std::get<std::experimental::observer_ptr<ffi_type>>(func.argTypes.at(i)).get());
 		}
-		// We need to have a copy of params, since params may have "custom" types,
-		// which arent actually a part of libffi, but I added for "convenience".
-		// These custom types cannot be used in ffi_call, since it will just not work
-		// as intended.
-		ffi_type** paramsCopy = new ffi_type*[narms];
-		// Deep copy params
-		copyTypeArray(params, paramsCopy, narms, altHeap);
 		// Return type
 		ffi_type* returnType;
 		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType))
@@ -322,23 +267,22 @@ namespace rt
 			returnType = std::get<std::shared_ptr<ffi_type>>(func.retType).get();
 		// Create CIF
 		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
-					returnType,
-					params) != FFI_OK)
+				 returnType,
+				 params.realParams()) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
 		// Return value data
 		void* ret;
 		if (returnType != &ffi_type_void) { // Void doesnt need memory allocated
 			ret = new char[returnType->size]; // TODO: alligned alloc?? idk...
 		}
-		// Arguments
+		// The values of function arguments
 		std::vector<std::any> arguments;
 		// List of generic pointers to the values actually used to call the function
-		std::unique_ptr<void* []> call_args; // Generic pointers to args
-		call_args = std::make_unique<void* []>(narms); // Create list to arg pointers
+		std::vector<void*> call_args(narms);
 		// Get arguments
 		for (int i = 0; i < narms; ++i) {
 			// Cast arg to type wanted by lib
-			ffi_type* type = params[i];
+			ffi_type* type = params.at(i);
 			if (type->type == FFI_TYPE_STRUCT) { // Struct
 				auto obj = std::get<std::shared_ptr<Object>>(args.at(i)); // TODO: Error handling
 				// Create struct
@@ -416,109 +360,86 @@ namespace rt
 			{
 			/*{{{*/
 			if (arguments.at(i).type() == typeid(std::shared_ptr<uint8_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<uint8_t>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<uint8_t>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<int8_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<int8_t>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<int8_t>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint16_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<uint16_t>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<uint16_t>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<int16_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<int16_t>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<int16_t>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint32_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<uint32_t>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<uint32_t>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<int64_t>))
-				call_args[i] = std::any_cast<std::shared_ptr<int64_t>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<int64_t>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<float>))
-				call_args[i] = std::any_cast<std::shared_ptr<float>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<float>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<double>))
-				call_args[i] = std::any_cast<std::shared_ptr<double>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<double>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned char>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned char>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<unsigned char>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<signed char>))
-				call_args[i] = std::any_cast<std::shared_ptr<signed char>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<signed char>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned short>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned short>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<unsigned short>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<short>))
-				call_args[i] = std::any_cast<std::shared_ptr<short>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<short>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned int>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned int>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<unsigned int>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
-				call_args[i] = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned long>))
-				call_args[i] = std::any_cast<std::shared_ptr<unsigned long>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<unsigned long>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<long>))
-				call_args[i] = std::any_cast<std::shared_ptr<long>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<long>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(std::shared_ptr<long double>))
-				call_args[i] = std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get();
+				call_args.at(i) = std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get();
 			else if (arguments.at(i).type() == typeid(void*)) // Struct
-				call_args[i] = std::any_cast<void*>(arguments.at(i));
+				call_args.at(i) = std::any_cast<void*>(arguments.at(i));
 			// Pointers
 			else if (arguments.at(i).type() == typeid(char*)) // C string
-				call_args[i] = &std::any_cast<char*&>(arguments.at(i));		
+				call_args.at(i) = &std::any_cast<char*&>(arguments.at(i));		
 			else if (arguments.at(i).type() == typeid(int*))
-				call_args[i] = &std::any_cast<int*&>(arguments.at(i));
+				call_args.at(i) = &std::any_cast<int*&>(arguments.at(i));
 			else if (arguments.at(i).type() == typeid(float*))
-				call_args[i] = &std::any_cast<float*&>(arguments.at(i));
+				call_args.at(i) = &std::any_cast<float*&>(arguments.at(i));
 			// TODO: The rest
 			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
 			/*}}}*/
 			}
 		}
-		// Turn custom ffi_types into pointers
-		// ffi_call will not work properly if this is not done
-		for (int i = 0; i < narms; ++i) {
-			// TODO: I don't think this works at all
-			if (params[i]->type == FFI_TYPE_STRUCT) {
-				auto restore = [](ffi_type* strct, auto&& restore) -> void {
-					for (int i = 0; strct->elements[i] != NULL; i++) {
-						if (strct->elements[i]->type == FFI_TYPE_STRUCT) {
-							restore(strct->elements[i], restore);
-						} else if (std::find(ffiTypes.begin(), ffiTypes.end(), strct->elements[i]) == ffiTypes.end()) {
-							strct->elements[i] = &ffi_type_pointer;
-						}
-					};
-				};
-				restore(params[i], restore);
-			}
-			else if (std::find(ffiTypes.begin(), ffiTypes.end(), params[i]) == ffiTypes.end()) {
-				params[i] = &ffi_type_pointer;	
-			}
-		}
 		// Call
-		ffi_call(&cif, FFI_FN(func.function), ret, call_args.get());
+		ffi_call(&cif, FFI_FN(func.function), ret, call_args.data());
 		// Write pointer values back to their Runtime counterparts
 		for (int i = 0; i < narms; ++i) {
-			if (params[i] != paramsCopy[i]) // Check if custom type, as they're the only pointers
+			if (params.at(i)->type == FFI_TYPE_STRUCT) // Check if struct, as they may have pointer members
+			{
+				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization // ????
+					updateObject(*params.at(i), *pObj, call_args.at(i));
+				} else {
+					std::cout << "Value passed to struct argument! New values are not written down! Type: " <<  params.at(i)->type << std::endl;
+				}
+			}
+			else if (params.at(i)->type == FFI_TYPE_POINTER)
 			{
 				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization // ????
 					// First check if string
-					if (paramsCopy[i] == &ffi_type_cstring) {
-						pObj->get()->setLast(*reinterpret_cast<char**>(call_args[i]));
+					if (params.at(i) == &ffi_type_cstring) {
+						pObj->get()->setLast(*reinterpret_cast<char**>(call_args.at(i)));
 						continue;
 					}
 					// If not string
 					double val;
-					if (paramsCopy[i] == &ffi_type_psint)
-						val = **reinterpret_cast<int**>(call_args[i]);
-					if (paramsCopy[i] == &ffi_type_pfloat)
-						val = **reinterpret_cast<float**>(call_args[i]);
+					if (params.at(i) == &ffi_type_psint)
+						val = **reinterpret_cast<int**>(call_args.at(i));
+					else if (params.at(i) == &ffi_type_pfloat)
+						val = **reinterpret_cast<float**>(call_args.at(i));
 					// TODO: The rest
 					pObj->get()->setLast(val);
 				} else {
-					std::cout << "Value passed to pointer argument! New values are not written down! Type: " <<  paramsCopy[i]->type << std::endl;
-				}
-			}
-			if (params[i]->type == FFI_TYPE_STRUCT) // Check if struct, as they may have pointer members
-			{
-				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization // ????
-					updateObject(*params[i], *paramsCopy[i], *pObj, call_args[i]);
-				} else {
-					std::cout << "Value passed to struct argument! New values are not written down! Type: " <<  paramsCopy[i]->type << std::endl;
+					std::cout << "Value passed to pointer argument! New values are not written down! Type: " <<  params.at(i)->type << std::endl;
 				}
 			}
 		}
-		// Finished with params
-		delete[] params;
-		delete[] paramsCopy;
 		// Return value
 		if (returnType->type != FFI_TYPE_STRUCT) {
 			double retVal;

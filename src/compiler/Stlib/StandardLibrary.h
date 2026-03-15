@@ -496,7 +496,7 @@ namespace rt
 		}
 		e[size] = NULL; // Last one (NULL terminated array)
 		return new ffi_type(
-			0, // size (init 0)
+			0, // size // These will be calculated by libffi later
 			0, // align (init 0)
 			FFI_TYPE_STRUCT, // type
 			e // elements

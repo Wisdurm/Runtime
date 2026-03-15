@@ -104,8 +104,6 @@ void freeInt(int* mem)
 // EVEN MORE difficult structs :DD
 void difficult(dif f)
 {
-	printf("%d, %f, %s\n", f.in, *f.num, f.str);
 	*f.num *= 2;
 	strcpy(f.str, "Updated");
-	printf("%d, %f, %s\n", f.in, *f.num, f.str);
 }
