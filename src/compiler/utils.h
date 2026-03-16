@@ -4,7 +4,9 @@
 #include <strings.h>
 #include <sys/types.h>
 #include "ffi.h"
-#include <tuple>
+#include "interpreter.h"
+#include <any>
+#include <deque>
 #include <vector>
 #include <array>
 #include <algorithm>
@@ -73,32 +75,65 @@ public:
 	}
 
 	// Add real or custom ffi type
-	void push_back(ffi_type* type)
+	void add(ffi_type* type)
 	{
 		paramsAbstract.push_back(type);
 		// If struct, check members
 		if (type->type == FFI_TYPE_STRUCT) {
-			// Recursively check struct for custom types
-			auto clean = [](ffi_type* strct, auto&& clean) -> void {
-				for (int i = 0; strct->elements[i] != NULL; i++) {
-					if (strct->elements[i]->type == FFI_TYPE_STRUCT) {
-						clean(strct->elements[i], clean);
-					} else if (
-						std::find(
-							ffiTypes.begin(), ffiTypes.end(),
-							strct->elements[i]) == ffiTypes.end()) {
-						// Custom type; replace
-						strct->elements[i] = &ffi_type_pointer;
+			// Recursively copy struct and remove custom types
+			auto copy = [this](ffi_type* type, auto&& copy) -> ffi_type* {
+				if (type->type == FFI_TYPE_STRUCT) {
+					// Create new struct
+					auto strc = rt::altStore<ffi_type>(new ffi_type (
+								       0, // size // These will be copied later
+								       0, // align (init 0)
+								       FFI_TYPE_STRUCT, // type
+								       nullptr // elements
+								       ), altHeap);
+					// Copy values
+					int len = 0;
+					for (; type->elements[len] != NULL; len++) {}
+					strc->elements = rt::altStore<ffi_type*>(new ffi_type*[len], altHeap);
+					for (int i = 0; type->elements[i] != NULL; i++) {
+						strc->elements[i] = copy(type->elements[i], copy);
+					};
+					return strc;
+				} else {
+					// If custom type, replace
+					if (std::find(ffiTypes.begin(), ffiTypes.end(), type) == ffiTypes.end()) {
+						return &ffi_type_pointer;
+					} else {
+						return type;
 					}
-				};
-			};
-			clean(type, clean);	
+				}
+			};			
+			params.push_back(copy(type, copy));
 		} else {
 			// If not real ffi_type, replace with pointer
 			if (std::find(ffiTypes.begin(), ffiTypes.end(), type))
 				params.push_back(type);
 			else
 				params.push_back(&ffi_type_pointer);
+		}
+	}
+
+	// ffi_prep_cif only calculates values for the real params, so we need
+	// to copy these values onto paramsAbstract
+	void updateAbstract()
+	{
+		for (int i = 0; i < params.size(); i++) {
+			// Recursively copy struct and remove custom types
+			auto update = [this](ffi_type* type, ffi_type* typeA, auto&& update) -> void {
+				// Copy struct values
+				if (type->type == FFI_TYPE_STRUCT) {
+					typeA->alignment = type->alignment;
+					typeA->size = type->size;
+					for (int i = 0; type->elements[i] != NULL; i++) {
+						update(type->elements[i], typeA->elements[i], update);
+					};
+				}
+			};
+			update(params.at(i), paramsAbstract.at(i), update);
 		}
 	}
 
@@ -124,4 +159,6 @@ private:
 	std::vector<ffi_type*> params;
 	// Array of pointes to ffi_types, real or custom
 	std::vector<ffi_type*> paramsAbstract;
+	// Store rubbish
+	std::deque<std::any> altHeap;
 };
