@@ -9,6 +9,8 @@
 #include <deque>
 #include <iostream>
 #include <fstream>
+#include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 #include <variant>
@@ -30,68 +32,40 @@ namespace rt
 	/// <summary>
 	/// Maps type names to their ffi type pointers
 	/// </summary>
-	static const std::unordered_map<std::string, ffi_type*> typeNames = {
-		{"void", &ffi_type_void}, // Only for return values
-		{"uint8", &ffi_type_uint8}, // u int8
-		{"sint8", &ffi_type_sint8}, // s int8
-		{"int8", &ffi_type_sint8}, // Default
-		{"uint16", &ffi_type_uint16}, // u int16
-		{"sint16", &ffi_type_sint16}, // s int16
-		{"int16", &ffi_type_sint16}, // Default
-		{"uint32", &ffi_type_uint32}, // u int32
-		{"sint32", &ffi_type_sint32}, // s int32
-		{"int32", &ffi_type_sint32}, // Default
-		{"uint64", &ffi_type_uint64}, // u int64
-		{"sint64", &ffi_type_sint64}, // s int64
-		{"int64", &ffi_type_sint64}, // Default
-		{"float", &ffi_type_float},
-		{"double", &ffi_type_double},
-		{"uchar", &ffi_type_uchar}, // u char
-		{"schar", &ffi_type_schar}, // s char
+	static const std::unordered_map<std::string, CType> typeNames = {
+		{"void", CType::Void}, // Only for return values
+		{"uint8", CType::Uint8}, // u int8
+		{"sint8", CType::Sint8}, // s int8
+		{"int8", CType::Sint8}, // Default
+		{"uint16", CType::Uint16}, // u int16
+		{"sint16", CType::Sint16}, // s int16
+		{"int16", CType::Sint16}, // Default
+		{"uint32", CType::Uint32}, // u int32
+		{"sint32", CType::Sint32}, // s int32
+		{"int32", CType::Sint32}, // Default
+		{"uint64", CType::Uint64}, // u int64
+		{"sint64", CType::Sint64}, // s int64
+		{"int64", CType::Sint64}, // Default
+		{"float", CType::Float},
+		{"double", CType::Double},
+		{"uchar", CType::Uchar}, // u char
+		{"schar", CType::Schar}, // s char
 		// No default char since the standard does not specify whether or not
 		// char is signed by default :/
-		{"ushort", &ffi_type_ushort}, // u short
-		{"sshort", &ffi_type_sshort}, // s short
-		{"short", &ffi_type_sshort}, // Default
-		{"uint", &ffi_type_uint}, // u int
-		{"sint", &ffi_type_sint}, // s int
-		{"int", &ffi_type_sint}, // Int is signed by default, so we have default :)
-		{"ulong", &ffi_type_ulong}, // u long
-		{"slong", &ffi_type_ulong}, // s long
-		{"long", &ffi_type_ulong}, // Default
-		{"longdouble", &ffi_type_longdouble},
-		// Pointers
-		{"cstring", &ffi_type_cstring}, // Char pointer, special logic in interpreter
-		{"uint8*",&ffi_type_puint8  },
-		{"sint8*",&ffi_type_psint8  },
-		{"int8*",&ffi_type_psint8  }, // D
-		{"uint16*",&ffi_type_puint16 },
-		{"sint16*",&ffi_type_psint16 },
-		{"int16*",&ffi_type_psint16 }, // D
-		{"uint32*",&ffi_type_puint32 },
-		{"sint32*",&ffi_type_psint32 },
-		{"int32*",&ffi_type_psint32 }, // D
-		{"uint64*",&ffi_type_puint64 },
-		{"sint64*",&ffi_type_psint64 },
-		{"int64*",&ffi_type_psint64 }, // D
-		{"float*",&ffi_type_pfloat  },
-		{"double*",&ffi_type_pdouble },
-		{"uchar*",&ffi_type_puchar  },
-		{"schar*",&ffi_type_pschar  },
-		{"ushort*",&ffi_type_pushort },
-		{"sshort*",&ffi_type_psshort },
-		{"short*",&ffi_type_psshort }, // D
-		{"uint*",&ffi_type_puint   },
-		{"sint*",&ffi_type_psint   },
-		{"int*",&ffi_type_psint   }, // D
-		{"ulong*",&ffi_type_pulong  },
-		{"slong*",&ffi_type_pslong  },
-		{"long*",&ffi_type_pslong  }, // D
-		{"longdouble*",&ffi_type_plongdouble},
+		{"ushort", CType::Ushort}, // u short
+		{"sshort", CType::Sshort}, // s short
+		{"short", CType::Sshort}, // Default
+		{"uint", CType::Uint}, // u int
+		{"sint", CType::Sint}, // s int
+		{"int", CType::Sint}, // Int is signed by default, so we have default :)
+		{"ulong", CType::Ulong}, // u long
+		{"slong", CType::Slong}, // s long
+		{"long", CType::Slong}, // Default
+		{"longdouble", CType::Longdouble},
 		// Complex
-		{"complex_float", &ffi_type_complex_float},
-		{"complex_double", &ffi_type_complex_double},
-		{"complex_longdouble", &ffi_type_complex_longdouble},
+		{"complex_float", CType::Complexfloat},
+		{"complex_double", CType::Complexdouble},
+		{"complex_longdouble", CType::Complexlongdouble},
 	};
 	/// <summary>
 	/// Returns the first argument
@@ -470,39 +444,27 @@ namespace rt
 		return giveException("Wrong amount of arguments");
 	}
 
-	/// <summary>
-	/// Creates custom struct ffi_type from Object
-	/// </summary>
-	[[nodiscard]] static ffi_type* makeFfiType(std::shared_ptr<Object> obj, SymbolTable* symtab, ArgState& argState, std::deque<std::any>& altHeap)
+	[[nodiscard]] Type&& makeType(objectOrValue& obv, SymbolTable* symtab, ArgState& argState)
 	{
-		// Very non-portable function
-		// TOO BAD!
-		auto members = obj->getMembers();
-		const int size = members.size();
-		// Struct
-		ffi_type** e = altStore<ffi_type*>(new ffi_type*[size + 1], altHeap); // TODO: Probably works?
-		// Member types
-		for (int i = 0; i < size; ++i) {
-			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&members.at(i))) {
-				// Nested struct
-				e[i] = altStore<ffi_type>(makeFfiType(*obj, symtab, argState, altHeap), altHeap);
-			} else {
-				auto value = evaluate(members.at(i), symtab, argState);
-				if (const std::string* pType = std::get_if<std::string>(&value)){ 
-					e[i] = typeNames.at(*pType);
-				}
-				else return nullptr;
+		// Not 100% confident this all works as intended
+		if (const auto obj = std::get_if<std::shared_ptr<Object>>(&obv)) {
+			// Struct
+			std::deque<Type> elements;
+			for (auto m : (*obj)->getMembers()) {
+				elements.push_back(std::move(makeType(m, symtab, argState)));
+			}
+			return Type(CType::Struct, false, elements);
+		} else {
+			// Not struct
+			auto rV = evaluate(obv, symtab, argState);
+			if (const std::string* rType = std::get_if<std::string>(&rV)) {
+				return Type(typeNames.at(*rType), rType->back() == '*');
+			} else [[unlikely]] {
+				throw;
 			}
 		}
-		e[size] = NULL; // Last one (NULL terminated array)
-		return new ffi_type(
-			0, // size // These will be calculated by libffi later
-			0, // align (init 0)
-			FFI_TYPE_STRUCT, // type
-			e // elements
-			);
 	}
-
+	
 	/*
 	 * Desc=Creates a binding for a shared function, by specifying it's parameters and return value.
 	 * Added=v0.11.0
@@ -532,47 +494,13 @@ namespace rt
 		// Reset function
 		func->argTypes.clear();
 		func->initialized = false;
-		func->retType = std::experimental::make_observer<ffi_type>(nullptr); // Unbelievable
 		// Get return value
-		if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&args.at(1))) {
-			// Struct
-			if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
-				func->retType = std::shared_ptr<ffi_type>(sT);
-			} else [[unlikely]] {
-				return giveException("Return type was of wrong type");
-			}
-		}
-		else { // Not struct
-			ffi_type* ret;
-			auto rV = evaluate(args.at(1), symtab, argState);
-			if (const std::string* rType = std::get_if<std::string>(&rV)) {
-				ret = typeNames.at(*rType);
-			} else [[unlikely]] {
-				return giveException("Return name was of wrong type");
-			}
-			func->retType = std::experimental::make_observer<ffi_type>(ret);
-		}
+		func->retType.emplace(std::move(makeType(args.at(1), symtab, argState)));
+		std::cout << "Move constructor should have been called!";
 		// Get parameters
-		func->argTypes.reserve(args.size() - 2);; // Prepare for params
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
-			if (const std::shared_ptr<Object>* obj = std::get_if<std::shared_ptr<Object>>(&(*it))) {
-				if (auto sT = makeFfiType(*obj, symtab, argState, func->altHeap)) {
-					func->argTypes.push_back(std::shared_ptr<ffi_type>(sT)); // Struct parameter
-					continue;
-				} else [[unlikely]] {
-					return giveException("Arg type was of wrong type");
-				}
-			}
-			// Not struct
-			auto rP = evaluate(*it, symtab, argState);
-			if (const std::string* pType = std::get_if<std::string>(&rP)){ 
-				if (*pType == "void") {
-					return giveException("Shared function cannot have parameters of type void");
-				}
-				func->argTypes.push_back(std::experimental::make_observer<ffi_type>(typeNames.at(*pType))); // TODO: Error handling
-			} else [[unlikely]] {
-				return giveException("Argument type was of wrong type");
-			}
+			func->argTypes.emplace_back(std::move(makeType(*it, symtab, argState)));
+			std::cout << "Move constructor should have been called!";
 		}
 		// Finished
 		func->initialized = true;
