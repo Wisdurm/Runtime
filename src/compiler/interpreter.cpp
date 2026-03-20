@@ -156,73 +156,62 @@ namespace rt
 		}
 		else if (auto node = std::dynamic_pointer_cast<ast::Call>(expr))
 		{
-			//TODO: The next 20 or so lines of code suck REALLY bad and I HATE THEM VERY MUCH
-			// THIS FUNCTION IS SOOOOO BAD BUT I REALLY DONT WANT TO REWRITE IT
+			// This code is no longer that bad, but I am still struggling to understand some parts
 
-			Symbol calledObject;
-			std::shared_ptr<Object> callee;
-
-			// If node->object is identifier,
-			// check for builtin since interpret_internal can't handle that.
+			// If call target is identifier,
 			if (auto bn = std::dynamic_pointer_cast<ast::Identifier>(node->object))
 			{
-				const auto& v = symtab->lookUp(bn->name, argState); // Look up object in symtab
-				if (std::holds_alternative<BuiltIn>(v)) // Builtin
-				{
-					calledObject = std::get<BuiltIn>(v);
+				if (call) {
+					const auto& v = symtab->lookUp(bn->name, argState); // Look up object in symtab
+					// Get arguments	
+					std::vector<objectOrValue> args;
+					for (auto arg : node->args)
+					{
+						// Do not evaluate here
+						args.push_back(interpret_internal(arg, symtab, false, argState));
+					}
+					// Call function
+					if (std::holds_alternative<BuiltIn>(v)) {	
+						// Call builtin
+						return std::get<BuiltIn>(v)(args, symtab, argState);
+					} else if (std::holds_alternative<LibFunc>(v)) {
+						// Call shared_library
+						return callShared(args, std::get<LibFunc>(v), symtab, argState);
+					} else {
+						// Going down in scope, this creates a new symbol table with the current one as it's parent
+						SymbolTable localSt = SymbolTable(symtab);
+						// Call Runtime function
+						return callObject(std::get<std::shared_ptr<Object>>(v), &localSt, argState, args);
+					}
 				}
-				else if (std::holds_alternative<LibFunc>(v)) // Library function
-				{
-					calledObject = std::get<LibFunc>(v);
-				}
-				else // Not builtin
-				{
-					calledObject = std::get<std::shared_ptr<Object>>(v);
-				}
-				callee = std::make_shared<Object>(bn->name, node);
-			}
-			else // Not builtin function
-			{	
+				// If not called, return something idk
+				return std::make_shared<Object>(bn->name, node);
+			} else {	
 				// This gets called when calling member functions
 				// I genuinely don't understand how I wrote this code, but I'm so glad
 				// I managed.
 				auto tmp = interpret_internal(node->object, symtab, false, argState);
 				if (std::holds_alternative<std::shared_ptr<Object>>(tmp)) // If object, call object
 				{
-					callee = std::get<std::shared_ptr<Object>>(tmp);
-					calledObject = callee;
-				}
-				else
+					auto calledObject = std::get<std::shared_ptr<Object>>(tmp);
+					if (call)
+					{
+						// Get arguments	
+						std::vector<objectOrValue> args;
+						for (auto arg : node->args)
+						{
+							// Do not evaluate here
+							args.push_back(interpret_internal(arg, symtab, false, argState));
+						}
+						// Call Runtime function
+						SymbolTable localSt = SymbolTable(symtab); // Going down in scope
+						return callObject(calledObject, &localSt, argState, args);
+					}
+					// If not called, return something idk
+					return calledObject;
+				} else {
 					return std::get<std::variant<double, std::string>>(tmp); // If value, return the value
-			}
-
-			if (call)
-			{
-				// Get arguments	
-				std::vector<objectOrValue> args;
-				for (auto arg : node->args)
-				{
-					// Do not evaluate here
-					args.push_back(interpret_internal(arg, symtab, false, argState));
 				}
-
-				if (std::holds_alternative<BuiltIn>(calledObject)) // Call built-in
-				{
-					return std::get<BuiltIn>(calledObject)(args, symtab, argState);
-				}
-				else if (std::holds_alternative<LibFunc>(calledObject)) // Call library
-				{
-					return callShared(args, std::get<LibFunc>(calledObject), symtab, argState);
-				}
-				else // Call Runtime Object
-				{
-					SymbolTable localSt = SymbolTable(symtab); // Going down in scope
-					return callObject(std::get<std::shared_ptr<Object>>(calledObject), &localSt, argState, args);
-				}
-			}
-			else
-			{
-				return callee;
 			}
 		}
 		else if (auto node = std::dynamic_pointer_cast<ast::BinaryOperator>(expr))
