@@ -55,7 +55,31 @@ namespace rt
 
 	// Map ctype to ffi_type. Optimize away later
 	static const std::unordered_map<CType, ffi_type*> typeMap = {
-		
+		{CType::Void, &ffi_type_void},
+		{CType::Uint8, &ffi_type_uint8},
+		{CType::Sint8, &ffi_type_sint},
+		{CType::Uint16, &ffi_type_uint16},
+		{CType::Sint16, &ffi_type_sint16},
+		{CType::Uint32, &ffi_type_uint32},
+		{CType::Sint32, &ffi_type_sint32},
+		{CType::Uint64, &ffi_type_uint64},
+		{CType::Sint64, &ffi_type_sint64},
+		{CType::Float, &ffi_type_float},
+		{CType::Double, &ffi_type_double},
+		{CType::Uchar, &ffi_type_uchar},
+		{CType::Schar, &ffi_type_schar},
+		{CType::Ushort, &ffi_type_ushort},
+		{CType::Sshort, &ffi_type_sshort},
+		{CType::Uint, &ffi_type_uint},
+		{CType::Sint, &ffi_type_sint},
+		{CType::Ulong, &ffi_type_ulong},
+		{CType::Slong, &ffi_type_slong},
+		{CType::Longdouble, &ffi_type_longdouble},
+		{CType::Complexfloat, &ffi_type_complex_float},
+		{CType::Complexdouble, &ffi_type_complex_double},
+		{CType::Complexlongdouble, &ffi_type_complex_longdouble},
+		{CType::Cstring, &ffi_type_pointer},
+		{CType::Struct, &ffi_type_pointer}
 	};
 	
 	struct Type
