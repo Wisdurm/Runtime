@@ -444,9 +444,9 @@ namespace rt
 		return giveException("Wrong amount of arguments");
 	}
 
-	[[nodiscard]] Type&& makeType(objectOrValue& obv, SymbolTable* symtab, ArgState& argState)
+	[[nodiscard]] Type makeType(objectOrValue& obv, SymbolTable* symtab, ArgState& argState)
 	{
-		// Not 100% confident this all works as intended
+		// Trusting move elision with my life
 		if (const auto obj = std::get_if<std::shared_ptr<Object>>(&obv)) {
 			// Struct
 			std::vector<Type> members;

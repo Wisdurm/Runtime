@@ -21,6 +21,7 @@
 #include <elf.h> // WINDOWS!!
 #include <link.h>
 #include <cxxabi.h>  // needed for abi::__cxa_demangle
+#include <cassert>
 
 namespace rt
 {
@@ -272,7 +273,7 @@ namespace rt
 			// Herkullista
 			return altAlloc<T>(getNumericalValue(value), altHeap);
 		} else {
-			return getNumericalValue(value);
+			return static_cast<T>(getNumericalValue(value));
 		}
 	}
 
@@ -281,9 +282,9 @@ namespace rt
 	[[nodiscard]] void* toVoid(std::any& value, bool pointer)
 	{
 		if (pointer) {
-			return &(std::any_cast<uint8_t*&>(value));
+			return &(std::any_cast<T*&>(value));
 		} else {
-			return &std::any_cast<uint8_t&>(value);
+			return &std::any_cast<T&>(value);
 		}
 	}
 
@@ -305,7 +306,8 @@ namespace rt
 
 		// Function signature, created later
 		ffi_cif cif;
-		// Number of params params
+		
+		// Number of params
 		const int narms = func.argTypes.size();
 		
 		// A list of the types of each argument
@@ -346,7 +348,8 @@ namespace rt
 			if (pType.type == CType::Struct) { // Struct
 				auto obj = std::get<std::shared_ptr<Object>>(args.at(i)); // TODO: Error handling
 				// Create struct
-				const ffi_type* type = paramTypes.at(i); 
+				const ffi_type* type = paramTypes.at(i);
+				// TODO: Vector
 				void* structMem = std::aligned_alloc(type->alignment, type->size);
 				// Store on alt heap, so it gets deallocated at the end of the function call
 				// This SHOULD work, but not 100% confident, TODO if bored
@@ -368,6 +371,9 @@ namespace rt
 				case CType::Sint8:
 					arguments.push_back(toAny<int8_t>(value, pType.pointer, altHeap));
 					break;
+				case CType::Sint:
+					arguments.push_back(toAny<signed int>(value, pType.pointer, altHeap));
+					break;
 				case CType::Float:
 					arguments.push_back(toAny<float>(value, pType.pointer, altHeap));
 					break;
@@ -378,8 +384,8 @@ namespace rt
 						arguments.push_back(std::get<std::string>(value));
 					}
 					break;
-				// default: herkullinen warning message
-				// 	throw InterpreterException("Unimplemented arg type", 0, "Unknown");
+				default:
+					throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 				}					
 			}
 		}
@@ -406,6 +412,9 @@ namespace rt
 			case CType::Sint8:
 				call_args.push_back(toVoid<int8_t>(arguments.at(i), pType.pointer));
 				break;
+			case CType::Sint:
+				call_args.push_back(toVoid<signed int>(arguments.at(i), pType.pointer));
+				break;
 			case CType::Float:
 				call_args.push_back(toVoid<float>(arguments.at(i), pType.pointer));
 				break;
@@ -419,7 +428,8 @@ namespace rt
 			case CType::Struct:
 				// TODO: ??
 				call_args.push_back(&std::any_cast<void*&>(arguments.at(i)));
-				break;
+			default:
+				throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 			}			
 		}
 

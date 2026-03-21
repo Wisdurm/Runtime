@@ -136,6 +136,7 @@ namespace rt
 			, members(std::move(other.members))
 			, elements(std::move(other.elements)) // Not sure if move is necessary but must remain stable
 		{
+			std::cout << "move was called\n";
 			// Idk?
 		};
 		// Dont need so delete juuuuusttt in case
@@ -152,8 +153,8 @@ namespace rt
 				for (int i = 0; i < size; ++i) {					
 					elements.push_back(members.at(i).get());
 				}
-				elements.push_back(NULL); // Last one (NULL terminated array)
 				assert(elements.size() == size);
+				elements.push_back(NULL); // Last one (NULL terminated array)
 				return std::shared_ptr<ffi_type>(new ffi_type(
 								  0, // size // These will be calculated by libffi later
 								  0, // align (init 0)
