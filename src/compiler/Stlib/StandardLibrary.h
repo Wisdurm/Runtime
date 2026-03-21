@@ -66,6 +66,8 @@ namespace rt
 		{"complex_float", CType::Complexfloat},
 		{"complex_double", CType::Complexdouble},
 		{"complex_longdouble", CType::Complexlongdouble},
+		// Other
+		{"cstring", CType::Cstring}
 	};
 	/// <summary>
 	/// Returns the first argument
@@ -458,7 +460,12 @@ namespace rt
 			// Not struct
 			auto rV = evaluate(obv, symtab, argState);
 			if (const std::string* rType = std::get_if<std::string>(&rV)) {
-				return Type(typeNames.at(*rType), rType->back() == '*');
+				// Is pointer type
+				if (rType->back() == '*') {
+					return Type(typeNames.at(rType->substr(0, rType->size() - 1)), true);
+				} else {
+					return Type(typeNames.at(*rType), false);
+				}
 			} else [[unlikely]] {
 				throw;
 			}

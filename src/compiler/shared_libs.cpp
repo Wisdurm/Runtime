@@ -381,7 +381,7 @@ namespace rt
 					if (pType.pointer) {
 						throw InterpreterException("Unimplemented feature", 0, "Unknown");
 					} else {
-						arguments.push_back(std::get<std::string>(value));
+						arguments.push_back(std::get<std::string>(value).data());
 					}
 					break;
 				default:
@@ -422,7 +422,7 @@ namespace rt
 				if (pType.pointer) {
 					throw InterpreterException("Unimplemented feature", 0, "Unknown");
 				} else {
-					call_args.push_back(std::any_cast<std::string&>(arguments.at(i)).data());
+					call_args.push_back(toVoid<char>(arguments.at(i), true));
 				}
 				break;
 			case CType::Struct:
