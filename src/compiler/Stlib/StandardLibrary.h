@@ -449,11 +449,11 @@ namespace rt
 		// Not 100% confident this all works as intended
 		if (const auto obj = std::get_if<std::shared_ptr<Object>>(&obv)) {
 			// Struct
-			std::deque<Type> elements;
+			std::vector<Type> members;
 			for (auto m : (*obj)->getMembers()) {
-				elements.push_back(std::move(makeType(m, symtab, argState)));
+				members.push_back(std::move(makeType(m, symtab, argState)));
 			}
-			return Type(CType::Struct, false, elements);
+			return Type(CType::Struct, false, members);
 		} else {
 			// Not struct
 			auto rV = evaluate(obv, symtab, argState);
@@ -483,7 +483,7 @@ namespace rt
 		{
 			auto v = evaluate(args.at(0), symtab, argState);
 			if (const std::string* name = std::get_if<std::string>(&v)){
-				if ((func = std::get_if<LibFunc>(&symtab->lookUpHard(*name)))) {}
+				if ((func = std::get_if<std::shared_ptr<LibFunc>>(&symtab->lookUpHard(*name))->get())) {}
 				else { [[unlikely]]
 					return giveException("Func name was not of a shared function");
 				}

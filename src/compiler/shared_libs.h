@@ -3,11 +3,11 @@
 #include "object.h"
 #include "interpreter.h"
 // C++
+#include <algorithm>
 #include <deque>
 #include <ffi.h>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -60,78 +60,87 @@ namespace rt
 	
 	struct Type
 	{
+		// TODO: Replace shared_ptr with unique_ptr when brave enough
+		
 		// The actual type
 		const CType type;
 		// Whether or not pointer
 		const bool pointer;
 		// Members (If struct)
-		const std::deque<Type> members;
-		// Libffi type
-		std::experimental::observer_ptr<ffi_type> ffiType;
-		// Memory; owns all of the memory dynamically allocated via containing
-		// smart pointers. Auto de-allocated at the end
-		std::deque<std::any> altHeap;
+		std::vector<Type> members;
+		// Libffi type: either observer pointer to existing one, or shared pointer owning struct type
+		std::variant<std::experimental::observer_ptr<ffi_type>, std::shared_ptr<ffi_type>> ffiType;
+		// Element array used by ffi_type
+		std::vector<ffi_type*> elements;
 
+		// Returns the pointer either owned or observed by the type
+		ffi_type* get() const
+		{
+			if (auto pp = std::get_if<std::experimental::observer_ptr<ffi_type>>(&ffiType)) {
+				return pp->get();
+			} else {
+				return std::get<std::shared_ptr<ffi_type>>(ffiType).get();
+			}
+		}
+		
 		// Constructor without members
 		Type(CType type, bool pointer)
 			: type(type)
 			, pointer(pointer)
 		{
-			// This class probably breaks like 100000 established rules of C++
-			// but I don't really know how I should be doing this
-			ffiType = std::experimental::make_observer<ffi_type>(makeFfiType(*this, altHeap));
+
+			ffiType = makeFfiType();
 		}
 
 		// Constructor with members
-		Type(CType type, bool pointer, std::deque<Type>& m)
+		Type(CType type, bool pointer, std::vector<Type>& members)
 			: type(type)
 			, pointer(pointer)
-			, members(std::move(m))
+			, members(std::move(members))
 		{
-			// This class probably breaks like 100000 established rules of C++
-			// but I don't really know how I should be doing this
-			ffiType = std::experimental::make_observer<ffi_type>(makeFfiType(*this, altHeap));
+			ffiType = makeFfiType();
 		}
 
-		// DONT COPY EVER PLEASE MY SMALL BRAIN CAN'T KEEP UP
+		// Never copy just because
 		Type (const Type&) = delete;
 		Type& operator= (const Type&) = delete;
-		// Move constructor; I can't bother anymore, just move it
-		Type (const Type&& other)
+		// Move constructor; Should be safe, assuming Type.ffiType.elements still points to Type.elements
+		Type (Type&& other)
 			: type(other.type)
 			, pointer(other.pointer)
 			, ffiType(other.ffiType)
-			, altHeap(std::move(other.altHeap))
+			, members(std::move(other.members))
+			, elements(std::move(other.elements)) // Not sure if move is necessary but must remain stable
 		{
-			// I guess this is ok? Idk...
-			std::cout << "MOVE CONSTUCTOR CALLED!";
-		}
+			// Idk?
+		};
 		// Dont need so delete juuuuusttt in case
 		Type& operator= (const Type&&) = delete;
 	private:
-		/// Creates struct ffi_type from Type
-		[[nodiscard]] ffi_type* makeFfiType(const Type& type, std::deque<std::any>& altHeap)
+		/// Returns ffi_type representing Type
+		[[nodiscard]] std::variant<std::experimental::observer_ptr<ffi_type>, std::shared_ptr<ffi_type>> makeFfiType()
 		{
-			if (type.type == CType::Struct) {
-				const int size = type.members.size();
+			if (type == CType::Struct) {
+				const int size = members.size();
 				// Struct
-				ffi_type** e = altStore<ffi_type*>(new ffi_type*[size + 1], altHeap);
+				elements.reserve(size);
 				// Member types
 				for (int i = 0; i < size; ++i) {					
-					e[i] = makeFfiType(type.members.at(i), altHeap);
+					elements.push_back(members.at(i).get());
 				}
-				e[size] = NULL; // Last one (NULL terminated array)
-				return altStore<ffi_type>(new ffi_type(
+				elements.push_back(NULL); // Last one (NULL terminated array)
+				assert(elements.size() == size);
+				return std::shared_ptr<ffi_type>(new ffi_type(
 								  0, // size // These will be calculated by libffi later
 								  0, // align (init 0)
 								  FFI_TYPE_STRUCT, // type
-								  e // elements
-								  ), altHeap);
+								  elements.data() // elements
+								  ));
 			} else {
-				if (type.pointer) {
-					return &ffi_type_pointer;
+				if (pointer) {
+					return std::experimental::make_observer<ffi_type>(&ffi_type_pointer);
 				} else {
-					return typeMap.at(type.type);
+					return std::experimental::make_observer<ffi_type>(typeMap.at(type));
 				}
 			}
 		}

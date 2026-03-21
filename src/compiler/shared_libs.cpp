@@ -8,6 +8,7 @@
 #include "utils.h"
 // C++
 #include <any>
+#include <cstdint>
 #include <deque>
 #include <ffi.h>
 #include <memory>
@@ -97,13 +98,12 @@ namespace rt
 		// Create objects
 		for (auto sym : symbols) {
 			void* fptr = dlsym(handle, sym.c_str());
-			symtab->updateSymbol(sym, LibFunc{
+			symtab->insert(sym, std::make_shared<LibFunc>(LibFunc{
 					.function = fptr,
-					.initialized = false, 
-					.retType = std::experimental::make_observer<ffi_type>(nullptr),
-					.argTypes = {},
-					.altHeap = {},
-					});
+						.initialized = false,
+						.retType = std::nullopt,
+						.argTypes = {},
+						}));
 			// These are not yet able to be called, as they do not have
 			// their necessary argument and return types set
 			// The signature must be specified by calling Sign()
@@ -122,7 +122,7 @@ namespace rt
 	/// <summary>
 	/// Creates a struct in a specified area of memory based on a Runtime object
 	/// </summary>
-	static void structFromObject(void* structMem, std::shared_ptr<Object> obj, ffi_type type,
+	static void structFromObject(void* structMem, std::shared_ptr<Object> obj, const Type& type,
 				     SymbolTable* symtab, ArgState& argState, std::deque<std::any>& altHeap)
 	{
 		// Here we assume we already have all the memory we need allocated;
@@ -133,14 +133,14 @@ namespace rt
 		// TODO: Packed support, as well as look into the libffi way of doing this
 		// Get members of arg
 		auto members = obj->getMembers(); // TODO: error handling
-		MemoryExplorer expl = MemoryExplorer(structMem, &type);
+		MemoryExplorer expl = MemoryExplorer(structMem, type);
 		// Assign members
-		for (int i = 0; type.elements[i] != NULL; ++i) {
+		for (int i = 0; type.members.size() < i; i++) {
 			// Loop through member types
 			const auto [memory, t] = expl[i];
-			if (t->type == FFI_TYPE_STRUCT) { // Struct
+			if (t.type == CType::Struct) { // Struct
 				auto member = std::get<std::shared_ptr<Object>>(members.at(i)); // TODO: Error handling
-				structFromObject(memory, member, *t, symtab, argState, altHeap);
+				structFromObject(memory, member, t, symtab, argState, altHeap);
 			} else {
 				const auto value = evaluate(members.at(i), symtab, argState);
 				if (auto str = std::get_if<std::string>(&value)) {
@@ -149,16 +149,33 @@ namespace rt
 					*reinterpret_cast<char**>(memory) = std::any_cast<std::string&>(altHeap.back()).data();
 				} else {
 					double val = std::get<double>(value);
-					if (t == &ffi_type_sint)  // TODO TE RES
-						*reinterpret_cast<int*>(memory) = static_cast<int>(val);
-					else if (t == &ffi_type_uchar) 
-						*reinterpret_cast<unsigned char*>(memory) = static_cast<unsigned char>(val);
-					else if (t == &ffi_type_float) 
-						*reinterpret_cast<float*>(memory) = static_cast<float>(val);
-					// Pointers
-					else if (t == &ffi_type_pfloat)
-						*reinterpret_cast<float**>(memory) = altAlloc(static_cast<float>(val), altHeap);
-					else throw InterpreterException("Unimplemented element type", 0, "Unknown");
+					switch (t.type)
+					{
+					case CType::Sint:
+						if (t.pointer) {
+							*reinterpret_cast<int**>(memory) = altAlloc(static_cast<int>(val), altHeap);
+						} else {						
+							*reinterpret_cast<int*>(memory) = static_cast<int>(val);						
+						}
+						break;
+					case CType::Uchar:					
+						if (t.pointer) {
+							*reinterpret_cast<unsigned char**>(memory) = altAlloc(static_cast<unsigned char>(val), altHeap);
+						} else {
+							*reinterpret_cast<unsigned char*>(memory) = static_cast<unsigned char>(val);
+						}
+						break;
+					case CType::Float:
+						if (t.pointer) {
+							*reinterpret_cast<float**>(memory) = altAlloc(static_cast<float>(val), altHeap);
+						} else {
+							*reinterpret_cast<float*>(memory) = static_cast<float>(val);
+						}
+						break;
+					default:
+						throw InterpreterException("Unimplemented element type", 0, "Unknown");
+						break;
+					}
 				}
 			}
 		}
@@ -167,43 +184,51 @@ namespace rt
 	/// <summary>
 	/// Creates a Runtime object from a struct in memory
 	/// </summary>
-	static std::shared_ptr<Object> objectFromStruct(void* strc, ffi_type structType)
+	static std::shared_ptr<Object> objectFromStruct(void* strc, const Type& type)
 	{
 		// TODO: Packed support, as well as look into the libffi way of doing this
 		auto obj = std::make_shared<Object>();
-		MemoryExplorer expl = MemoryExplorer(strc, &structType);
-		for (int i = 0; structType.elements[i] != NULL; ++i) {
+		MemoryExplorer expl = MemoryExplorer(strc, type);
+		for (int i = 0; type.members.size() < i; i++) {
 			// Loop through member types
 			const auto [memory, t] = expl[i];
-			// Get value
-			std::variant<double, std::string> value;
-			if (t == &ffi_type_sint)  // TODO TE RES
-				value = static_cast<double>(*reinterpret_cast<int*>(memory));
-			else if (t == &ffi_type_float)
-				value = static_cast<double>(*reinterpret_cast<float*>(memory));
-			else if (t->type == FFI_TYPE_STRUCT) {
-				obj->addMember(objectFromStruct(memory, *t));
+			if (t.type == CType::Struct) {
+				obj->addMember(objectFromStruct(memory, t));
+			} else {
+				// Get value
+				std::variant<double, std::string> value;
+				switch (t.type)
+				{
+				case CType::Sint:
+					value = static_cast<double>(*reinterpret_cast<int*>(memory));
+					break;
+				case CType::Float:
+					value = static_cast<double>(*reinterpret_cast<float*>(memory));
+					break;
+				default:
+					throw InterpreterException("Unimplemented element type", 0, "Unknown");
+				}
+				// Add value
+				obj->addMember(value);
 			}
-			else throw InterpreterException("Unimplemented element type", 0, "Unknown");
-			// Add value
-			obj->addMember(value);
 		}
 		return obj;
 	}
 
 	// Sets the values of a Runtime object based on pointers within a struct
 	// struct may have custom types
-	static void updateObject(ffi_type strct, std::shared_ptr<Object> obj, void* callArg)
+	static void updateObject(void* callArg, std::shared_ptr<Object> obj, const Type& type)
 	{
 		// Loop through all the members and check if they are pointers
-		MemoryExplorer expl = MemoryExplorer(callArg, &strct);
-		for (int i = 0; strct.elements[i] != NULL; i++) {
+		MemoryExplorer expl = MemoryExplorer(callArg, type);
+		for (int i = 0; i < type.members.size(); i++) {
 			// Loop through member types
 			const auto [memory, t] = expl[i];
 			auto member = obj->getMembers()[i];
-			if (strct.elements[i]->type == FFI_TYPE_POINTER) { // Check if pointer
+			// Check if pointer
+			if (t.pointer or t.type == CType::Cstring) {
 				// First check if string
-				if (strct.elements[i] == &ffi_type_cstring) {
+				if (t.type == CType::Cstring) {
 					char* str = *reinterpret_cast<char**>(memory);
 					if (auto op = std::get_if<std::shared_ptr<Object>>(&member)) {
 						(*op)->setLast(str);
@@ -213,20 +238,52 @@ namespace rt
 					continue;
 				}
 				// If not string
+				// Get value
 				double val;
-				if (strct.elements[i] == &ffi_type_psint)
+				switch (t.type)
+				{
+				case CType::Sint:
 					val = **reinterpret_cast<int**>(memory);
-				if (strct.elements[i] == &ffi_type_pfloat)
+					break;
+				case CType::Float:
 					val = **reinterpret_cast<float**>(memory);
-				// TODO: The rest
+					break;
+				default:
+					throw InterpreterException("Unimplemented element type", 0, "Unknown");
+				}
+				// Set value
 				if (auto op = std::get_if<std::shared_ptr<Object>>(&member)) {
 					(*op)->setLast(val);
 				} else {
 					std::get<std::variant<double, std::string>>(member) = val;
 				}
-			} else if (strct.elements[i]->type == FFI_TYPE_STRUCT) {
-				updateObject(*t, std::get<std::shared_ptr<Object>>(member), memory); // TODO: Error handling for get<>
+			} else if (t.type == CType::Struct) {
+				updateObject(memory, std::get<std::shared_ptr<Object>>(member), t); // TODO: Error handling for get<>
 			}
+			// Otherwise no need to update anything
+		}
+	}
+
+	// Returns an std::any, which stores the provided value
+	template <typename T>
+	[[nodiscard]] std::any toAny(std::variant<double, std::string> value, bool pointer, std::deque<std::any>& altHeap)
+	{
+		if (pointer) {
+			// Herkullista
+			return altAlloc<T>(getNumericalValue(value), altHeap);
+		} else {
+			return getNumericalValue(value);
+		}
+	}
+
+	// Returns a void pointer to the value stored in the std::any
+	template <typename T>
+	[[nodiscard]] void* toVoid(std::any& value, bool pointer)
+	{
+		if (pointer) {
+			return &(std::any_cast<uint8_t*&>(value));
+		} else {
+			return &std::any_cast<uint8_t&>(value);
 		}
 	}
 
@@ -252,27 +309,20 @@ namespace rt
 		const int narms = func.argTypes.size();
 		
 		// A list of the types of each argument
-		ParamWrapper params = ParamWrapper(narms);
-		for (int i = 0; i < narms; ++i) {
-			if (std::holds_alternative<std::shared_ptr<ffi_type>>(func.argTypes.at(i)))
-				params.add(std::get<std::shared_ptr<ffi_type>>(func.argTypes.at(i)).get());
-			else
-				params.add(std::get<std::experimental::observer_ptr<ffi_type>>(func.argTypes.at(i)).get());
+		std::vector<ffi_type*> paramTypes;
+		paramTypes.reserve(narms);
+		for (int i = 0; i < narms; i++) {
+			paramTypes.push_back(func.argTypes.at(i).get());
 		}
 		
 		// Return type
-		ffi_type* returnType;
-		if (const auto rType = std::get_if<std::experimental::observer_ptr<ffi_type>>(&func.retType))
-			returnType = rType->get();
-		else
-			returnType = std::get<std::shared_ptr<ffi_type>>(func.retType).get();
+		ffi_type* returnType = func.retType.value().get();
 		
 		// Create CIF
 		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
 				 returnType,
-				 params.realParams()) != FFI_OK)
+				 paramTypes.data()) != FFI_OK)
 			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
-		params.updateAbstract();
 		
 		// Return value data
 		void* ret;
@@ -292,126 +342,85 @@ namespace rt
 		// Push the values of arguments to arguments
 		for (int i = 0; i < narms; ++i) {
 			// Cast arg to type wanted by lib
-			ffi_type* type = params.at(i);
-			if (type->type == FFI_TYPE_STRUCT) { // Struct
+			const Type& pType = func.argTypes.at(i);
+			if (pType.type == CType::Struct) { // Struct
 				auto obj = std::get<std::shared_ptr<Object>>(args.at(i)); // TODO: Error handling
 				// Create struct
+				const ffi_type* type = paramTypes.at(i); 
 				void* structMem = std::aligned_alloc(type->alignment, type->size);
 				// Store on alt heap, so it gets deallocated at the end of the function call
 				// This SHOULD work, but not 100% confident, TODO if bored
 				altHeap.push_back(std::shared_ptr<void>(structMem, [](void* ptr){free(ptr);} ));
 				// This function actually pushes all the the necessary data to the memory buffer
-				structFromObject(structMem, obj, *type, symtab, argState, altHeap);
+				structFromObject(structMem, obj, pType, symtab, argState, altHeap);
 				arguments.push_back(structMem);
 			} else { // Not struct, feel free to evaluate
 				// Get value of arg
 				auto value = evaluate(args.at(i), symtab, argState);
 				
-				if (type == &ffi_type_uint8)
-					// Shared because vector requires copyable types
-					arguments.push_back(std::make_shared<uint8_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_sint8)
-					arguments.push_back(std::make_shared<int8_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_uint16)
-					arguments.push_back(std::make_shared<uint16_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_sint16)
-					arguments.push_back(std::make_shared<int16_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_uint32)
-					arguments.push_back(std::make_shared<uint32_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_sint32)
-					arguments.push_back(std::make_shared<int32_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_uint64)
-					arguments.push_back(std::make_shared<uint64_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_sint64)
-					arguments.push_back(std::make_shared<int64_t>(getNumericalValue(value)));
-				else if (type == &ffi_type_float)
-					arguments.push_back(std::make_shared<float>(getNumericalValue(value)));
-				else if (type == &ffi_type_double)
-					arguments.push_back(std::make_shared<double>(getNumericalValue(value)));
-				else if (type == &ffi_type_uchar)
-					arguments.push_back(std::make_shared<unsigned char>(getNumericalValue(value)));
-				else if (type == &ffi_type_schar)
-					arguments.push_back(std::make_shared<signed char>(getNumericalValue(value)));
-				else if (type == &ffi_type_ushort)
-					arguments.push_back(std::make_shared<unsigned short>(getNumericalValue(value)));
-				else if (type == &ffi_type_sshort)
-					arguments.push_back(std::make_shared<short>(getNumericalValue(value)));
-				else if (type == &ffi_type_uint)
-					arguments.push_back(std::make_shared<unsigned int>(getNumericalValue(value)));
-				else if (type == &ffi_type_sint)
-					arguments.push_back(std::make_shared<int>(getNumericalValue(value)));
-				else if (type == &ffi_type_ulong)
-					arguments.push_back(std::make_shared<unsigned long>(getNumericalValue(value)));
-				else if (type == &ffi_type_slong)
-					arguments.push_back(std::make_shared<long>(getNumericalValue(value)));
-				else if (type == &ffi_type_longdouble)
-					arguments.push_back(std::make_shared<long double>(getNumericalValue(value)));
-				// Pointer types
-				else if (type == &ffi_type_cstring) {
-					// Add to alt heap so object lifetime survives function call
-					altHeap.push_back(std::get<std::string>(value));
-					arguments.push_back(std::any_cast<std::string&>(altHeap.back()).data());
-				}
-				else if (type == &ffi_type_psint)
-					arguments.push_back(altAlloc<int>(getNumericalValue(value), altHeap));
-				else if (type == &ffi_type_pfloat)
-					arguments.push_back(altAlloc<float>(getNumericalValue(value), altHeap));
-				// TODO: The rest
-				else throw InterpreterException("Unimplemented arg type", 0, "Unknown");
+				switch (pType.type)
+				{
+				case CType::Void:
+					throw InterpreterException("Cannot have void as param type", 0, "Unknown");
+				case CType::Uint8:
+					arguments.push_back(toAny<uint8_t>(value, pType.pointer, altHeap));
+					break;
+				case CType::Sint8:
+					arguments.push_back(toAny<int8_t>(value, pType.pointer, altHeap));
+					break;
+				case CType::Float:
+					arguments.push_back(toAny<float>(value, pType.pointer, altHeap));
+					break;
+				case CType::Cstring:
+					if (pType.pointer) {
+						throw InterpreterException("Unimplemented feature", 0, "Unknown");
+					} else {
+						arguments.push_back(std::get<std::string>(value));
+					}
+					break;
+				// default: herkullinen warning message
+				// 	throw InterpreterException("Unimplemented arg type", 0, "Unknown");
+				}					
 			}
 		}
+
+		// This should demonstrate what in the world is happening here
+		// int c = 18;
+		// std::any a = c;
+		// void* b = &std::any_cast<int&>(a);
+		// assert(*((int*)b) == c);
 		
 		// Make call_args a list of void pointers to the actual values
 		for (int i = 0; i < narms; ++i) {
-			// nightmare nightmare nightmare nightmare nightmare nightmare nightmare 
-			// This is EXTREMELY prone to errors, errors which are likely quite hard to spot
+			// nightmare nightmare nightmare 
+			// This is quite prone to errors, errors which are likely quite hard to spot
+			const Type& pType = func.argTypes.at(i);
+			
+			switch (pType.type)
 			{
-			if (arguments.at(i).type() == typeid(std::shared_ptr<uint8_t>))
-				call_args.push_back(std::any_cast<std::shared_ptr<uint8_t>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int8_t>))
-				call_args.push_back(std::any_cast<std::shared_ptr<int8_t>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint16_t>))
-				call_args.push_back(std::any_cast<std::shared_ptr<uint16_t>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int16_t>))
-				call_args.push_back(std::any_cast<std::shared_ptr<int16_t>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<uint32_t>))
-				call_args.push_back(std::any_cast<std::shared_ptr<uint32_t>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int64_t>))
-				call_args.push_back(std::any_cast<std::shared_ptr<int64_t>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<float>))
-				call_args.push_back(std::any_cast<std::shared_ptr<float>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<double>))
-				call_args.push_back(std::any_cast<std::shared_ptr<double>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned char>))
-				call_args.push_back(std::any_cast<std::shared_ptr<unsigned char>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<signed char>))
-				call_args.push_back(std::any_cast<std::shared_ptr<signed char>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned short>))
-				call_args.push_back(std::any_cast<std::shared_ptr<unsigned short>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<short>))
-				call_args.push_back(std::any_cast<std::shared_ptr<short>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned int>))
-				call_args.push_back(std::any_cast<std::shared_ptr<unsigned int>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<int>))
-				call_args.push_back(std::any_cast<std::shared_ptr<int>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<unsigned long>))
-				call_args.push_back(std::any_cast<std::shared_ptr<unsigned long>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<long>))
-				call_args.push_back(std::any_cast<std::shared_ptr<long>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(std::shared_ptr<long double>))
-				call_args.push_back(std::any_cast<std::shared_ptr<long double>>(arguments.at(i)).get());
-			else if (arguments.at(i).type() == typeid(void*)) // Struct
-				call_args.push_back(std::any_cast<void*>(arguments.at(i)));
-			// Pointers
-			else if (arguments.at(i).type() == typeid(char*)) // C string
-				call_args.push_back(&std::any_cast<char*&>(arguments.at(i)));
-			else if (arguments.at(i).type() == typeid(int*))
-				call_args.push_back(&std::any_cast<int*&>(arguments.at(i)));
-			else if (arguments.at(i).type() == typeid(float*))
-				call_args.push_back(&std::any_cast<float*&>(arguments.at(i)));
-			// TODO: The rest
-			else throw InterpreterException("Unimplemented arg pointer", 0, "Unknown");
-			}
+			case CType::Void:
+				throw InterpreterException("Cannot have void as param type", 0, "Unknown");
+			case CType::Uint8:
+				call_args.push_back(toVoid<uint8_t>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Sint8:
+				call_args.push_back(toVoid<int8_t>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Float:
+				call_args.push_back(toVoid<float>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Cstring:
+				if (pType.pointer) {
+					throw InterpreterException("Unimplemented feature", 0, "Unknown");
+				} else {
+					call_args.push_back(std::any_cast<std::string&>(arguments.at(i)).data());
+				}
+				break;
+			case CType::Struct:
+				// TODO: ??
+				call_args.push_back(&std::any_cast<void*&>(arguments.at(i)));
+				break;
+			}			
 		}
 
 		assert(call_args.size() == narms);
@@ -422,34 +431,44 @@ namespace rt
 		
 		// Write pointer values back to their Runtime counterparts
 		for (int i = 0; i < narms; ++i) {
-			if (params.at(i)->type == FFI_TYPE_STRUCT) // Check if struct, as they may have pointer members
+			const Type& t = func.argTypes.at(i);
+			// Check if struct, as they may have pointer members
+			if (t.type == CType::Struct)
 			{
 				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization // ????
-					updateObject(*params.at(i), *pObj, call_args.at(i));
+					updateObject(call_args.at(i), *pObj, t);
 				} else {
-					std::cout << "Value passed to struct argument! New values are not written down! Type: " <<  params.at(i)->type << std::endl;
+					std::cout << "Value passed to struct argument! New values are not written down! Type: " << static_cast<int>(t.type) << std::endl;
 				}
 			}
-			else if (params.at(i)->type == FFI_TYPE_POINTER)
+			else if (t.pointer or t.type == CType::Cstring)
 			{
 				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization // ????
 					// First check if string
-					if (params.at(i) == &ffi_type_cstring) {
+					if (t.type == CType::Cstring) {
 						pObj->get()->setLast(*reinterpret_cast<char**>(call_args.at(i)));
 						continue;
 					}
 					// If not string
 					double val;
-					if (params.at(i) == &ffi_type_psint)
+					switch (t.type)
+					{
+					case CType::Sint:
 						val = **reinterpret_cast<int**>(call_args.at(i));
-					else if (params.at(i) == &ffi_type_pfloat)
+						break;
+					case CType::Float:
 						val = **reinterpret_cast<float**>(call_args.at(i));
+						break;
+					default:
+						throw InterpreterException("Unimplemented element type", 0, "Unknown");
+					}
 					// TODO: The rest
 					pObj->get()->setLast(val);
 				} else {
-					std::cout << "Value passed to pointer argument! New values are not written down! Type: " <<  params.at(i)->type << std::endl;
+					std::cout << "Value passed to pointer argument! New values are not written down! Type: " << static_cast<int>(t.type) << std::endl;
 				}
 			}
+			// Otherwise no need to update any values
 		}
 		
 		// Return value
@@ -472,7 +491,7 @@ namespace rt
 			return retVal;
 		} else { // Struct return value
 			// Construct Runtime object based on struct in memory
-			return objectFromStruct(ret, *returnType);
+			return objectFromStruct(ret, func.retType.value());
 		}
 	}
 }

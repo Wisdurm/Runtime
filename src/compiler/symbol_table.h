@@ -7,11 +7,7 @@
 #include <unordered_map> // Do testing later on to figure out if a normal map would be better
 #include <string>
 #include <memory>
-#include <variant>
-#include <functional>
 #include <vector>
-#include <algorithm>
-#include <any>
 
 // Forward declarations
 namespace rt
@@ -75,12 +71,8 @@ namespace rt {
 		/// <param name="key">Name of the symbol</param>
 		/// <param name="object">Value of the symbol</param>
 		void updateSymbol(const std::string& key, const std::shared_ptr<rt::Object> object);
-		/// <summary>
-		/// Changes the value of a symbol, or adds a new one to the local scope if not found
-		/// </summary>
-		/// <param name="key">Name of the symbol</param>
-		/// <param name="object">Value of the symbol</param>
-		void updateSymbol(const std::string& key, LibFunc object);
+		// Moves a new value into the symbol table
+		void insert(const std::string& key, std::shared_ptr<LibFunc> object);
 		/// <summary>
 		/// Clears the symbol table
 		/// </summary>

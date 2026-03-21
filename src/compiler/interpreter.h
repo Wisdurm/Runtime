@@ -7,7 +7,6 @@
 #include <deque>
 #include <tsl/ordered_map.h>
 // C++
-#include <unordered_map> // Do testing later on to figure out if a normal map would be better
 #include <string>
 #include <memory>
 #include <variant>
@@ -16,6 +15,14 @@
 #include <algorithm>
 #include <any>
 
+namespace rt
+{
+	// Forward declarations
+	class SymbolTable;
+	class ArgState;
+	struct LibFunc;
+}
+
 /// <summary>
 /// Built-in Runtime function
 /// </summary>
@@ -23,10 +30,10 @@ using BuiltIn = std::function<objectOrValue(std::vector<objectOrValue>&, rt::Sym
 /// <summary>
 /// Type which symbol table points to object, a function object referencing a built in function or a function from a shared library.
 /// </summary>
-using Symbol = std::variant<std::shared_ptr<rt::Object>, BuiltIn, rt::LibFunc>;
+using Symbol = std::variant<std::shared_ptr<rt::Object>, BuiltIn, std::shared_ptr<rt::LibFunc>>;
 
 namespace rt
-{
+{	
 	// TODO: Inline is scary but I must confront it someday
 
 	/// <summary>

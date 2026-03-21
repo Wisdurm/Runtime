@@ -128,14 +128,9 @@ namespace rt
 			locals.insert({ key, object });
 	}
 
-	void SymbolTable::updateSymbol(const std::string& key, LibFunc object)
+	void SymbolTable::insert(const std::string& key, std::shared_ptr<LibFunc> object)
 	{
-		// Check if key exists
-		std::unordered_map<std::string, Symbol>::iterator it = locals.find(key);
-		if (it != locals.end()) // Exists
-			it->second = object; // I don't think there's any chance this works but I'm a bit tired atm so I'll figure this out in the coming days/weeks
-		else
-			locals.insert({ key, object });
+		locals.insert({key, object});
 	}
 
 	void SymbolTable::clear()
@@ -149,14 +144,14 @@ namespace rt
 	{
 		std::vector<std::string> keys;
 		// Get from current
-		for (auto kv : this->locals) {
+		for (auto& kv : this->locals) {
 			keys.push_back(kv.first);
 		}
 		// Get from parents
 		auto p = parent;
 		while (p != nullptr)
 		{
-			for (auto kv : p->locals) {
+			for (auto& kv : p->locals) {
 				keys.push_back(kv.first);
 			}
 		}

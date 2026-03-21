@@ -174,9 +174,9 @@ namespace rt
 					if (std::holds_alternative<BuiltIn>(v)) {	
 						// Call builtin
 						return std::get<BuiltIn>(v)(args, symtab, argState);
-					} else if (std::holds_alternative<LibFunc>(v)) {
+					} else if (std::holds_alternative<std::shared_ptr<LibFunc>>(v)) {
 						// Call shared_library
-						return callShared(args, std::get<LibFunc>(v), symtab, argState);
+						return callShared(args, *std::get<std::shared_ptr<LibFunc>>(v), symtab, argState);
 					} else {
 						// Going down in scope, this creates a new symbol table with the current one as it's parent
 						SymbolTable localSt = SymbolTable(symtab);
