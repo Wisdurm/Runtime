@@ -5,6 +5,7 @@
 #include "Stlib/StandardFiles.h"
 #include "object.h"
 #include "symbol_table.h"
+#include "tokenizer.h"
 #include "utils.h"
 // C++
 #include <any>
@@ -25,6 +26,10 @@
 
 namespace rt
 {
+	// Location from where callShared is being called.
+	// Having this as a global variable for this file because it's just so much simpler
+	static SourceLocation* srcLoc;
+	
 	/// <summary>
 	/// Stores all currently loaded shared libraries
 	/// </summary>
@@ -85,7 +90,7 @@ namespace rt
 		void* handle = nullptr;
 		handle = dlopen(fileName, RTLD_LAZY | RTLD_GLOBAL);
 		if (!handle) {
-			throw InterpreterException(dlerror(), 0, "Unknown");
+			throw InterpreterException(dlerror(), srcLoc->getLine(), srcLoc->getFile());
 		}
 		std::vector<std::string> symbols = getSymbols(handle);
 		// Demangle names (if C++)
@@ -133,19 +138,21 @@ namespace rt
 
 		// TODO: Packed support, as well as look into the libffi way of doing this
 		// Get members of arg
-		auto members = obj->getMembers(); // TODO: error handling
+		auto members = obj->getMembers();
 		MemoryExplorer expl = MemoryExplorer(structMem, type);
 		// Assign members
 		for (int i = 0; i < type.members.size(); i++) {
 			// Loop through member types
 			const auto [memory, t] = expl[i];
 			if (t.type == CType::Struct) { // Struct
-				auto member = std::get<std::shared_ptr<Object>>(members.at(i)); // TODO: Error handling
+				if (not std::holds_alternative<std::shared_ptr<Object>>(members.at(i))) {
+					throw InterpreterException("Cannot create struct from value argument", srcLoc->getLine(), srcLoc->getFile());
+				}
+				auto member = std::get<std::shared_ptr<Object>>(members.at(i));
 				structFromObject(memory, member, t, symtab, argState, altHeap);
 			} else {
 				const auto value = evaluate(members.at(i), symtab, argState);
 				if (auto str = std::get_if<std::string>(&value)) {
-					// TODO: Maybe should be stored somewhere else? Idk
 					altHeap.push_back(*str);
 					*reinterpret_cast<char**>(memory) = std::any_cast<std::string&>(altHeap.back()).data();
 				} else {
@@ -174,7 +181,7 @@ namespace rt
 						}
 						break;
 					default:
-						throw InterpreterException("Unimplemented element type", 0, "Unknown");
+						throw InterpreterException("Unimplemented element type", srcLoc->getLine(), srcLoc->getFile());
 						break;
 					}
 				}
@@ -207,7 +214,7 @@ namespace rt
 					value = static_cast<double>(*reinterpret_cast<float*>(memory));
 					break;
 				default:
-					throw InterpreterException("Unimplemented element type", 0, "Unknown");
+					throw InterpreterException("Unimplemented element type", srcLoc->getLine(), srcLoc->getFile());
 				}
 				// Add value
 				obj->addMember(value);
@@ -250,7 +257,7 @@ namespace rt
 					val = **reinterpret_cast<float**>(memory);
 					break;
 				default:
-					throw InterpreterException("Unimplemented element type", 0, "Unknown");
+					throw InterpreterException("Unimplemented element type", srcLoc->getLine(), srcLoc->getFile());
 				}
 				// Set value
 				if (auto op = std::get_if<std::shared_ptr<Object>>(&member)) {
@@ -259,7 +266,10 @@ namespace rt
 					std::get<std::variant<double, std::string>>(member) = val;
 				}
 			} else if (t.type == CType::Struct) {
-				updateObject(memory, std::get<std::shared_ptr<Object>>(member), t); // TODO: Error handling for get<>
+				if (not std::holds_alternative<std::shared_ptr<Object>>(member)) {
+					throw InterpreterException("Cannot create struct from value argument", srcLoc->getLine(), srcLoc->getFile());
+				}
+				updateObject(memory, std::get<std::shared_ptr<Object>>(member), t);
 			}
 			// Otherwise no need to update anything
 		}
@@ -288,15 +298,14 @@ namespace rt
 		}
 	}
 
-	[[nodiscard]] objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState)
+	[[nodiscard]] objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState, SourceLocation src)
 	{
-		// TODO: Fix broken state if fails midway
-		// TODO: There are probably about 1000 memory leaks, memory mismagement and whatever errors in this code.
-		// I'm not even sure where to begin honestly.
+		// Initialize srcLocation
+		srcLoc = &src;
 		
 		// TODO: Windows
 		if (not func.initialized)
-			throw InterpreterException("Shared function is not yet bound", 0, "Unknown");
+			throw InterpreterException("Shared function is not yet bound", srcLoc->getLine(), srcLoc->getFile());
 		
 		// Stores smart pointers
 		// The pointers store values that need to be stored in this scope
@@ -323,13 +332,14 @@ namespace rt
 		// Create CIF
 		if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, narms,
 				 returnType,
-				 paramTypes.data()) != FFI_OK)
-			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", 0, "Unknown");
+				 paramTypes.data()) != FFI_OK) {
+			throw InterpreterException("Unable to prepare cif. Likely incorrect arguments or unimplemented features.", srcLoc->getLine(), srcLoc->getFile());
+		}
 		
 		// Return value data
-		void* ret;
-		if (returnType != &ffi_type_void) { // Void doesnt need memory allocated
-			ret = std::aligned_alloc(returnType->alignment, returnType->size);			
+		std::shared_ptr<void> ret;
+		if (returnType != &ffi_type_void) { // Void doesnt need memory
+			ret = std::shared_ptr<void>(std::aligned_alloc(returnType->alignment, returnType->size), [](void* ptr){free(ptr);});
 		}
 		
 		// The values of function arguments
@@ -346,10 +356,12 @@ namespace rt
 			// Cast arg to type wanted by lib
 			const Type& pType = func.argTypes.at(i);
 			if (pType.type == CType::Struct) { // Struct
-				auto obj = std::get<std::shared_ptr<Object>>(args.at(i)); // TODO: Error handling
+				if (not std::holds_alternative<std::shared_ptr<Object>>(args.at(i))) {
+					throw InterpreterException("Cannot create struct from value argument", srcLoc->getLine(), srcLoc->getFile());
+				}
+				auto obj = std::get<std::shared_ptr<Object>>(args.at(i));
 				// Create struct
 				const ffi_type* type = paramTypes.at(i);
-				// TODO: Vector
 				void* structMem = std::aligned_alloc(type->alignment, type->size);
 				// Store on alt heap, so it gets deallocated at the end of the function call
 				// This SHOULD work, but not 100% confident, TODO if bored
@@ -364,38 +376,82 @@ namespace rt
 				switch (pType.type)
 				{
 				case CType::Void:
-					throw InterpreterException("Cannot have void as param type", 0, "Unknown");
+					throw InterpreterException("Cannot have void as param type", srcLoc->getLine(), srcLoc->getFile());
 				case CType::Uint8:
 					arguments.push_back(toAny<uint8_t>(value, pType.pointer, altHeap));
 					break;
 				case CType::Sint8:
 					arguments.push_back(toAny<int8_t>(value, pType.pointer, altHeap));
 					break;
-				case CType::Sint:
-					arguments.push_back(toAny<signed int>(value, pType.pointer, altHeap));
+				case CType::Uint16:
+					arguments.push_back(toAny<uint16_t>(value, pType.pointer, altHeap));
+					break;
+				case CType::Sint16:
+					arguments.push_back(toAny<int16_t>(value, pType.pointer, altHeap));
+					break;
+				case CType::Uint32:
+					arguments.push_back(toAny<uint32_t>(value, pType.pointer, altHeap));
+					break;
+				case CType::Sint32:
+					arguments.push_back(toAny<int32_t>(value, pType.pointer, altHeap));
+					break;
+				case CType::Uint64:
+					arguments.push_back(toAny<uint64_t>(value, pType.pointer, altHeap));
+					break;
+				case CType::Sint64:
+					arguments.push_back(toAny<int64_t>(value, pType.pointer, altHeap));
 					break;
 				case CType::Float:
 					arguments.push_back(toAny<float>(value, pType.pointer, altHeap));
 					break;
+				case CType::Double:
+					arguments.push_back(toAny<double>(value, pType.pointer, altHeap));
+					break;
+				case CType::Uchar:
+					arguments.push_back(toAny<unsigned char>(value, pType.pointer, altHeap));
+					break;
+				case CType::Schar:
+					arguments.push_back(toAny<signed char>(value, pType.pointer, altHeap));
+					break;
+				case CType::Ushort:
+					arguments.push_back(toAny<unsigned short>(value, pType.pointer, altHeap));
+					break;
+				case CType::Sshort:
+					arguments.push_back(toAny<short>(value, pType.pointer, altHeap));
+					break;
+				case CType::Uint:
+					arguments.push_back(toAny<unsigned int>(value, pType.pointer, altHeap));
+					break;
+				case CType::Sint:
+					arguments.push_back(toAny<int>(value, pType.pointer, altHeap));
+					break;
+				case CType::Ulong:
+					arguments.push_back(toAny<unsigned long>(value, pType.pointer, altHeap));
+					break;
+				case CType::Slong:
+					arguments.push_back(toAny<long>(value, pType.pointer, altHeap));
+					break;
+				case CType::Longdouble:
+					arguments.push_back(toAny<long double>(value, pType.pointer, altHeap));
+					break;
 				case CType::Cstring:
 					if (pType.pointer) {
-						throw InterpreterException("Unimplemented feature", 0, "Unknown");
+						throw InterpreterException("Unimplemented feature", srcLoc->getLine(), srcLoc->getFile());
 					} else {
 						altHeap.push_back(std::get<std::string>(value));
 						arguments.push_back(std::any_cast<std::string&>(altHeap.back()).data());
 					}
-					break;
+					break;					
 				default:
-					throw InterpreterException("Unimplemented arg type", 0, "Unknown");
+					throw InterpreterException("Unimplemented arg type", srcLoc->getLine(), srcLoc->getFile());
 				}					
 			}
 		}
 
 		// This should demonstrate what in the world is happening here
-		// int c = 18;
-		// std::any a = c;
+		// std::any a = 18;
 		// void* b = &std::any_cast<int&>(a);
-		// assert(*((int*)b) == c);
+		// assert(*((int*)b) == 18);
 		
 		// Make call_args a list of void pointers to the actual values
 		for (int i = 0; i < narms; ++i) {
@@ -406,32 +462,76 @@ namespace rt
 			switch (pType.type)
 			{
 			case CType::Void:
-				throw InterpreterException("Cannot have void as param type", 0, "Unknown");
+				throw InterpreterException("Cannot have void as param type", srcLoc->getLine(), srcLoc->getFile());
 			case CType::Uint8:
 				call_args.push_back(toVoid<uint8_t>(arguments.at(i), pType.pointer));
 				break;
 			case CType::Sint8:
 				call_args.push_back(toVoid<int8_t>(arguments.at(i), pType.pointer));
 				break;
-			case CType::Sint:
-				call_args.push_back(toVoid<signed int>(arguments.at(i), pType.pointer));
+			case CType::Uint16:
+				call_args.push_back(toVoid<uint16_t>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Sint16:
+				call_args.push_back(toVoid<int16_t>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Uint32:
+				call_args.push_back(toVoid<uint32_t>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Sint32:
+				call_args.push_back(toVoid<int32_t>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Uint64:
+				call_args.push_back(toVoid<uint64_t>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Sint64:
+				call_args.push_back(toVoid<int64_t>(arguments.at(i), pType.pointer));
 				break;
 			case CType::Float:
 				call_args.push_back(toVoid<float>(arguments.at(i), pType.pointer));
 				break;
+			case CType::Double:
+				call_args.push_back(toVoid<double>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Uchar:
+				call_args.push_back(toVoid<unsigned char>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Schar:
+				call_args.push_back(toVoid<signed char>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Ushort:
+				call_args.push_back(toVoid<unsigned short>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Sshort:
+				call_args.push_back(toVoid<short>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Uint:
+				call_args.push_back(toVoid<unsigned int>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Sint:
+				call_args.push_back(toVoid<int>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Ulong:
+				call_args.push_back(toVoid<unsigned long>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Slong:
+				call_args.push_back(toVoid<long>(arguments.at(i), pType.pointer));
+				break;
+			case CType::Longdouble:
+				call_args.push_back(toVoid<long double>(arguments.at(i), pType.pointer));
+				break;				
 			case CType::Cstring:
 				if (pType.pointer) {
-					throw InterpreterException("Unimplemented feature", 0, "Unknown");
+					throw InterpreterException("Unimplemented feature", srcLoc->getLine(), srcLoc->getFile());
 				} else {
 					call_args.push_back(toVoid<char>(arguments.at(i), true));
 				}
 				break;
 			case CType::Struct:
-				// TODO: ??
 				call_args.push_back(std::any_cast<void*&>(arguments.at(i)));
 				break;
 			default:
-				throw InterpreterException("Unimplemented arg type", 0, "Unknown");
+				throw InterpreterException("Unimplemented arg type", srcLoc->getLine(), srcLoc->getFile());
 			}			
 		}
 
@@ -439,7 +539,7 @@ namespace rt
 		assert(arguments.size() == narms);
 		
 		// Call the function
-		ffi_call(&cif, FFI_FN(func.function), ret, call_args.data());
+		ffi_call(&cif, FFI_FN(func.function), ret.get(), call_args.data());
 		
 		// Write pointer values back to their Runtime counterparts
 		for (int i = 0; i < narms; ++i) {
@@ -447,7 +547,7 @@ namespace rt
 			// Check if struct, as they may have pointer members
 			if (t.type == CType::Struct)
 			{
-				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization // ????
+				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) {
 					updateObject(call_args.at(i), *pObj, t);
 				} else {
 					std::cout << "Value passed to struct argument! New values are not written down! Type: " << static_cast<int>(t.type) << std::endl;
@@ -455,7 +555,7 @@ namespace rt
 			}
 			else if (t.pointer or t.type == CType::Cstring)
 			{
-				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) { // TODO: if optimization // ????
+				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) {
 					// First check if string
 					if (t.type == CType::Cstring) {
 						pObj->get()->setLast(*reinterpret_cast<char**>(call_args.at(i)));
@@ -465,16 +565,66 @@ namespace rt
 					double val;
 					switch (t.type)
 					{
-					case CType::Sint:
-						val = **reinterpret_cast<int**>(call_args.at(i));
+					case CType::Uint8:
+						val = **reinterpret_cast<uint8_t**>(call_args.at(i));
+						break;
+					case CType::Sint8:
+						val = **reinterpret_cast<int8_t**>(call_args.at(i));
+						break;
+					case CType::Uint16:
+						val = **reinterpret_cast<uint16_t**>(call_args.at(i));
+						break;
+					case CType::Sint16:
+						val = **reinterpret_cast<int16_t**>(call_args.at(i));
+						break;
+					case CType::Uint32:
+						val = **reinterpret_cast<uint32_t**>(call_args.at(i));
+						break;
+					case CType::Sint32:
+						val = **reinterpret_cast<int32_t**>(call_args.at(i));
+						break;
+					case CType::Uint64:
+						val = **reinterpret_cast<uint64_t**>(call_args.at(i));
+						break;
+					case CType::Sint64:
+						val = **reinterpret_cast<int64_t**>(call_args.at(i));
 						break;
 					case CType::Float:
 						val = **reinterpret_cast<float**>(call_args.at(i));
 						break;
+					case CType::Double:
+						val = **reinterpret_cast<double**>(call_args.at(i));
+						break;
+					case CType::Uchar:
+						val = **reinterpret_cast<unsigned char**>(call_args.at(i));
+						break;
+					case CType::Schar:
+						val = **reinterpret_cast<signed char**>(call_args.at(i));
+						break;
+					case CType::Ushort:
+						val = **reinterpret_cast<unsigned short**>(call_args.at(i));
+						break;
+					case CType::Sshort:
+						val = **reinterpret_cast<short**>(call_args.at(i));
+						break;
+					case CType::Uint:
+						val = **reinterpret_cast<unsigned int**>(call_args.at(i));
+						break;
+					case CType::Sint:
+						val = **reinterpret_cast<int**>(call_args.at(i));
+						break;
+					case CType::Ulong:
+						val = **reinterpret_cast<unsigned long**>(call_args.at(i));
+						break;
+					case CType::Slong:
+						val = **reinterpret_cast<long**>(call_args.at(i));
+						break;
+					case CType::Longdouble:
+						val = **reinterpret_cast<long double**>(call_args.at(i));
+						break;
 					default:
-						throw InterpreterException("Unimplemented element type", 0, "Unknown");
+						throw InterpreterException("Unimplemented element type", srcLoc->getLine(), srcLoc->getFile());
 					}
-					// TODO: The rest
 					pObj->get()->setLast(val);
 				} else {
 					std::cout << "Value passed to pointer argument! New values are not written down! Type: " << static_cast<int>(t.type) << std::endl;
@@ -484,26 +634,55 @@ namespace rt
 		}
 		
 		// Return value
-		if (returnType->type != FFI_TYPE_STRUCT) {
-			double retVal;
-			if (returnType == &ffi_type_void)
-				return True; // Return True directly, since the return buffer has not had memory allocated here
-			else if (returnType == &ffi_type_sint) // TODO: The rest... :/
-				retVal = static_cast<double>(*reinterpret_cast<int*>(ret));
-			else if (returnType == &ffi_type_float) 
-				retVal = static_cast<double>(*reinterpret_cast<float*>(ret));
-			else if (returnType == &ffi_type_double) 
-				retVal = *reinterpret_cast<double*>(ret);
-			else {
-				delete[] reinterpret_cast<char*>(ret);
-				throw InterpreterException("Unimplemented return type", 0, "Unknown");
-			}
-			// Return value, and free memory
-			delete[] reinterpret_cast<char*>(ret);
-			return retVal;
-		} else { // Struct return value
+		if (returnType->type == FFI_TYPE_STRUCT) {
 			// Construct Runtime object based on struct in memory
-			return objectFromStruct(ret, func.retType.value());
+			return objectFromStruct(ret.get(), func.retType.value());
+		} else {
+			switch (func.retType.value().type)
+			{
+			case CType::Void:
+				return True; // Return True to indicate success
+			case CType::Uint8:
+				return static_cast<double>(*reinterpret_cast<uint8_t*>(ret.get()));
+			case CType::Sint8:
+				return static_cast<double>(*reinterpret_cast<int8_t*>(ret.get()));
+			case CType::Uint16:
+				return static_cast<double>(*reinterpret_cast<uint16_t*>(ret.get()));
+			case CType::Sint16:
+				return static_cast<double>(*reinterpret_cast<int16_t*>(ret.get()));
+			case CType::Uint32:
+				return static_cast<double>(*reinterpret_cast<uint32_t*>(ret.get()));
+			case CType::Sint32:
+				return static_cast<double>(*reinterpret_cast<int32_t*>(ret.get()));
+			case CType::Uint64:
+				return static_cast<double>(*reinterpret_cast<uint64_t*>(ret.get()));
+			case CType::Sint64:
+				return static_cast<double>(*reinterpret_cast<int64_t*>(ret.get()));
+			case CType::Float:
+				return static_cast<double>(*reinterpret_cast<float*>(ret.get()));
+			case CType::Double:
+				return static_cast<double>(*reinterpret_cast<double*>(ret.get()));
+			case CType::Uchar:
+				return static_cast<double>(*reinterpret_cast<unsigned char*>(ret.get()));
+			case CType::Schar:
+				return static_cast<double>(*reinterpret_cast<signed char*>(ret.get()));
+			case CType::Ushort:
+				return static_cast<double>(*reinterpret_cast<unsigned short*>(ret.get()));
+			case CType::Sshort:
+				return static_cast<double>(*reinterpret_cast<short*>(ret.get()));
+			case CType::Uint:
+				return static_cast<double>(*reinterpret_cast<unsigned int*>(ret.get()));
+			case CType::Sint:
+				return static_cast<double>(*reinterpret_cast<int*>(ret.get()));
+			case CType::Ulong:
+				return static_cast<double>(*reinterpret_cast<unsigned long*>(ret.get()));
+			case CType::Slong:
+				return static_cast<double>(*reinterpret_cast<long*>(ret.get()));
+			case CType::Longdouble:
+				return static_cast<double>(*reinterpret_cast<long double*>(ret.get()));
+			default:
+				throw InterpreterException("Unimplemented return type", srcLoc->getLine(), srcLoc->getFile());
+			}
 		}
 	}
 }

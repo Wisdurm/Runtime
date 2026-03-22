@@ -36,7 +36,7 @@ namespace rt
 		/// <summary>
 		/// Returns file member
 		/// </summary>
-		const std::string* getFile() const { return &file; };
+		const std::string& getFile() const { return file; };
 
 		// Operators
 

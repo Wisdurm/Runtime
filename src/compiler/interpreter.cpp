@@ -148,7 +148,7 @@ namespace rt
 			if (std::holds_alternative<std::shared_ptr<Object>>(v)) // Object
 				return std::get<std::shared_ptr<Object>>(v);
 			else
-				throw InterpreterException("Attempt to evaluate built-in function", node->src.getLine(), *node->src.getFile());
+				throw InterpreterException("Attempt to evaluate built-in function", node->src.getLine(), node->src.getFile());
 		}
 		else if (auto node = std::dynamic_pointer_cast<ast::Literal>(expr))
 		{
@@ -176,7 +176,7 @@ namespace rt
 						return std::get<BuiltIn>(v)(args, symtab, argState);
 					} else if (std::holds_alternative<std::shared_ptr<LibFunc>>(v)) {
 						// Call shared_library
-						return callShared(args, *std::get<std::shared_ptr<LibFunc>>(v), symtab, argState);
+						return callShared(args, *std::get<std::shared_ptr<LibFunc>>(v), symtab, argState, node->src);
 					} else {
 						// Going down in scope, this creates a new symbol table with the current one as it's parent
 						SymbolTable localSt = SymbolTable(symtab);
@@ -223,12 +223,12 @@ namespace rt
 				try {
 					object = std::get<std::shared_ptr<Object>>(interpret_internal(node->left, symtab, true, argState));
 				} catch (std::bad_variant_access) {
-					throw InterpreterException("Left-hand operand of accession was not object", node->src.getLine(), *node->src.getFile());
+					throw InterpreterException("Left-hand operand of accession was not object", node->src.getLine(), node->src.getFile());
 				}
 				try {
 					member = std::get<std::variant<double, std::string>>(interpret_internal(node->right, symtab, true, argState));
 				} catch (std::bad_variant_access) {
-					throw InterpreterException("Right-hand operand of accession was not a value", node->src.getLine(), *node->src.getFile());
+					throw InterpreterException("Right-hand operand of accession was not a value", node->src.getLine(), node->src.getFile());
 				}
 				return *(object->getMember(member));
 			}
@@ -241,7 +241,7 @@ namespace rt
 			}
 		}
 		else
-			throw InterpreterException("Unimplemented ast node encountered", expr->src.getLine(), *expr->src.getFile());
+			throw InterpreterException("Unimplemented ast node encountered", expr->src.getLine(), expr->src.getFile());
 	}
 
 	std::variant<double, std::string> evaluate(objectOrValue member, SymbolTable* symtab, ArgState& argState, bool write)
@@ -254,7 +254,7 @@ namespace rt
 				// Get source location
 				if (object->getExpression() != nullptr) {
 					SourceLocation loc = object->getExpression()->src;
-					throw InterpreterException("Object evaluation got stuck in an infinite loop", loc.getLine(), *loc.getFile());
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", loc.getLine(), loc.getFile());
 				}
 				else {
 					// TODO: expand search
@@ -313,7 +313,7 @@ namespace rt
 				// Get source location
 				if (object->getExpression() != nullptr) {
 					SourceLocation loc = object->getExpression()->src;
-					throw InterpreterException("Object evaluation got stuck in an infinite loop", loc.getLine(), *loc.getFile());
+					throw InterpreterException("Object evaluation got stuck in an infinite loop", loc.getLine(), loc.getFile());
 				}
 				else {
 					// TODO: expand search

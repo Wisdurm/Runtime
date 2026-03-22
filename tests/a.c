@@ -43,7 +43,6 @@ void testVoid()
 // Strings
 int compareStr(char* str1, char* str2)
 {
-	printf("1: %s\n2: %s\n", str1, str2);
 	return strcmp(str1, str2);
 }
 void capString(char* str)
@@ -51,13 +50,13 @@ void capString(char* str)
 	str[0] = toupper(str[0]);
 }
 // Structures
-void testStruct(structure* val)
+void testStruct(structure val)
 {
-	printf("in:%d\nfl:%f", val->in, val->fl);
+	printf("in:%d\nfl:%f", val.in, val.fl);
 }
-int compareStruct(structure* val)
+int compareStruct(structure val)
 {
-	return val->in > val->fl;
+	return val.in > val.fl;
 }
 structure retStruct(int in, float fl)
 {
@@ -71,9 +70,9 @@ cmx complex(int num)
 	cmx r = { .in = num, .st = s };
 	return r;
 }
-int cmxParam(cmx* c)
+int cmxParam(cmx c)
 {
-	return c->in + c->st.fl + c->st.in;
+	return c.in + c.st.fl + c.st.in;
 }
 // Pointers
 void triplePtr(int* ptr)
@@ -104,9 +103,9 @@ void freeInt(int* mem)
 	free(mem);
 }
 // EVEN MORE difficult structs :DD
-void difficult(dif* f)
+void difficult(dif f)
 {
-	printf("Everything fine %d %f %s %d", f->in, *f->num, f->str, f->ez);
-	*f->num *= 2;
-	strcpy(f->str, "Updated");
+	printf("Everything fine %d %f %s %d", f.in, *f.num, f.str, f.ez);
+	*f.num *= 2;
+	strcpy(f.str, "Updated");
 }

@@ -21,12 +21,11 @@ The current implementation of the interpreter is VERY inefficient, and the stand
 I am well aware of this, however I'm not particularly smart, and due to my highly fluctuating motivation to work on this,
 I can't promise it being improved upon very soon (or necessarily ever).
 
-I've also been working on the ffi for the past 4 months 🫠
-
 ## The Future
 
 None of the following are promises, but I have reason to believe many of them will \*\*eventually\*\* be done:
 - Finished FFI (v.0.11.0 for most major functionality)
+- Proper struct support for FFI (v0.13.0)
 - Refactored documentation
 - Larger standard library (although it will ideally still stay quite minimal)
 - Refactor as a library for easy embedding

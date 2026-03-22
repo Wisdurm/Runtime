@@ -2,6 +2,7 @@
 // Runtime
 #include "object.h"
 #include "interpreter.h"
+#include "tokenizer.h"
 // C++
 #include <algorithm>
 #include <deque>
@@ -205,5 +206,5 @@ namespace rt
         /// <summary>
 	/// Calls a shared library function
 	/// </summary>
-	objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState);
+	objectOrValue callShared(const std::vector<objectOrValue>& args, const LibFunc& func, SymbolTable* symtab, ArgState& argState, SourceLocation src);
 }

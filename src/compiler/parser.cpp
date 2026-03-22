@@ -29,7 +29,7 @@ namespace rt
 	{
 		auto token = peek(tokens);
 		if (expected != "" and *token.getText() != expected) {
-			throw ParserException("Unexpected token encountered", token.getSrc().getLine(), *token.getSrc().getFile());
+			throw ParserException("Unexpected token encountered", token.getSrc().getLine(), token.getSrc().getFile());
 		}
 		pos++;
 		return token;
@@ -73,7 +73,7 @@ namespace rt
 			// following checks
 		}
 		default:
-			throw ParserException("Unhandled token type", expr->src.getLine(), expr->src.getFile()->c_str());
+			throw ParserException("Unhandled token type", expr->src.getLine(), expr->src.getFile());
 		}
 
 		if (*peek(tokens).getText() == "-" and !parsePure)
@@ -110,12 +110,12 @@ namespace rt
 		consume(tokens, "-");
 		std::shared_ptr<ast::Literal> expr = std::dynamic_pointer_cast<ast::Literal>(parseExpression(tokens, true));
 		if (expr == nullptr) [[unlikely]]
-			throw ParserException("Expected literal after '-' token", expr->src.getLine(), expr->src.getFile()->c_str());
+			throw ParserException("Expected literal after '-' token", expr->src.getLine(), expr->src.getFile());
 		// Invert value
 		if (std::holds_alternative<double>(expr->litValue)) // Kind of weird to have this in the parser but it works :shrug:
 			expr->litValue = std::get<double>(expr->litValue) * -1;
 		else [[unlikely]]
-			throw ParserException("You're mentally ill", expr->src.getLine(), expr->src.getFile()->c_str());
+			throw ParserException("You're mentally ill", expr->src.getLine(), expr->src.getFile());
 			// If you genuinely wrote -"1" in your code you don't deserve to have access to a computer
 		return expr;
 	}
@@ -166,7 +166,7 @@ namespace rt
 		while (*peek(tokens).getText() != ")")
 		{
 			if (pos == tokens.size())
-				throw ParserException("Unmatched parentheses, starting at", beg.getSrc().getLine(), beg.getSrc().getFile()->c_str());
+				throw ParserException("Unmatched parentheses, starting at", beg.getSrc().getLine(), beg.getSrc().getFile());
 			args.push_back(parseExpression(tokens));
 		}
 		consume(tokens, ")");
