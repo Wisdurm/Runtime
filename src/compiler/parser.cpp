@@ -28,7 +28,7 @@ namespace rt
 	static Token consume(const std::vector<Token>& tokens, std::string expected = "")
 	{
 		auto token = peek(tokens);
-		if (expected != "" and *token.getText() != expected) {
+		if (expected != "" and token.getText() != expected) {
 			throw ParserException("Unexpected token encountered", token.getSrc().getLine(), token.getSrc().getFile());
 		}
 		pos++;
@@ -76,7 +76,7 @@ namespace rt
 			throw ParserException("Unhandled token type", expr->src.getLine(), expr->src.getFile());
 		}
 
-		if (*peek(tokens).getText() == "-" and !parsePure)
+		if (peek(tokens).getText() == "-" and !parsePure)
 		{
 			if (std::dynamic_pointer_cast<ast::Identifier>(expr) != nullptr) // Member being accessed
 				expr = parseBinaryLeft(tokens, expr);
@@ -84,7 +84,7 @@ namespace rt
 			// If last one is not identifier, then this one is surely a negative value
 			// In order to parse the negative value, we need to first return the expression
 		}
-		while (*peek(tokens).getText() == "(" and !parsePure)
+		while (peek(tokens).getText() == "(" and !parsePure)
 		{
 			expr = parseFunction(tokens, expr);
 		}
@@ -98,7 +98,7 @@ namespace rt
 	static std::shared_ptr<ast::Expression> parseIdentifier(const std::vector<Token>& tokens)
 	{
 		const Token token = consume(tokens);
-		return make_shared<ast::Identifier>(token.getSrc(), *token.getText());
+		return make_shared<ast::Identifier>(token.getSrc(), token.getText());
 	}
 	
 	/// <summary>
@@ -129,10 +129,10 @@ namespace rt
 		const Token token = consume(tokens);
 		if (token.getType() == TokenType::NUMBER)
 		{	// Number literal
-			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(std::stod(*token.getText())));
+			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(std::stod(token.getText())));
 		} else {
 			// String literal
-			return std::make_shared<ast::Literal>(token.getSrc(), *token.getText());
+			return std::make_shared<ast::Literal>(token.getSrc(), token.getText());
 		}
 	}
 
@@ -142,7 +142,7 @@ namespace rt
 	/// <returns></returns>
 	static std::shared_ptr<ast::Expression> parseBinaryLeft(const std::vector<Token>& tokens, std::shared_ptr<ast::Expression> left)
 	{
-		while (*peek(tokens).getText() == "-")
+		while (peek(tokens).getText() == "-")
 		{
 			consume(tokens, "-");
 			auto right = parseExpression(tokens, true);
@@ -163,7 +163,7 @@ namespace rt
 		const auto beg = consume(tokens, "(");
 		
 		std::vector<std::shared_ptr<ast::Expression>> args;
-		while (*peek(tokens).getText() != ")")
+		while (peek(tokens).getText() != ")")
 		{
 			if (pos == tokens.size())
 				throw ParserException("Unmatched parentheses, starting at", beg.getSrc().getLine(), beg.getSrc().getFile());
@@ -193,7 +193,7 @@ namespace rt
 		pos = 0;
 		if (requireMain) // True by default
 		{
-			if (*tokens[2].getText() == "Main") // Check for main function
+			if (tokens[2].getText() == "Main") // Check for main function
 				return parseExpression(tokens);
 			else
 				return parseMain(tokens);

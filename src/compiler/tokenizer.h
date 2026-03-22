@@ -8,7 +8,7 @@ namespace rt
 		IDENTIFIER,
 		STRING,
 		NUMBER,
-		PUNCTUATION, // - operator as well as parentheses (also commas)
+		PUNCTUATION,
 		END // Used by parser
 	};
 
@@ -76,7 +76,7 @@ namespace rt
 		/// <summary>
 		/// Return text member
 		/// </summary>
-		const std::string* getText() const { return &text; };
+		const std::string& getText() const { return text; };
 		/// <summary>
 		/// Return type member
 		/// </summary>
@@ -101,7 +101,7 @@ namespace rt
 		static const char punctuation[];
 	private:
 		/// <summary>
-		/// The text of the token (C style string)
+		/// The text of the token
 		/// </summary>
 		const std::string text;
 		/// <summary>
