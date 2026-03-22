@@ -381,7 +381,8 @@ namespace rt
 					if (pType.pointer) {
 						throw InterpreterException("Unimplemented feature", 0, "Unknown");
 					} else {
-						arguments.push_back(std::get<std::string>(value).data());
+						altHeap.push_back(std::get<std::string>(value));
+						arguments.push_back(std::any_cast<std::string&>(altHeap.back()).data());
 					}
 					break;
 				default:
