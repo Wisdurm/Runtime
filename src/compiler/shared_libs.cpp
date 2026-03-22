@@ -136,7 +136,7 @@ namespace rt
 		auto members = obj->getMembers(); // TODO: error handling
 		MemoryExplorer expl = MemoryExplorer(structMem, type);
 		// Assign members
-		for (int i = 0; type.members.size() < i; i++) {
+		for (int i = 0; i < type.members.size(); i++) {
 			// Loop through member types
 			const auto [memory, t] = expl[i];
 			if (t.type == CType::Struct) { // Struct
@@ -190,7 +190,7 @@ namespace rt
 		// TODO: Packed support, as well as look into the libffi way of doing this
 		auto obj = std::make_shared<Object>();
 		MemoryExplorer expl = MemoryExplorer(strc, type);
-		for (int i = 0; type.members.size() < i; i++) {
+		for (int i = 0; i < type.members.size(); i++) {
 			// Loop through member types
 			const auto [memory, t] = expl[i];
 			if (t.type == CType::Struct) {
@@ -427,7 +427,8 @@ namespace rt
 				break;
 			case CType::Struct:
 				// TODO: ??
-				call_args.push_back(&std::any_cast<void*&>(arguments.at(i)));
+				call_args.push_back(std::any_cast<void*&>(arguments.at(i)));
+				break;
 			default:
 				throw InterpreterException("Unimplemented arg type", 0, "Unknown");
 			}			
