@@ -25,7 +25,7 @@ TEST_CASE("Expression comparison", "[parser]")
 
 TEST_CASE("Literals", "[parser]")
 {
-	const char* test1 = "Object(Main, 1, 1.2, \"1.2\")";
+	const char* test1 = "Object(Main 1 1.2 \"1.2\")";
 	auto r1 = std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Object"), std::vector<std::shared_ptr<ast::Expression>>{ std::make_shared<ast::Identifier>(L,"Main"), std::make_shared<ast::Literal>(L, 1.0), std::make_shared<ast::Literal>(L, 1.2) , std::make_shared<ast::Literal>(L, std::variant<double, std::string>("1.2")) });
 	auto v = parse(tokenize(test1));
 	REQUIRE(*v == *r1);
@@ -34,7 +34,7 @@ TEST_CASE("Literals", "[parser]")
 TEST_CASE("Top level statements", "[parser]")
 {
 	// Test basic top level statements
-	const char* test1 = "i\nAssign(i-0,1)";
+	const char* test1 = "i\nAssign(i-0 1)";
 	auto r1 = std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Object"), std::vector<std::shared_ptr<ast::Expression>>{ std::make_shared<ast::Identifier>(L,"Main"), std::make_shared<ast::Identifier>(L, "i"), std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Assign"), std::vector<std::shared_ptr<ast::Expression>>{ std::make_shared<ast::BinaryOperator>(L,std::make_shared<ast::Identifier>(L, "i"), std::make_shared<ast::Literal>(L, 0.0)), std::make_shared<ast::Literal>(L, 1.0) })});
 	REQUIRE(*parse(tokenize(test1)) == *r1);
 }
@@ -67,7 +67,7 @@ TEST_CASE("Nested members", "[parser]")
 
 TEST_CASE("Parsing complex nested calls", "[parser]")
 {
-	const char* test1 = "i \n Object( body, Print(param1), Assign(param1-0, Add(param1(), 1)) )\nWhile(SmallerThan(i, 5), body(i) )";
+	const char* test1 = "i \n Object(body Print(param1) Assign(param1-0 Add(param1() 1)) )\nWhile(SmallerThan(i 5) body(i) )";
 	auto r1 = std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Object"), std::vector<std::shared_ptr<ast::Expression>>{ std::make_shared<ast::Identifier>(L,"Main"),
 		std::make_shared<ast::Identifier>(L, "i"),
 		std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Object"), std::vector<std::shared_ptr<ast::Expression>>{ std::make_shared<ast::Identifier>(L, "body"), std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Print"), std::vector<std::shared_ptr<ast::Expression>>{std::make_shared<ast::Identifier>(L, "param1")}), std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Assign"), std::vector<std::shared_ptr<ast::Expression>>{std::make_shared<ast::BinaryOperator>(L, std::make_shared<ast::Identifier>(L, "param1"),std::make_shared<ast::Literal>(L, 0.0)), std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "Add"), std::vector<std::shared_ptr<ast::Expression>>{std::make_shared<ast::Call>(L, std::make_shared<ast::Identifier>(L, "param1"), std::vector<std::shared_ptr<ast::Expression>>{}), std::make_shared<ast::Literal>(L, 1.0)}) })}),

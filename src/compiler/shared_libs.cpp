@@ -550,7 +550,10 @@ namespace rt
 				if (auto pObj = std::get_if<std::shared_ptr<Object>>(&args.at(i))) {
 					updateObject(call_args.at(i), *pObj, t);
 				} else {
+#if RUNTIME_DEBUG==1
 					std::cout << "Value passed to struct argument! New values are not written down! Type: " << static_cast<int>(t.type) << std::endl;
+#endif // RUNTIME_DEBUG
+
 				}
 			}
 			else if (t.pointer or t.type == CType::Cstring)
@@ -627,7 +630,9 @@ namespace rt
 					}
 					pObj->get()->setLast(val);
 				} else {
+#if RUNTIME_DEBUG==1
 					std::cout << "Value passed to pointer argument! New values are not written down! Type: " << static_cast<int>(t.type) << std::endl;
+#endif // RUNTIME_DEBUG
 				}
 			}
 			// Otherwise no need to update any values

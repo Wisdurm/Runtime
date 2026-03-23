@@ -99,6 +99,8 @@ namespace rt
 		/// Punctuation which the tokenizer will look out for (operators, parentheses etc.)
 		/// </summary>
 		static const char punctuation[];
+		// Puncuation which the tokenizer will not allow to exist on it's own
+		static const char npunctuation[];
 	private:
 		/// <summary>
 		/// The text of the token

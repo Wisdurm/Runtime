@@ -137,7 +137,6 @@ namespace rt
 			, members(std::move(other.members))
 			, elements(std::move(other.elements)) // Not sure if move is necessary but must remain stable
 		{
-			std::cout << "move was called\n";
 			// Idk?
 		};
 		// Dont need so delete juuuuusttt in case

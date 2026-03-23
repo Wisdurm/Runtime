@@ -503,11 +503,9 @@ namespace rt
 		func->initialized = false;
 		// Get return value
 		func->retType.emplace(std::move(makeType(args.at(1), symtab, argState)));
-		std::cout << "Move constructor should have been called!";
 		// Get parameters
 		for (auto it = args.begin() + 2; it != args.end(); ++it) {
 			func->argTypes.emplace_back(std::move(makeType(*it, symtab, argState)));
-			std::cout << "Move constructor should have been called!";
 		}
 		// Finished
 		func->initialized = true;

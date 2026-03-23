@@ -9,6 +9,7 @@
 namespace rt
 {
 	const char Token::punctuation[] = {'-','(', ')'};
+	const char Token::npunctuation[] = {',', '.'};
 	const char* li = "live-input";
 	
 	// Tokenizer
@@ -52,16 +53,20 @@ namespace rt
 				} while (isalnum(src[srcI]));
 				tokens.push_back(Token(identifier, TokenType::IDENTIFIER, SourceLocation(line, srcFile)));
 			}
-			// Check for int literal
+			// Check for number literal
 			if (isdigit(src[srcI]))
 			{
 				match = true;
-				std::string intLiteral;
+				std::string numberLiteral;
 				do {
-					intLiteral += src[srcI];
+					numberLiteral += src[srcI];
 					advance();
-				} while (isdigit(src[srcI]) or src[srcI] == '.');
-				tokens.push_back(Token(intLiteral, TokenType::NUMBER, SourceLocation(line, srcFile)));
+				} while (isdigit(src[srcI]) or src[srcI] == '.' or src[srcI] == ',');
+				// Check for trailing decimal seperators
+				if (src[srcI - 1] == '.' or src[srcI - 1] == ',') {
+					throw TokenizerException("Number literal may not end with trailing decimal seperators", line-1, srcFile);
+				}
+				tokens.push_back(Token(numberLiteral, TokenType::NUMBER, SourceLocation(line, srcFile)));
 			}		
 			// Check for string literal
 			if (src[srcI] == '\"' or src[srcI] == '\'')
@@ -95,6 +100,14 @@ namespace rt
 					character += src[srcI];
 					tokens.push_back(Token( character, TokenType::PUNCTUATION, SourceLocation(line, srcFile)));
 					advance();
+				}
+			}
+			// Check for unallowed punctuation (decimal seperators, which could get confusing otherwise)
+			for (char npunc : Token::npunctuation)
+			{
+				if (src[srcI] == npunc)
+				{
+					throw TokenizerException("Decimal seperators not allowed for generic formatting", line-1, srcFile);
 				}
 			}
 
