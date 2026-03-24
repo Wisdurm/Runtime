@@ -3,6 +3,7 @@
 // C++
 #include <vector>
 #include <string>
+#include <algorithm>
 // C
 #include <string.h>
 
@@ -10,6 +11,7 @@ namespace rt
 {
 	const char Token::punctuation[] = {'-','(', ')'};
 	const char Token::npunctuation[] = {',', '.'};
+	const char Token::identchars[] = "+*/<=>^"; // TODO: Might be expanded later
 	const char* li = "live-input";
 	
 	// Tokenizer
@@ -23,7 +25,7 @@ namespace rt
 		for (int srcI = 0; srcI < srcLen; )
 		{
 			// Advance forward in the text, while also keeping the source locations up to date
-			auto advance = [&srcI, &line, src]() {
+			const auto advance = [&srcI, &line, src]() {
 				srcI++;
 				if (src[srcI] == '\n')
 					line++;
@@ -40,18 +42,6 @@ namespace rt
 				{
 					advance();
 				} while (src[srcI] != '\n');
-			}
-			// Check for identifier
-			// TODO: Variable names should be able to include _ !!!
-			if (isalnum(src[srcI]) and not isdigit(src[srcI])) // Identifier can't begin with a number
-			{
-				match = true;
-				std::string identifier;
-				do {
-					identifier += src[srcI];
-					advance();
-				} while (isalnum(src[srcI]));
-				tokens.push_back(Token(identifier, TokenType::IDENTIFIER, SourceLocation(line, srcFile)));
 			}
 			// Check for number literal
 			if (isdigit(src[srcI]))
@@ -110,7 +100,22 @@ namespace rt
 					throw TokenizerException("Decimal seperators not allowed for generic formatting", line-1, srcFile);
 				}
 			}
-
+			// Only check for identifers as the very last option
+			if (match)
+				continue;
+			// Check for identifier			
+			if (isalnum(src[srcI]) or
+			    std::find(std::begin(Token::identchars), std::end(Token::identchars), src[srcI]) != std::end(Token::identchars))
+			{
+				match = true;
+				std::string identifier;
+				do {
+					identifier += src[srcI];
+					advance();
+				} while (isalnum(src[srcI]));
+				tokens.push_back(Token(identifier, TokenType::IDENTIFIER, SourceLocation(line, srcFile)));
+			}
+			// Prevent infinite loop
 			if (not match)
 				advance();
 		}

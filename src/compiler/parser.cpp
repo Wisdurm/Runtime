@@ -1,7 +1,7 @@
+// Runtime
 #include "parser.h"
 #include "tokenizer.h"
 #include "exceptions.h"
-#include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <string>

@@ -24,16 +24,16 @@ TEST_CASE("Basic conditionals and loops", "[libraries]")
 	REQUIRE(rt::interpretAndReturn(r1).at(0) == test1);
 
 	// Object(Main
-	//	While(SmallerThan(i 10)
-	//		Assign(i 0 Add(i 1))
+	//	While(<(i 10)
+	//		Assign(i 0 +(i 1))
 	//	)
 	//	Print(i)
 	// )
-	// Excepted output: "9"
+	// Excepted output: "10"
 
 	const std::string test2 = "10.000000";
-	auto r2 = rt::parse(rt::tokenize("While(SmallerThan(i 10)"
-				"Assign(i 0 Add(i 1))"
+	auto r2 = rt::parse(rt::tokenize("While(<(i 10)"
+				"Assign(i 0 +(i 1))"
 				")"
 				"Print(i)"));
 	REQUIRE(rt::interpretAndReturn(r2).at(0) == test2);

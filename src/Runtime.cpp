@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 		file.open(filePath.value(), std::fstream::in);
 		if (file.fail())
 		{
-			std::cout << "Unable to open file " << argv[1] << std::endl;
+			std::cout << "Unable to open file " << filePath.value() << std::endl;
 			return EXIT_FAILURE;
 		}
 		file.seekg(0, std::ios::end);
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 					} else {
 						std::variant<double, std::string> value = std::get<std::variant<double, std::string>>(v);
 						if (auto str = std::get_if<std::string>(&value))
-							std::cout << str << std::endl;
+							std::cout << *str << std::endl;
 						else
 							std::cout << std::get<double>(value) << std::endl;
 					}

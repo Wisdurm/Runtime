@@ -101,6 +101,8 @@ namespace rt
 		static const char punctuation[];
 		// Puncuation which the tokenizer will not allow to exist on it's own
 		static const char npunctuation[];
+		// Additional allowed characters in identifier (in addition to isalnum)
+		static const char identchars[];
 	private:
 		/// <summary>
 		/// The text of the token
