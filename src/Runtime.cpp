@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 					objectOrValue v = rt::liveIntrepret(rt::parse(rt::tokenize(input.c_str(), "live-input"), false));
 					CYAN_TEXT;
 					if (auto obj = std::get_if<std::shared_ptr<rt::Object>>(&v)) {
-						std::cout << "Object \"" << *(*obj)->getName() << "\"" << std::endl;
+						std::cout << "Object \"" << (*obj)->getName() << "\"" << std::endl;
 					} else {
 						std::variant<double, std::string> value = std::get<std::variant<double, std::string>>(v);
 						if (auto str = std::get_if<std::string>(&value))

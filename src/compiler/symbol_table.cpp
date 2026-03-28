@@ -179,6 +179,9 @@ namespace rt
 			{"GetKeys", GetKeys},
 			{"Size", Size},
 			{"Series", Series},
+			{"And", And},
+			{"Or", Or},
+			{"Name", Name},
 			// Math
 			{"+", Add},
 			{"-", Minus},

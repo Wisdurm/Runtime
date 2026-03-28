@@ -15,17 +15,13 @@
 #include <vector>
 #include <variant>
 #include <experimental/memory>
+#include <iomanip>
+#include <sstream>
 // Gnu
 #include <readline/readline.h>
 // C
 #include <stdlib.h>
 #include <ffi.h>
-#include <cctype>      // std::tolower
-#include <algorithm>   // std::equal
-#include <string_view> // std::string_view
-
-#include <iomanip>
-#include <sstream>
 
 namespace rt
 {
@@ -51,7 +47,7 @@ namespace rt
 		{"uchar", CType::Uchar}, // u char
 		{"schar", CType::Schar}, // s char
 		// No default char since the standard does not specify whether or not
-		// char is signed by default :/
+		// char is signed by default
 		{"ushort", CType::Ushort}, // u short
 		{"sshort", CType::Sshort}, // s short
 		{"short", CType::Sshort}, // Default
@@ -428,7 +424,7 @@ namespace rt
 	}
 
 	/*
-	 * Desc=Returns how many members and object has.
+	 * Desc=Returns how many members an object has.
 	 * Added=v0.11.0
 	 * Returns=Number of members or exception
 	 * Param0[False]Object=An object to inspect.
@@ -542,8 +538,7 @@ namespace rt
 	 * Desc=Evaluates all arguments and returns the last one.
 	 * Added=v0.11.0
 	 * Returns=The value of the last object
-	 * Params[True]Objects=A list of objects, which will be evaluated in order.	 
-	 * The last one will be returned.
+	 * Params[True]Objects=A list of objects, which will be evaluated in order.
 	 */
 	objectOrValue Series(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
 	{
@@ -553,5 +548,62 @@ namespace rt
 		}
 		// Return last one
 		return evaluate(args.back(), symtab, argState);
+	}
+
+	/*
+	 * Desc=Evaluates all arguments until one returns a falsy value.
+	 * Added=v0.12.0
+	 * Returns=The value of the false object, or 1
+	 * Params[True]Objects=A list of objects, which may be evaluated.
+	 */
+	objectOrValue And(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		std::vector<objectOrValue>::iterator it = args.begin();
+		for (; it != args.end(); ++it) {
+			auto value = evaluate(*it, symtab, argState);
+			if (not toBoolean(value)) {
+				return value;
+			}
+		}
+		// Return false
+		return True;
+	}
+	
+	/*
+	 * Desc=Evaluates all arguments until one returns a truthy value.
+	 * Added=v0.12.0
+	 * Returns=The value of the true object, or 0
+	 * Params[True]Objects=A list of objects, which may be evaluated.
+	 */
+	objectOrValue Or(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		std::vector<objectOrValue>::iterator it = args.begin();
+		for (; it != args.end(); ++it) {
+			auto value = evaluate(*it, symtab, argState);
+			if (toBoolean(value)) {
+				return value;
+			}
+		}
+		// Return false
+		return False;
+	}
+
+	/*
+	 * Desc=Returns the name of an object.
+	 * Added=v0.12.0
+	 * Returns=Name of the object
+	 * Param0[False]Object=An object to inspect.
+	 */
+	objectOrValue Name(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() > 0)
+		{
+			if (std::holds_alternative<std::variant<double, std::string>>(args.at(0))) {
+				return giveException("Object must be object");
+			}
+			auto obj = std::get<std::shared_ptr<Object>>(args.at(0));
+			return obj->getName();
+		}
+		return giveException("Wrong amount of arguments");
 	}
 }

@@ -79,7 +79,7 @@ namespace rt {
 		/// Return name member
 		/// </summary>
 		/// <returns></returns>
-		std::string* getName() { return &name; };
+		std::string& getName() { return name; };
 		/// <summary>
 		/// Return expr member
 		/// </summary>

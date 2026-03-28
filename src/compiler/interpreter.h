@@ -37,7 +37,7 @@ namespace rt
 	// TODO: Inline is scary but I must confront it someday
 
 	// Stod which accepts commas as decimal seperators
-	inline double eStod(std::string str)
+	[[nodiscard]] inline double eStod(std::string str)
 	{
 		auto cpos = str.find(','), ppos = str.find('.');
 		size_t hpos = 0;
@@ -92,7 +92,7 @@ namespace rt
 		return std::any_cast<std::shared_ptr<T>&>(altheap.back()).get();
 	}
 	/// Determines whether an object is true or false
-	inline bool toBoolean(std::variant<double, std::string> val)
+	inline bool toBoolean(const std::variant<double, std::string> val)
 	{
 		if (std::holds_alternative<std::string>(val))
 		{
