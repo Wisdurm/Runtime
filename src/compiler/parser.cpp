@@ -2,9 +2,11 @@
 #include "parser.h"
 #include "tokenizer.h"
 #include "exceptions.h"
-#include <cctype>
-#include <cstddef>
+#include "utils.h"
+// C++
 #include <string>
+// C
+#include <cctype>
 
 namespace rt
 {
@@ -131,24 +133,7 @@ namespace rt
 	{
 		const Token token = consume(tokens);
 		if (token.getType() == TokenType::NUMBER) {
-			std::string str = token.getText();
-			auto cpos = str.find(','), ppos = str.find('.');
-			// Convert commas to periods for stod, since Runtime accepts European decimals aswell
-			size_t hpos = 0;
-			if (cpos != std::string::npos) {
-				str.replace(cpos, 1, ".");
-				hpos = cpos;
-			} else if (ppos != std::string::npos) {
-				hpos = ppos;
-			}
-			// Check for too many decimal seperators
-			if ((cpos != std::string::npos and ppos != std::string::npos) or
-			    (hpos != 0) and (
-			     (str.find('.', hpos + 1) != std::string::npos) or
-			     (str.find(',', hpos + 1) != std::string::npos))) {
-				throw ParserException("Cannot have multiple decimal seperators in a single literal", token.getSrc().getLine(), token.getSrc().getFile());	
-			}			
-			return std::make_shared<ast::Literal>(token.getSrc(), std::variant<double, std::string>(std::stod(str)));
+			return std::make_shared<ast::Literal>(token.getSrc(), eStod(token.getText()));
 		} else {
 			return std::make_shared<ast::Literal>(token.getSrc(), token.getText());
 		}

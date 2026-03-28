@@ -441,7 +441,7 @@ namespace rt
 				return giveException("Object must be object");
 			}
 			auto obj = std::get<std::shared_ptr<Object>>(args.at(0));
-			return static_cast<double>(obj->getMembers().size());
+			return static_cast<double>(obj->size());
 		}
 		return giveException("Wrong amount of arguments");
 	}

@@ -3,17 +3,17 @@
 #include "object.h"
 #include "shared_libs.h"
 #include "ast.h"
-// ??
-#include <deque>
-#include <tsl/ordered_map.h>
+#include "exceptions.h"
 // C++
 #include <string>
 #include <memory>
 #include <variant>
 #include <functional>
 #include <vector>
-#include <algorithm>
 #include <any>
+#include <deque>
+// External
+#include <tsl/ordered_map.h>
 
 namespace rt
 {
@@ -36,6 +36,27 @@ namespace rt
 {	
 	// TODO: Inline is scary but I must confront it someday
 
+	// Stod which accepts commas as decimal seperators
+	inline double eStod(std::string str)
+	{
+		auto cpos = str.find(','), ppos = str.find('.');
+		size_t hpos = 0;
+		if (cpos != std::string::npos) {
+			str.replace(cpos, 1, ".");
+			hpos = cpos;
+		} else if (ppos != std::string::npos) {
+			hpos = ppos;
+		}
+		// Check for too many decimal seperators
+		if ((cpos != std::string::npos and ppos != std::string::npos) or
+		    (hpos != 0) and (
+			    (str.find('.', hpos + 1) != std::string::npos) or
+			    (str.find(',', hpos + 1) != std::string::npos))) {
+			throw ParserException("Cannot have multiple decimal seperators in a single literal", 0, "Unknown");	
+		}
+		return std::stod(str);
+	}
+	
 	/// <summary>
 	/// Returns the numerical value of a value
 	/// </summary>
@@ -49,18 +70,6 @@ namespace rt
 		}
 		else
 			return std::get<double>(val);
-	}
-
-	// Stack overflow
-	inline bool ichar_equals(char a, char b)
-	{
-		return std::tolower(static_cast<unsigned char>(a)) ==
-			std::tolower(static_cast<unsigned char>(b));
-	}
-
-	inline bool iequals(std::string_view lhs, std::string_view rhs)
-	{
-		return std::ranges::equal(lhs, rhs, ichar_equals);
 	}
 
 	/// <summary>
@@ -82,30 +91,14 @@ namespace rt
 		altheap.push_back(std::shared_ptr<T>(ptr));
 		return std::any_cast<std::shared_ptr<T>&>(altheap.back()).get();
 	}
-	/// <summary>
-	/// Evaluates a value as a bool
-	/// </summary>
+	/// Determines whether an object is true or false
 	inline bool toBoolean(std::variant<double, std::string> val)
 	{
 		if (std::holds_alternative<std::string>(val))
 		{
-			std::string str = std::get<std::string>(val);
-			if (iequals(str, "true"))
-				return true;
-			else if (iequals(str, "false"))
-				return false;
-			else
-			{
-				for (char c : str)
-				{
-					if (not isalnum(c) or c == '.') // If string is not "true", "false" or a number, then it can't be evaluated as a boolean
-						throw;
-				}
-				return std::stod(str) >= 1;
-			}
-		}
-		else
-		{
+			// Evaluate string as if it were number
+			return eStod(std::get<std::string>(val)) >= 1;
+		} else {
 			return std::get<double>(val) >= 1;
 		}
 	}

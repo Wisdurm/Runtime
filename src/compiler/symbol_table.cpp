@@ -12,7 +12,6 @@
 #include <memory>
 #include <variant>
 #include <vector>
-#include <unordered_set>
 #include <cstring>
 // C
 #include <cstdlib>

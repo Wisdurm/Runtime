@@ -146,6 +146,11 @@ namespace rt {
 			};
 			return r; 
 		};
+		// Returns the amount of members the object has
+		size_t size()
+		{
+			return members.size();
+		}
 		/// <summary>
 		/// Add member with just int key
 		/// </summary>

@@ -1,12 +1,15 @@
-#include <cstddef>
+#pragma once
+// Runtime
+#include "shared_libs.h"
+#include "exceptions.h"
+// C++
+#include <tuple>
+// C
 #include <cstdint>
 #include <readline/rlstdc.h>
 #include <strings.h>
 #include <sys/types.h>
-#include "exceptions.h"
 #include "ffi.h"
-#include "shared_libs.h"
-#include <tuple>
 
 // Class to provide a convenient and (hopefully) safe wrapper for a section of memory
 // to be accessed as a rt::Type mandated struct
