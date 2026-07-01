@@ -58,8 +58,44 @@ And finally:
 
 ## Examples
 
-The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) written in Runtime
+Variables, functions and callbacks
 ```bash (obviously not actually bash but lying for the sake of syntax highlighting)
+#!/usr/bin/Runtime
+
+# Create variable test with the value of 1
+Object(test 1)
+
+# Function which adds two args
+Object(AddArgs
+	Object(result Add(arg1 arg2))
+	result)
+
+# Same thing, but more compact
+Object(AddArgs2
+	Add(arg1 arg2))
+
+# Callbacks
+Object(CallFuncs
+	Print(Format("Function 1: $\nFunction 2: $" 
+		func1(test 5)
+		func2(test 5))))
+
+Print("AddArgs: " AddArgs(test 1))
+Print("AddArgs2: " AddArgs2(test 2))
+CallFuncs(AddArgs AddArgs2)
+CallFuncs(AddArgs)
+
+# Output:
+# AddArgs: 2.000000
+# AddArgs2: 3.000000
+# Function 1: 6.000000
+# Function 2: 6.000000
+# Function 1: 6.000000
+# Function 2: 0.000000
+```
+
+The [Collatz Conjecture](https://en.wikipedia.org/wiki/Collatz_conjecture) written in Runtime
+```bash
 #!/usr/bin/Runtime
 
 Object(n Input())
@@ -74,29 +110,7 @@ While( LargerThan(n 1)
 )
 ```
 
-Simple script to print all symbols from a shared library  
-(doesn't currently work as intended)
-
-```bash
-#!/usr/bin/Runtime
-# First cache the amount of symbols by default
-Copy(tmp, GetKeys())
-Object(oldCount, Size(tmp-0))
-# Then load the library
-Include(carg2) # Include the library in the first command line argument
-# (carg0 is program path, and carg1 is the script name)
-# Now get keys again
-Copy(symbols, GetKeys())
-Object(symCount, Size(symbols-0))
-# Then iterate and print all the ones in the included library
-Append(i, oldCount)
-While(SmallerThan(i, Minus(symCount,1))
-	Assign(i,0,Add(i,1)) # Iterate i
-	Print(symbols-0-i())
-)
-# TODO: The symbol table is not currently ordered...
-```
-
 ## Documentation
 
 Documentation is available at the official [Runtime site](https://runtime.wisdurm.fi/public/index.php).
+(CURRENTLY DOWN!)
