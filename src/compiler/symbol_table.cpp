@@ -182,6 +182,8 @@ namespace rt
 			{"And", And},
 			{"Or", Or},
 			{"Name", Name},
+			{"Set", Set},
+			{"Evaluate", Evaluate},
 			// Math
 			{"+", Add},
 			{"-", Minus},

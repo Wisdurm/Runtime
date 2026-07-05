@@ -606,4 +606,39 @@ namespace rt
 		}
 		return giveException("Wrong amount of arguments");
 	}
+
+	/*
+	 * Desc=Sets the value of an object.
+	 * Added=v0.12.0
+	 * Returns=True
+	 * Param0[False]Object=An object to add to.
+	 * Param1[False]Value=An object to add.
+	 */
+	objectOrValue Set(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() < 2) {
+					return giveException("Wrong amount of arguments");
+		}
+		if (std::holds_alternative<std::variant<double, std::string>>(args.at(0))) {
+			return giveException("Object must be object");
+		}
+		auto obj = std::get<std::shared_ptr<Object>>(args.at(0));
+		// Set value
+		obj->setLast(args.at(1));
+		return True;
+	}
+
+	/*
+	 * Desc=Evaluates an object.
+	 * Added=v0.12.0
+	 * Returns=Evaluated value of object
+	 * Param0[False]Object=An object to evaluate.
+	 */
+	objectOrValue Evaluate(std::vector<objectOrValue>& args, SymbolTable* symtab, ArgState& argState)
+	{
+		if (args.size() < 1) {
+					return giveException("Wrong amount of arguments");
+		}
+		return evaluate(args.at(0), symtab, argState);
+	}
 }
