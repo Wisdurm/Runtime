@@ -1,6 +1,0 @@
-{
-  "dependencies": [
-    "catch2",
-    "tsl-ordered-map"
-  ]
-}

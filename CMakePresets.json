@@ -2,18 +2,15 @@
   "version": 2,
   "configurePresets": [
     {
-      "name": "ninja-vcpkg",
+      "name": "ninja",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-      }
+      "binaryDir": "${sourceDir}/build"
     }
   ],
   "buildPresets": [
     {
-      "name": "ninja-vcpkg",
-      "configurePreset": "ninja-vcpkg"
+      "name": "ninja",
+      "configurePreset": "ninja"
     }
   ]
 }
