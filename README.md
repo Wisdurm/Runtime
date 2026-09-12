@@ -49,10 +49,8 @@ You can choose not to build tests by setting RUNTIME_BUILD_TESTS to false.
 
 First make sure Git and Ninja are installed.  
 ```sudo apt install git ninja-build```  
-Then install and setup vcpkg.  
-[Vcpkg install](https://learn.microsoft.com/en-gb/vcpkg/get_started/get-started?pivots=shell-bash)  
 Cd into this repository and run:  
-```cmake --preset=ninja-vcpkg```  
+```cmake --preset=ninja```  
 And finally:  
 ```cmake --build build```  
 
