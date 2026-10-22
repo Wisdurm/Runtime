@@ -35,7 +35,7 @@ None of the following are promises, but I have reason to believe many of them wi
 ### Dependencies 
 
 Dependencies are Catch2, Tessil's ordered maps and GNU readline,
-the former two of which which are both vcpkg packages.  
+the former two of which which are both pulled by FetchContent in CMake automatically.  
 GNU readline must for the time being be installed as a shared library, for example
 from your distribution's package manager.  
 That is, for Debian 13 you would do:  
